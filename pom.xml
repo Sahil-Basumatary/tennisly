@@ -71,7 +71,7 @@
             <java>
               <googleJavaFormat>
                 <version>1.19.2</version>
-                <style>GOOGLE</style>
+                <style>AOSP</style>
               </googleJavaFormat>
               <removeUnusedImports/>
               <trimTrailingWhitespace/>
