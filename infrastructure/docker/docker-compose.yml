@@ -15,23 +15,18 @@ services:
       - tennisly_postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tennisly} -d ${POSTGRES_DB:-tennisly}"]
+      test: ["CMD-SHELL", "pg_isready -U tennisly"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
     networks:
       - tennisly-network
-    deploy:
-      resources:
-        limits:
-          memory: 512M
 
   redis:
     image: redis:7-alpine
     container_name: tennisly-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -41,13 +36,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 5s
     networks:
       - tennisly-network
-    deploy:
-      resources:
-        limits:
-          memory: 256M
 
   kafka:
     image: bitnami/kafka:3.7
@@ -62,10 +52,6 @@ services:
       KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_CFG_DELETE_TOPIC_ENABLE: "true"
-      KAFKA_CFG_LOG_RETENTION_HOURS: 168
-      KAFKA_CFG_LOG_RETENTION_BYTES: 1073741824
     ports:
       - "${KAFKA_EXTERNAL_PORT:-9094}:9094"
     volumes:
@@ -78,20 +64,30 @@ services:
       start_period: 30s
     networks:
       - tennisly-network
-    deploy:
-      resources:
-        limits:
-          memory: 1G
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: tennisly-pgadmin
+    profiles: [tools]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@tennisly.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - tennisly_pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tennisly-network
 
 networks:
   tennisly-network:
     driver: bridge
-    name: tennisly-network
 
 volumes:
   tennisly_postgres_data:
-    name: tennisly_postgres_data
   tennisly_redis_data:
-    name: tennisly_redis_data
   tennisly_kafka_data:
-    name: tennisly_kafka_data
+  tennisly_pgadmin_data:
