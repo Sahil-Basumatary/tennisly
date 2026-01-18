@@ -82,6 +82,20 @@ services:
     networks:
       - tennisly-network
 
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: tennisly-redis-commander
+    profiles: [tools]
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - tennisly-network
+
 networks:
   tennisly-network:
     driver: bridge

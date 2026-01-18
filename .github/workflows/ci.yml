@@ -39,6 +39,7 @@ jobs:
             backend:
               - 'services/**'
               - 'pom.xml'
+              - 'infrastructure/**'
 
   frontend:
     name: Frontend
