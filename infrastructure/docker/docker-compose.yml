@@ -96,6 +96,21 @@ services:
     networks:
       - tennisly-network
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: tennisly-kafka-ui
+    profiles: [tools]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: tennisly-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "${KAFKA_UI_PORT:-8082}:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - tennisly-network
+
 networks:
   tennisly-network:
     driver: bridge
