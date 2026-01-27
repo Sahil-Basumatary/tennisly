@@ -1,68 +1,51 @@
-import Image from "next/image";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Home() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-background font-sans">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-foreground">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-muted-foreground">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-foreground"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-foreground"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <span className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            Tennisly
+          </span>
+          <ThemeToggle />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 text-primary-foreground transition-colors hover:bg-primary/90 md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-border px-5 transition-colors hover:bg-muted md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </header>
+      <main>
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-court-green/10 via-transparent to-royal-purple/10 dark:from-court-green/5 dark:to-championship-gold/10" />
+          <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-championship-gold/10 blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-court-green/10 blur-3xl" />
+          <div className="relative mx-auto max-w-6xl px-6 py-24 md:py-32">
+            <div className="absolute left-1/2 top-1/2 -z-10 h-px w-[120%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-gradient-to-r from-transparent via-border to-transparent opacity-50" />
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="mb-4 font-serif text-lg text-championship-gold">
+                Design System Showcase
+              </p>
+              <h1 className="mb-6 font-display text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
+                Championship-Grade
+                <br />
+                <span className="text-primary">Tennis Platform</span>
+              </h1>
+              <p className="mb-8 font-serif text-xl text-muted-foreground md:text-2xl">
+                Where tradition meets innovation on the digital court
+              </p>
+              <p className="mx-auto mb-10 max-w-xl font-sans text-base leading-relaxed text-muted-foreground">
+                A premium design system inspired by the elegance of Wimbledon,
+                combining classic championship aesthetics with modern interface
+                patterns.
+              </p>
+              <div className="flex flex-col justify-center gap-4 sm:flex-row">
+                <button className="rounded-full bg-primary px-8 py-3 font-sans font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg">
+                  Get Started
+                </button>
+                <button className="rounded-full border-2 border-secondary bg-transparent px-8 py-3 font-sans font-medium text-secondary transition-all hover:bg-secondary hover:text-secondary-foreground">
+                  View Components
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
