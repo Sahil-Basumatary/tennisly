@@ -1,5 +1,17 @@
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
+const colors = [
+  { name: "Court Green", hex: "#006633", variable: "court-green" },
+  { name: "Grass Light", hex: "#228B22", variable: "grass-light" },
+  { name: "Grass Dark", hex: "#004225", variable: "grass-dark" },
+  { name: "Championship Gold", hex: "#C9A227", variable: "championship-gold" },
+  { name: "Clay Terracotta", hex: "#C65D3B", variable: "clay-terracotta" },
+  { name: "Roland Clay", hex: "#D2691E", variable: "roland-clay" },
+  { name: "Cream White", hex: "#FFFEF2", variable: "cream-white" },
+  { name: "Deep Navy", hex: "#1A1A2E", variable: "deep-navy" },
+  { name: "Charcoal", hex: "#2D2D2D", variable: "charcoal" },
+];
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
@@ -107,7 +119,49 @@ export default function Home() {
             </div>
           </div>
         </section>
+        <section className="py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="mb-12 text-center">
+              <h2 className="mb-3 font-display text-3xl font-semibold text-foreground">
+                Color Palette
+              </h2>
+              <p className="font-sans text-muted-foreground">
+                Championship-inspired colors with dark mode variants
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              {colors.map((color) => (
+                <div
+                  key={color.variable}
+                  className="group rounded-lg border border-border bg-card p-4 transition-all hover:shadow-md"
+                >
+                  <div
+                    className="mb-3 h-16 w-full rounded-md shadow-inner ring-1 ring-black/5"
+                    style={{ backgroundColor: color.hex }}
+                  />
+                  <p className="font-sans text-sm font-medium text-card-foreground">
+                    {color.name}
+                  </p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {color.hex}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
+      <footer className="border-t border-border">
+        <div className="h-1 bg-gradient-to-r from-transparent via-championship-gold to-transparent" />
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <p className="text-center font-sans text-sm text-muted-foreground">
+            <span className="font-display font-medium text-foreground">
+              Tennisly
+            </span>{" "}
+            Design System v1.0
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
