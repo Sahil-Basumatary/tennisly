@@ -20,20 +20,18 @@ export default function Home() {
             <div className="absolute left-1/2 top-1/2 -z-10 h-px w-[120%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-gradient-to-r from-transparent via-border to-transparent opacity-50" />
             <div className="mx-auto max-w-3xl text-center">
               <p className="mb-4 font-serif text-lg text-championship-gold">
-                Design System Showcase
+                Design v1
               </p>
               <h1 className="mb-6 font-display text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
-                Championship-Grade
+                Championship
                 <br />
                 <span className="text-primary">Tennis Platform</span>
               </h1>
               <p className="mb-8 font-serif text-xl text-muted-foreground md:text-2xl">
-                Where tradition meets innovation on the digital court
+                live visualisation and data analysis for tennis matches
               </p>
               <p className="mx-auto mb-10 max-w-xl font-sans text-base leading-relaxed text-muted-foreground">
-                A premium design system inspired by the elegance of Wimbledon,
-                combining classic championship aesthetics with modern interface
-                patterns.
+                wimbledon legends
               </p>
               <div className="flex flex-col justify-center gap-4 sm:flex-row">
                 <button className="rounded-full bg-primary px-8 py-3 font-sans font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg">

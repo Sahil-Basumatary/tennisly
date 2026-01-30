@@ -21,6 +21,8 @@ const config: Config = {
         "royal-purple": "#4B0082",
         "purple-accent": "#6B238E",
         "championship-gold": "#C9A227",
+        "clay-terracotta": "#C65D3B",
+        "roland-clay": "#D2691E",
         "cream-white": "#FFFEF2",
         "deep-navy": "#1A1A2E",
         charcoal: "#2D2D2D",
