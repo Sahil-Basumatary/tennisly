@@ -37,9 +37,72 @@ export default function Home() {
                 <button className="rounded-full bg-primary px-8 py-3 font-sans font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg">
                   Get Started
                 </button>
-                <button className="rounded-full border-2 border-secondary bg-transparent px-8 py-3 font-sans font-medium text-secondary transition-all hover:bg-secondary hover:text-secondary-foreground">
+                <button className="rounded-full border-2 border-foreground bg-transparent px-8 py-3 font-sans font-medium text-foreground transition-all hover:bg-foreground hover:text-background">
                   View Components
                 </button>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="border-t border-border bg-muted/30 py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <div className="mb-12 text-center">
+              <h2 className="mb-3 font-display text-3xl font-semibold text-foreground">
+                Typography System
+              </h2>
+              <p className="font-sans text-muted-foreground">
+                Three carefully selected typefaces for hierarchy and elegance
+              </p>
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="mb-4 inline-block rounded bg-primary/10 px-3 py-1 font-sans text-xs font-medium uppercase tracking-wider text-primary">
+                  Headlines
+                </div>
+                <h3 className="mb-2 font-display text-2xl font-bold text-card-foreground">
+                  Playfair Display
+                </h3>
+                <p className="mb-4 font-sans text-sm text-muted-foreground">
+                  Elegant serif for hero text and section headers
+                </p>
+                <div className="space-y-2 border-t border-border pt-4 font-display text-card-foreground">
+                  <p className="text-lg font-normal">Regular 400</p>
+                  <p className="text-lg font-medium">Medium 500</p>
+                  <p className="text-lg font-semibold">Semibold 600</p>
+                  <p className="text-lg font-bold">Bold 700</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="mb-4 inline-block rounded bg-secondary/10 px-3 py-1 font-sans text-xs font-medium uppercase tracking-wider text-secondary">
+                  Accents
+                </div>
+                <h3 className="mb-2 font-serif text-2xl font-semibold text-card-foreground">
+                  Cormorant Garamond
+                </h3>
+                <p className="mb-4 font-sans text-sm text-muted-foreground">
+                  Refined serif for taglines and quotations
+                </p>
+                <div className="space-y-2 border-t border-border pt-4 font-serif text-card-foreground">
+                  <p className="text-lg font-normal">Regular 400</p>
+                  <p className="text-lg font-medium">Medium 500</p>
+                  <p className="text-lg font-semibold">Semibold 600</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="mb-4 inline-block rounded bg-accent/10 px-3 py-1 font-sans text-xs font-medium uppercase tracking-wider text-accent">
+                  Body
+                </div>
+                <h3 className="mb-2 font-sans text-2xl font-bold text-card-foreground">
+                  Lato
+                </h3>
+                <p className="mb-4 font-sans text-sm text-muted-foreground">
+                  Clean sans-serif for body text and UI elements
+                </p>
+                <div className="space-y-2 border-t border-border pt-4 font-sans text-card-foreground">
+                  <p className="text-lg font-light">Light 300</p>
+                  <p className="text-lg font-normal">Regular 400</p>
+                  <p className="text-lg font-bold">Bold 700</p>
+                </div>
               </div>
             </div>
           </div>
