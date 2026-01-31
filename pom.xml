@@ -25,6 +25,7 @@
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
   </properties>
   <modules>
+    <module>services/config-server</module>
   </modules>
   <dependencyManagement>
     <dependencies>
