@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: config-server
+encrypt:
+  key: ${ENCRYPT_KEY:}
+
