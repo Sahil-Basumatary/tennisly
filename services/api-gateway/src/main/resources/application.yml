@@ -1,6 +1,11 @@
 server:
   port: 8080
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${CLERK_JWKS_URI:https://trusting-toucan-94.clerk.accounts.dev/.well-known/jwks.json}
   cloud:
     gateway:
       discovery:
@@ -30,6 +35,10 @@ spring:
             allowCredentials: true
             maxAge: 3600
       routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
         - id: user-service
           uri: lb://user-service
           predicates:
