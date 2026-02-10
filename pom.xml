@@ -28,6 +28,7 @@
     <module>services/config-server</module>
     <module>services/eureka-server</module>
     <module>services/api-gateway</module>
+    <module>services/auth-service</module>
   </modules>
   <dependencyManagement>
     <dependencies>
