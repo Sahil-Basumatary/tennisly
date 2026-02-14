@@ -16,6 +16,9 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: false
+clerk:
+  webhook:
+    secret: ${CLERK_WEBHOOK_SECRET:}
 eureka:
   client:
     service-url:
