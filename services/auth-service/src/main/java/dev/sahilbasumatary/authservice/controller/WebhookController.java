@@ -1,5 +1,6 @@
 package dev.sahilbasumatary.authservice.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.sahilbasumatary.authservice.exception.WebhookVerificationException;
@@ -52,7 +53,10 @@ public class WebhookController {
             log.info("Processing webhook event: {}", eventType);
             webhookService.processEvent(eventType, data);
             return ResponseEntity.ok().build();
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
+            log.error("Malformed webhook payload", e);
+            return ResponseEntity.badRequest().build();
+        } catch (RuntimeException e) {
             log.error("Failed to process webhook event", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
