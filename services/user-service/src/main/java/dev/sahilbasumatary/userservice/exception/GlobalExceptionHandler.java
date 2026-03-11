@@ -77,6 +77,19 @@ public class GlobalExceptionHandler {
                                 fieldErrors));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalState(
+            IllegalStateException ex, HttpServletRequest request) {
+        log.warn("Business rule violation: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(
+                        ApiErrorResponse.of(
+                                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                                "Unprocessable Entity",
+                                ex.getMessage(),
+                                request.getRequestURI()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleMalformedJson(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
