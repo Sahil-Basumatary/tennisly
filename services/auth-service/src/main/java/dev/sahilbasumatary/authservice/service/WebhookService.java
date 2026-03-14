@@ -10,6 +10,10 @@ import dev.sahilbasumatary.authservice.entity.Organization;
 import dev.sahilbasumatary.authservice.entity.UserRole;
 import dev.sahilbasumatary.authservice.repository.AppUserRepository;
 import dev.sahilbasumatary.authservice.repository.OrganizationRepository;
+import dev.sahilbasumatary.common.event.OrganizationEvent;
+import dev.sahilbasumatary.common.event.UserEvent;
+import dev.sahilbasumatary.common.kafka.EventPublisher;
+import dev.sahilbasumatary.common.kafka.TopicNames;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,13 +26,16 @@ public class WebhookService {
     private final AppUserRepository userRepository;
     private final OrganizationRepository organizationRepository;
     private final ObjectMapper objectMapper;
+    private final EventPublisher eventPublisher;
 
     public WebhookService(AppUserRepository userRepository,
             OrganizationRepository organizationRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            EventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     public void processEvent(String eventType, JsonNode data) {
@@ -46,14 +53,14 @@ public class WebhookService {
     @Transactional
     void handleUserCreated(JsonNode data) {
         ClerkUserData userData = objectMapper.convertValue(data, ClerkUserData.class);
-        // Idempotency: skip if user already synced
         if (userRepository.findByClerkId(userData.id()).isPresent()) {
             log.info("User already exists for clerkId={}, skipping", userData.id());
             return;
         }
         AppUser user = new AppUser();
         user.setClerkId(userData.id());
-        user.setEmail(extractPrimaryEmail(userData));
+        String email = extractPrimaryEmail(userData);
+        user.setEmail(email);
         user.setFirstName(userData.firstName());
         user.setLastName(userData.lastName());
         user.setImageUrl(userData.imageUrl());
@@ -61,6 +68,12 @@ public class WebhookService {
         user.setActive(true);
         userRepository.save(user);
         log.info("Synced new user: clerkId={}", userData.id());
+        eventPublisher.publish(
+                TopicNames.USER_EVENTS,
+                userData.id(),
+                UserEvent.created(userData.id(), email,
+                        userData.firstName(), userData.lastName(),
+                        userData.imageUrl()));
     }
 
     @Transactional
@@ -68,7 +81,6 @@ public class WebhookService {
         ClerkUserData userData = objectMapper.convertValue(data, ClerkUserData.class);
         AppUser user = userRepository.findByClerkId(userData.id())
                 .orElseGet(() -> {
-                    // Clerk can fire updated before created reaches us
                     log.warn("User not found for clerkId={}, creating", userData.id());
                     AppUser newUser = new AppUser();
                     newUser.setClerkId(userData.id());
@@ -76,12 +88,19 @@ public class WebhookService {
                     newUser.setActive(true);
                     return newUser;
                 });
-        user.setEmail(extractPrimaryEmail(userData));
+        String email = extractPrimaryEmail(userData);
+        user.setEmail(email);
         user.setFirstName(userData.firstName());
         user.setLastName(userData.lastName());
         user.setImageUrl(userData.imageUrl());
         userRepository.save(user);
         log.info("Updated user: clerkId={}", userData.id());
+        eventPublisher.publish(
+                TopicNames.USER_EVENTS,
+                userData.id(),
+                UserEvent.updated(userData.id(), email,
+                        userData.firstName(), userData.lastName(),
+                        userData.imageUrl()));
     }
 
     @Transactional
@@ -92,6 +111,10 @@ public class WebhookService {
                     user.setActive(false);
                     userRepository.save(user);
                     log.info("Soft-deleted user: clerkId={}", clerkId);
+                    eventPublisher.publish(
+                            TopicNames.USER_EVENTS,
+                            clerkId,
+                            UserEvent.deleted(clerkId));
                 },
                 () -> log.warn("Delete event for unknown user: clerkId={}", clerkId)
         );
@@ -114,6 +137,11 @@ public class WebhookService {
         org.setActive(true);
         organizationRepository.save(org);
         log.info("Synced new organization: clerkOrgId={}", orgData.id());
+        eventPublisher.publish(
+                TopicNames.ORGANIZATION_EVENTS,
+                orgData.id(),
+                OrganizationEvent.created(orgData.id(), orgData.name(),
+                        orgData.slug(), orgData.imageUrl()));
     }
 
     @Transactional
@@ -134,6 +162,11 @@ public class WebhookService {
         org.setImageUrl(orgData.imageUrl());
         organizationRepository.save(org);
         log.info("Updated organization: clerkOrgId={}", orgData.id());
+        eventPublisher.publish(
+                TopicNames.ORGANIZATION_EVENTS,
+                orgData.id(),
+                OrganizationEvent.updated(orgData.id(), orgData.name(),
+                        orgData.slug(), orgData.imageUrl()));
     }
 
     @Transactional
@@ -144,6 +177,10 @@ public class WebhookService {
                     org.setActive(false);
                     organizationRepository.save(org);
                     log.info("Soft-deleted organization: clerkOrgId={}", clerkOrgId);
+                    eventPublisher.publish(
+                            TopicNames.ORGANIZATION_EVENTS,
+                            clerkOrgId,
+                            OrganizationEvent.deleted(clerkOrgId));
                 },
                 () -> log.warn("Delete event for unknown org: clerkOrgId={}",
                         clerkOrgId)
