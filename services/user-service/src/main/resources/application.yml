@@ -16,6 +16,12 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: user-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
 eureka:
   client:
     service-url:
