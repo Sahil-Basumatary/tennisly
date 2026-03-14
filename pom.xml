@@ -25,6 +25,7 @@
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
   </properties>
   <modules>
+    <module>services/tennisly-common</module>
     <module>services/config-server</module>
     <module>services/eureka-server</module>
     <module>services/api-gateway</module>
@@ -39,6 +40,11 @@
         <version>${spring-cloud.version}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>dev.sahilbasumatary</groupId>
+        <artifactId>tennisly-common</artifactId>
+        <version>${project.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
