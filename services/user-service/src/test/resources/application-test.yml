@@ -10,6 +10,14 @@ spring:
     show-sql: false
   flyway:
     enabled: false
+  kafka:
+    bootstrap-servers: localhost:9094
+    consumer:
+      group-id: user-service-test
+      auto-offset-reset: earliest
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
 eureka:
   client:
     enabled: false

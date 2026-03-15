@@ -26,6 +26,7 @@ public class AuthEventListener {
         this.organizationRepository = organizationRepository;
     }
 
+    @Transactional
     @KafkaListener(topics = TopicNames.USER_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void handleUserEvent(UserEvent event) {
         log.info("Received user event: eventId={} type={} clerkId={}",
@@ -38,6 +39,7 @@ public class AuthEventListener {
         }
     }
 
+    @Transactional
     @KafkaListener(topics = TopicNames.ORGANIZATION_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void handleOrganizationEvent(OrganizationEvent event) {
         log.info("Received org event: eventId={} type={} clerkOrgId={}",
@@ -50,8 +52,7 @@ public class AuthEventListener {
         }
     }
 
-    @Transactional
-    void onUserCreated(UserEvent event) {
+    private void onUserCreated(UserEvent event) {
         if (profileRepository.findByClerkId(event.getClerkId()).isPresent()) {
             log.info("Profile already exists for clerkId={}, skipping", event.getClerkId());
             return;
@@ -67,8 +68,7 @@ public class AuthEventListener {
         log.info("Created user profile from event for clerkId={}", event.getClerkId());
     }
 
-    @Transactional
-    void onUserUpdated(UserEvent event) {
+    private void onUserUpdated(UserEvent event) {
         profileRepository.findByClerkId(event.getClerkId()).ifPresentOrElse(
                 profile -> {
                     if (event.getEmail() != null) profile.setEmail(event.getEmail());
@@ -86,8 +86,7 @@ public class AuthEventListener {
         );
     }
 
-    @Transactional
-    void onUserDeleted(UserEvent event) {
+    private void onUserDeleted(UserEvent event) {
         profileRepository.findByClerkId(event.getClerkId()).ifPresentOrElse(
                 profile -> {
                     profile.setActive(false);
@@ -100,8 +99,7 @@ public class AuthEventListener {
         );
     }
 
-    @Transactional
-    void onOrganizationCreated(OrganizationEvent event) {
+    private void onOrganizationCreated(OrganizationEvent event) {
         if (organizationRepository.findByClerkOrgId(event.getClerkOrgId()).isPresent()) {
             log.info("Organization already exists for clerkOrgId={}, skipping",
                     event.getClerkOrgId());
@@ -111,18 +109,19 @@ public class AuthEventListener {
         org.setClerkOrgId(event.getClerkOrgId());
         org.setName(event.getName());
         org.setSlug(event.getSlug());
+        org.setLogoUrl(event.getImageUrl());
         org.setActive(true);
         organizationRepository.save(org);
         log.info("Created organization from event for clerkOrgId={}",
                 event.getClerkOrgId());
     }
 
-    @Transactional
-    void onOrganizationUpdated(OrganizationEvent event) {
+    private void onOrganizationUpdated(OrganizationEvent event) {
         organizationRepository.findByClerkOrgId(event.getClerkOrgId()).ifPresentOrElse(
                 org -> {
                     if (event.getName() != null) org.setName(event.getName());
                     if (event.getSlug() != null) org.setSlug(event.getSlug());
+                    if (event.getImageUrl() != null) org.setLogoUrl(event.getImageUrl());
                     organizationRepository.save(org);
                     log.info("Updated org from event for clerkOrgId={}",
                             event.getClerkOrgId());
@@ -135,8 +134,7 @@ public class AuthEventListener {
         );
     }
 
-    @Transactional
-    void onOrganizationDeleted(OrganizationEvent event) {
+    private void onOrganizationDeleted(OrganizationEvent event) {
         organizationRepository.findByClerkOrgId(event.getClerkOrgId()).ifPresentOrElse(
                 org -> {
                     org.setActive(false);
