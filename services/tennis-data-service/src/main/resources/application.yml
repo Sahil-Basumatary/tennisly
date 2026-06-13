@@ -21,6 +21,9 @@ spring:
     producer:
       acks: all
       retries: 3
+tennis:
+  data:
+    provider: ${TENNIS_DATA_PROVIDER:mock}
 eureka:
   client:
     service-url:
