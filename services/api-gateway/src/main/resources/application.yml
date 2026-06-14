@@ -43,6 +43,10 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/api/users/**
+        - id: tennis-data-service
+          uri: lb://tennis-data-service
+          predicates:
+            - Path=/api/tennis/**
         - id: match-service
           uri: lb://match-service
           predicates:
