@@ -16,6 +16,9 @@ import java.util.UUID;
     }),
     @JsonSubTypes.Type(value = OrganizationEvent.class, names = {
             "ORGANIZATION_CREATED", "ORGANIZATION_UPDATED", "ORGANIZATION_DELETED"
+    }),
+    @JsonSubTypes.Type(value = TennisDataEvent.class, names = {
+            "TENNIS_PLAYERS_SYNCED", "TENNIS_TOURNAMENTS_SYNCED", "TENNIS_RANKINGS_SYNCED"
     })
 })
 public abstract class BaseEvent {
