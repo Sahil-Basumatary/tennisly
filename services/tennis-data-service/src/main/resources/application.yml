@@ -13,6 +13,11 @@ spring:
       ddl-auto: validate
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
   flyway:
     enabled: true
     baseline-on-migrate: false
@@ -24,6 +29,11 @@ spring:
 tennis:
   data:
     provider: ${TENNIS_DATA_PROVIDER:mock}
+    sync:
+      enabled: ${TENNIS_DATA_SYNC_ENABLED:true}
+      players-cron: ${TENNIS_DATA_SYNC_PLAYERS_CRON:0 0 2 * * *}
+      tournaments-cron: ${TENNIS_DATA_SYNC_TOURNAMENTS_CRON:0 30 2 * * *}
+      rankings-cron: ${TENNIS_DATA_SYNC_RANKINGS_CRON:0 0 */6 * * *}
 eureka:
   client:
     service-url:

@@ -1,5 +1,9 @@
 package dev.sahilbasumatary.tennisdataservice.service;
 
+import dev.sahilbasumatary.common.event.TennisDataEvent;
+import dev.sahilbasumatary.common.kafka.EventPublisher;
+import dev.sahilbasumatary.common.kafka.TopicNames;
+import dev.sahilbasumatary.tennisdataservice.config.RedisCacheConfig;
 import dev.sahilbasumatary.tennisdataservice.dto.PlayerData;
 import dev.sahilbasumatary.tennisdataservice.dto.RankingData;
 import dev.sahilbasumatary.tennisdataservice.dto.TournamentData;
@@ -13,6 +17,9 @@ import dev.sahilbasumatary.tennisdataservice.repository.TournamentRepository;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,18 +32,31 @@ public class DataSyncService {
     private final PlayerRepository playerRepository;
     private final TournamentRepository tournamentRepository;
     private final RankingRepository rankingRepository;
+    private final EventPublisher eventPublisher;
+    private final String providerName;
 
     public DataSyncService(
             TennisDataProvider provider,
             PlayerRepository playerRepository,
             TournamentRepository tournamentRepository,
-            RankingRepository rankingRepository) {
+            RankingRepository rankingRepository,
+            EventPublisher eventPublisher,
+            @Value("${tennis.data.provider:mock}") String providerName) {
         this.provider = provider;
         this.playerRepository = playerRepository;
         this.tournamentRepository = tournamentRepository;
         this.rankingRepository = rankingRepository;
+        this.eventPublisher = eventPublisher;
+        this.providerName = providerName;
     }
 
+    @Caching(
+            evict = {
+                @CacheEvict(cacheNames = RedisCacheConfig.PLAYER_CACHE, allEntries = true),
+                @CacheEvict(cacheNames = RedisCacheConfig.PLAYERS_CACHE, allEntries = true),
+                @CacheEvict(cacheNames = RedisCacheConfig.PLAYER_RANKINGS_CACHE, allEntries = true),
+                @CacheEvict(cacheNames = RedisCacheConfig.RANKINGS_CACHE, allEntries = true)
+            })
     @Transactional
     public int syncPlayers() {
         List<PlayerData> source = provider.fetchPlayers();
@@ -46,10 +66,13 @@ public class DataSyncService {
             applyPlayer(player, data);
             playerRepository.save(player);
         }
-        log.info("Player sync complete: {} records processed", source.size());
-        return source.size();
+        int processed = source.size();
+        log.info("Player sync complete: {} records processed", processed);
+        publish(TennisDataEvent.playersSynced(processed, providerName));
+        return processed;
     }
 
+    @CacheEvict(cacheNames = RedisCacheConfig.TOURNAMENTS_CACHE, allEntries = true)
     @Transactional
     public int syncTournaments() {
         List<TournamentData> source = provider.fetchTournaments();
@@ -61,10 +84,17 @@ public class DataSyncService {
             applyTournament(tournament, data);
             tournamentRepository.save(tournament);
         }
-        log.info("Tournament sync complete: {} records processed", source.size());
-        return source.size();
+        int processed = source.size();
+        log.info("Tournament sync complete: {} records processed", processed);
+        publish(TennisDataEvent.tournamentsSynced(processed, providerName));
+        return processed;
     }
 
+    @Caching(
+            evict = {
+                @CacheEvict(cacheNames = RedisCacheConfig.RANKINGS_CACHE, allEntries = true),
+                @CacheEvict(cacheNames = RedisCacheConfig.PLAYER_RANKINGS_CACHE, allEntries = true)
+            })
     @Transactional
     public int syncRankings() {
         List<RankingData> source = provider.fetchRankings();
@@ -94,7 +124,12 @@ public class DataSyncService {
             processed++;
         }
         log.info("Ranking sync complete: {} records processed", processed);
+        publish(TennisDataEvent.rankingsSynced(processed, providerName));
         return processed;
+    }
+
+    private void publish(TennisDataEvent event) {
+        eventPublisher.publish(TopicNames.TENNIS_DATA_EVENTS, event.getResourceType(), event);
     }
 
     private void applyPlayer(Player player, PlayerData data) {
