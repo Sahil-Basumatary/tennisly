@@ -108,6 +108,9 @@ public class DataSyncService {
                         data.playerExternalId());
                 continue;
             }
+            player.setCurrentRanking(data.rank());
+            player.setCurrentPoints(data.points());
+            playerRepository.save(player);
             Ranking ranking =
                     rankingRepository
                             .findByPlayerIdAndRankingDateAndRankingType(
