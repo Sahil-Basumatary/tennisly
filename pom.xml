@@ -32,6 +32,7 @@
     <module>services/auth-service</module>
     <module>services/user-service</module>
     <module>services/tennis-data-service</module>
+    <module>services/match-service</module>
   </modules>
   <dependencyManagement>
     <dependencies>
