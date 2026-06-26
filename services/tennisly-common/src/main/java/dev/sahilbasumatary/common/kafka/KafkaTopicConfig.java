@@ -40,6 +40,15 @@ public class KafkaTopicConfig {
     }
 
     @Bean
+    public NewTopic matchEventsTopic() {
+        return TopicBuilder.name(TopicNames.MATCH_EVENTS)
+                .partitions(DEFAULT_PARTITIONS)
+                .replicas(DEFAULT_REPLICAS)
+                .config("retention.ms", RETENTION_MS)
+                .build();
+    }
+
+    @Bean
     public NewTopic userEventsDlqTopic() {
         return TopicBuilder.name(TopicNames.USER_EVENTS_DLQ)
                 .partitions(1)
@@ -58,6 +67,14 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic tennisDataEventsDlqTopic() {
         return TopicBuilder.name(TopicNames.TENNIS_DATA_EVENTS_DLQ)
+                .partitions(1)
+                .replicas(DEFAULT_REPLICAS)
+                .build();
+    }
+
+    @Bean
+    public NewTopic matchEventsDlqTopic() {
+        return TopicBuilder.name(TopicNames.MATCH_EVENTS_DLQ)
                 .partitions(1)
                 .replicas(DEFAULT_REPLICAS)
                 .build();

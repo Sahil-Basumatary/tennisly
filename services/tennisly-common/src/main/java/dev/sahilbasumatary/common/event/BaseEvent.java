@@ -19,6 +19,9 @@ import java.util.UUID;
     }),
     @JsonSubTypes.Type(value = TennisDataEvent.class, names = {
             "TENNIS_PLAYERS_SYNCED", "TENNIS_TOURNAMENTS_SYNCED", "TENNIS_RANKINGS_SYNCED"
+    }),
+    @JsonSubTypes.Type(value = MatchEvent.class, names = {
+            "MATCH_CREATED", "MATCH_UPDATED", "MATCH_STATUS_CHANGED", "MATCH_POINT_RECORDED"
     })
 })
 public abstract class BaseEvent {
