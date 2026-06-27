@@ -1,0 +1,32 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: replay-service
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+replay:
+  clients:
+    match-service-uri: ${REPLAY_MATCH_SERVICE_URI:http://match-service}
+    tennis-data-service-uri: ${REPLAY_TENNIS_DATA_SERVICE_URI:http://tennis-data-service}
+    connect-timeout: ${REPLAY_CLIENT_CONNECT_TIMEOUT:PT5S}
+    read-timeout: ${REPLAY_CLIENT_READ_TIMEOUT:PT10S}
+  engine:
+    frames-per-second: ${REPLAY_ENGINE_FPS:60}
+    integration-step-seconds: ${REPLAY_ENGINE_STEP:0.002}
+    max-flight-seconds: ${REPLAY_ENGINE_MAX_FLIGHT:6.0}
+    solver-max-iterations: ${REPLAY_ENGINE_SOLVER_ITERATIONS:48}
+    solver-tolerance-metres: ${REPLAY_ENGINE_SOLVER_TOLERANCE:0.05}
+    max-rally-length: ${REPLAY_ENGINE_MAX_RALLY:40}
