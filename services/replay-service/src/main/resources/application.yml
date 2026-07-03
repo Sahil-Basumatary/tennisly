@@ -3,6 +3,19 @@ server:
 spring:
   application:
     name: replay-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_REPLAY:tennisly_replay}
+    username: ${POSTGRES_USER:tennisly}
+    password: ${POSTGRES_PASSWORD:tennisly_dev}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
 eureka:
   client:
     service-url:
@@ -30,3 +43,11 @@ replay:
     solver-max-iterations: ${REPLAY_ENGINE_SOLVER_ITERATIONS:48}
     solver-tolerance-metres: ${REPLAY_ENGINE_SOLVER_TOLERANCE:0.05}
     max-rally-length: ${REPLAY_ENGINE_MAX_RALLY:40}
+  storage:
+    endpoint: ${REPLAY_STORAGE_ENDPOINT:http://localhost:9000}
+    region: ${REPLAY_STORAGE_REGION:us-east-1}
+    bucket: ${REPLAY_STORAGE_BUCKET:tennisly-replays}
+    access-key: ${REPLAY_STORAGE_ACCESS_KEY:minioadmin}
+    secret-key: ${REPLAY_STORAGE_SECRET_KEY:minioadmin}
+    path-style-access: ${REPLAY_STORAGE_PATH_STYLE:true}
+    auto-create-bucket: ${REPLAY_STORAGE_AUTO_CREATE_BUCKET:true}
