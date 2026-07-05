@@ -55,6 +55,19 @@ public class GlobalExceptionHandler {
                                 request.getRequestURI()));
     }
 
+    @ExceptionHandler(ReplayStorageException.class)
+    public ResponseEntity<ApiErrorResponse> handleStorageFailure(
+            ReplayStorageException ex, HttpServletRequest request) {
+        log.error("Replay storage failure on {}", request.getRequestURI(), ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(
+                        ApiErrorResponse.of(
+                                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                                "Service Unavailable",
+                                "Replay storage is currently unavailable",
+                                request.getRequestURI()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
