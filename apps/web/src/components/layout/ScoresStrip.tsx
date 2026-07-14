@@ -1,0 +1,133 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/brandIcons";
+import type { ScoreCard } from "@/types/scores";
+import { cn } from "@/lib/utils";
+
+type ScoresStripProps = {
+  items: ScoreCard[];
+};
+
+function statusLabel(card: ScoreCard) {
+  if (card.status === "live") return "LIVE";
+  if (card.status === "final") return "FINAL";
+  return card.startLabel ?? "SOON";
+}
+
+function ScoreCardView({ card }: { card: ScoreCard }) {
+  return (
+    <Link
+      href={card.href}
+      className="flex h-[65px] min-w-[220px] shrink-0 flex-col justify-center border-r border-hairline bg-white px-3 text-ticker-foreground transition-colors hover:bg-surface-muted"
+    >
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="font-data text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          {card.tournament} · {card.round}
+        </span>
+        <span
+          className={cn(
+            "font-data text-[10px] font-bold uppercase tracking-wide",
+            card.status === "live" ? "text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {statusLabel(card)}
+        </span>
+      </div>
+      <div className="space-y-0.5">
+        {[card.home, card.away].map((side) => (
+          <div key={side.shortName} className="flex items-center justify-between gap-3">
+            <span
+              className={cn(
+                "truncate font-sans text-[13px] leading-tight",
+                side.winner ? "font-bold text-foreground" : "font-medium",
+              )}
+            >
+              {side.name}
+            </span>
+            <span className="font-data text-[13px] font-bold tracking-wide tabular-nums">
+              {side.sets.length > 0 ? side.sets.join(" ") : "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
+export function ScoresStrip({ items }: ScoresStripProps) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+
+  const syncButtons = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    setCanPrev(el.scrollLeft > 4);
+    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    syncButtons();
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", syncButtons, { passive: true });
+    window.addEventListener("resize", syncButtons);
+    return () => {
+      el.removeEventListener("scroll", syncButtons);
+      window.removeEventListener("resize", syncButtons);
+    };
+  }, [items]);
+
+  const scrollByCards = (dir: -1 | 1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * 240, behavior: "smooth" });
+  };
+
+  return (
+    <div className="border-b border-hairline bg-ticker text-ticker-foreground">
+      <div className="relative mx-auto flex h-ticker max-w-[1400px] items-stretch">
+        <div className="hidden w-[120px] shrink-0 flex-col justify-center border-r border-hairline bg-[#edeef0] px-3 sm:flex">
+          <span className="font-data text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+            Tennis
+          </span>
+          <Link
+            href="/scores"
+            className="font-sans text-[12px] font-semibold text-foreground hover:underline"
+          >
+            All Scores
+          </Link>
+        </div>
+        <button
+          type="button"
+          aria-label="Previous scores"
+          disabled={!canPrev}
+          onClick={() => scrollByCards(-1)}
+          className="flex w-8 shrink-0 items-center justify-center border-r border-hairline text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+        </button>
+        <div
+          ref={scrollerRef}
+          className="flex flex-1 overflow-x-auto scrollbar-none"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {items.map((card) => (
+            <ScoreCardView key={card.id} card={card} />
+          ))}
+        </div>
+        <button
+          type="button"
+          aria-label="Next scores"
+          disabled={!canNext}
+          onClick={() => scrollByCards(1)}
+          className="flex w-8 shrink-0 items-center justify-center border-l border-hairline text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
+        >
+          <ChevronRightIcon className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
