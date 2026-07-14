@@ -2,166 +2,124 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const colors = [
   { name: "Court Green", hex: "#006633", variable: "court-green" },
-  { name: "Grass Light", hex: "#228B22", variable: "grass-light" },
-  { name: "Grass Dark", hex: "#004225", variable: "grass-dark" },
-  { name: "Championship Gold", hex: "#C9A227", variable: "championship-gold" },
-  { name: "Clay Terracotta", hex: "#C65D3B", variable: "clay-terracotta" },
-  { name: "Roland Clay", hex: "#D2691E", variable: "roland-clay" },
-  { name: "Cream White", hex: "#FFFEF2", variable: "cream-white" },
-  { name: "Deep Navy", hex: "#1A1A2E", variable: "deep-navy" },
-  { name: "Charcoal", hex: "#2D2D2D", variable: "charcoal" },
+  { name: "Royal Purple", hex: "#540082", variable: "royal-purple" },
+  { name: "Brand Gold", hex: "#816c3c", variable: "championship-gold" },
+  { name: "Chrome", hex: "#2b2c2d", variable: "chrome" },
+  { name: "Ticker", hex: "#f1f2f3", variable: "ticker" },
+  { name: "Surface Muted", hex: "#f2f4f8", variable: "soft-gray" },
+  { name: "Inverse Deep", hex: "#0b2917", variable: "inverse-deep" },
+  { name: "Inverse Purple", hex: "#240330", variable: "inverse-purple" },
+  { name: "Destructive", hex: "#da1e28", variable: "destructive" },
 ];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <span className="font-display text-2xl font-semibold tracking-tight text-foreground">
-            Tennisly
-          </span>
-          <ThemeToggle />
-        </div>
-      </header>
-      <main>
-        <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-court-green/10 via-transparent to-royal-purple/10 dark:from-court-green/5 dark:to-championship-gold/10" />
-          <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-championship-gold/10 blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-court-green/10 blur-3xl" />
-          <div className="relative mx-auto max-w-6xl px-6 py-24 md:py-32">
-            <div className="absolute left-1/2 top-1/2 -z-10 h-px w-[120%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-gradient-to-r from-transparent via-border to-transparent opacity-50" />
-            <div className="mx-auto max-w-3xl text-center">
-              <p className="mb-4 font-serif text-lg text-championship-gold">
-                Design v1
-              </p>
-              <h1 className="mb-6 font-display text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
-                Championship
-                <br />
-                <span className="text-primary">Tennis Platform</span>
-              </h1>
-              <p className="mb-8 font-serif text-xl text-muted-foreground md:text-2xl">
-                live visualisation and data analysis for tennis matches
-              </p>
-              <p className="mx-auto mb-10 max-w-xl font-sans text-base leading-relaxed text-muted-foreground">
-                wimbledon legends
-              </p>
-              <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                <button className="rounded-full bg-primary px-8 py-3 font-sans font-medium text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg">
-                  Get Started
-                </button>
-                <button className="rounded-full border-2 border-foreground bg-transparent px-8 py-3 font-sans font-medium text-foreground transition-all hover:bg-foreground hover:text-background">
-                  View Components
-                </button>
-              </div>
-            </div>
+    <main>
+      <section className="relative overflow-hidden border-b border-hairline">
+        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <p className="font-sans text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+              Typography foundation
+            </p>
+            <ThemeToggle />
           </div>
-        </section>
-        <section className="border-t border-border bg-muted/30 py-20">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="mb-12 text-center">
-              <h2 className="mb-3 font-display text-3xl font-semibold text-foreground">
-                Typography System
-              </h2>
-              <p className="font-sans text-muted-foreground">
-                Three carefully selected typefaces for hierarchy and elegance
-              </p>
-            </div>
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
-                <div className="mb-4 inline-block rounded bg-primary/10 px-3 py-1 font-sans text-xs font-medium uppercase tracking-wider text-primary">
-                  Headlines
-                </div>
-                <h3 className="mb-2 font-display text-2xl font-bold text-card-foreground">
-                  Playfair Display
-                </h3>
-                <p className="mb-4 font-sans text-sm text-muted-foreground">
-                  Elegant serif for hero text and section headers
-                </p>
-                <div className="space-y-2 border-t border-border pt-4 font-display text-card-foreground">
-                  <p className="text-lg font-normal">Regular 400</p>
-                  <p className="text-lg font-medium">Medium 500</p>
-                  <p className="text-lg font-semibold">Semibold 600</p>
-                  <p className="text-lg font-bold">Bold 700</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
-                <div className="mb-4 inline-block rounded bg-secondary/10 px-3 py-1 font-sans text-xs font-medium uppercase tracking-wider text-secondary">
-                  Accents
-                </div>
-                <h3 className="mb-2 font-serif text-2xl font-semibold text-card-foreground">
-                  Cormorant Garamond
-                </h3>
-                <p className="mb-4 font-sans text-sm text-muted-foreground">
-                  Refined serif for taglines and quotations
-                </p>
-                <div className="space-y-2 border-t border-border pt-4 font-serif text-card-foreground">
-                  <p className="text-lg font-normal">Regular 400</p>
-                  <p className="text-lg font-medium">Medium 500</p>
-                  <p className="text-lg font-semibold">Semibold 600</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
-                <div className="mb-4 inline-block rounded bg-accent/10 px-3 py-1 font-sans text-xs font-medium uppercase tracking-wider text-accent">
-                  Body
-                </div>
-                <h3 className="mb-2 font-sans text-2xl font-bold text-card-foreground">
-                  Lato
-                </h3>
-                <p className="mb-4 font-sans text-sm text-muted-foreground">
-                  Clean sans-serif for body text and UI elements
-                </p>
-                <div className="space-y-2 border-t border-border pt-4 font-sans text-card-foreground">
-                  <p className="text-lg font-light">Light 300</p>
-                  <p className="text-lg font-normal">Regular 400</p>
-                  <p className="text-lg font-bold">Bold 700</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="py-20">
-          <div className="mx-auto max-w-6xl px-6">
-            <div className="mb-12 text-center">
-              <h2 className="mb-3 font-display text-3xl font-semibold text-foreground">
-                Color Palette
-              </h2>
-              <p className="font-sans text-muted-foreground">
-                Championship-inspired colors with dark mode variants
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-              {colors.map((color) => (
-                <div
-                  key={color.variable}
-                  className="group rounded-lg border border-border bg-card p-4 transition-all hover:shadow-md"
-                >
-                  <div
-                    className="mb-3 h-16 w-full rounded-md shadow-inner ring-1 ring-black/5"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  <p className="font-sans text-sm font-medium text-card-foreground">
-                    {color.name}
-                  </p>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {color.hex}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
-      <footer className="border-t border-border">
-        <div className="h-1 bg-gradient-to-r from-transparent via-championship-gold to-transparent" />
-        <div className="mx-auto max-w-6xl px-6 py-8">
-          <p className="text-center font-sans text-sm text-muted-foreground">
-            <span className="font-display font-medium text-foreground">
-              Tennisly
-            </span>{" "}
-            Design System v1.0
+          <h1 className="mb-5 font-display text-hero font-light text-foreground">
+            Championship
+            <br />
+            tennis platform
+          </h1>
+          <p className="mb-8 max-w-2xl font-sans text-md text-muted-foreground">
+            Global nav and scores strip are live above. Homepage editorial
+            surface lands in the next milestone.
           </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <a
+              href="/scores"
+              className="bg-primary px-8 py-3 text-center font-sans text-sm font-semibold uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              View Scores
+            </a>
+            <a
+              href="/sign-in"
+              className="border border-foreground bg-transparent px-8 py-3 text-center font-sans text-sm font-semibold uppercase tracking-wide text-foreground transition-colors hover:bg-foreground hover:text-background"
+            >
+              Sign In
+            </a>
+          </div>
         </div>
-      </footer>
-    </div>
+      </section>
+      <section className="border-b border-hairline bg-surface-muted py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-10">
+            <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
+              Type stack
+            </h2>
+            <p className="font-sans text-sm text-muted-foreground">
+              Montserrat for UI. Roboto Condensed for scores and dense data.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="border border-hairline bg-card p-6">
+              <p className="mb-3 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+                UI · Headlines
+              </p>
+              <h3 className="mb-2 font-display text-2xl font-semibold text-card-foreground">
+                Montserrat
+              </h3>
+              <div className="space-y-2 border-t border-hairline pt-4 font-display text-card-foreground">
+                <p className="text-lg font-light">Light 300</p>
+                <p className="text-lg font-normal">Regular 400</p>
+                <p className="text-lg font-semibold">Semibold 600</p>
+                <p className="text-lg font-bold">Bold 700</p>
+              </div>
+            </div>
+            <div className="border border-hairline bg-card p-6">
+              <p className="mb-3 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
+                Scores · Data
+              </p>
+              <h3 className="mb-2 font-data text-2xl font-bold uppercase tracking-wide text-card-foreground">
+                Roboto Condensed
+              </h3>
+              <div className="space-y-2 border-t border-hairline pt-4 font-data text-card-foreground">
+                <p className="text-lg font-light uppercase tracking-wide">
+                  Light 300 · 6-4 7-5
+                </p>
+                <p className="text-lg font-bold uppercase tracking-wide">
+                  Bold 700 · LIVE
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="py-16">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-10">
+            <h2 className="mb-2 font-display text-xl font-semibold text-foreground">
+              Color tokens
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {colors.map((color) => (
+              <div
+                key={color.variable}
+                className="border border-hairline bg-card p-4"
+              >
+                <div
+                  className="mb-3 h-16 w-full ring-1 ring-black/5"
+                  style={{ backgroundColor: color.hex }}
+                />
+                <p className="font-sans text-sm font-medium text-card-foreground">
+                  {color.name}
+                </p>
+                <p className="font-data text-xs uppercase tracking-wide text-muted-foreground">
+                  {color.hex}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

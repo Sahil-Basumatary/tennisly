@@ -11,22 +11,51 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        serif: ["var(--font-serif)", "Georgia", "serif"],
-        display: ["var(--font-display)", "Georgia", "serif"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        data: ["var(--font-data)", "Roboto Condensed", "Arial Narrow", "sans-serif"],
+      },
+      fontSize: {
+        xs: ["var(--text-xs)", { lineHeight: "1.25" }],
+        sm: ["var(--text-sm)", { lineHeight: "1.35" }],
+        base: ["var(--text-base)", { lineHeight: "1.5" }],
+        md: ["var(--text-md)", { lineHeight: "1.4" }],
+        lg: ["var(--text-lg)", { lineHeight: "1.3" }],
+        xl: ["var(--text-xl)", { lineHeight: "1.2" }],
+        "2xl": ["var(--text-2xl)", { lineHeight: "1.15" }],
+        hero: ["var(--text-hero)", { lineHeight: "1.1", fontWeight: "300" }],
+      },
+      spacing: {
+        nav: "var(--nav-height)",
+        header: "var(--header-height)",
+        ticker: "var(--ticker-height)",
       },
       colors: {
         "court-green": "#006633",
         "grass-light": "#228B22",
         "grass-dark": "#004225",
-        "royal-purple": "#4B0082",
+        "royal-purple": "#540082",
         "purple-accent": "#6B238E",
-        "championship-gold": "#C9A227",
+        "championship-gold": "#816c3c",
         "clay-terracotta": "#C65D3B",
         "roland-clay": "#D2691E",
         "cream-white": "#FFFEF2",
         "deep-navy": "#1A1A2E",
         charcoal: "#2D2D2D",
-        "soft-gray": "#F5F5F5",
+        "soft-gray": "#F2F4F8",
+        chrome: {
+          DEFAULT: "hsl(var(--chrome))",
+          foreground: "hsl(var(--chrome-foreground))",
+        },
+        ticker: {
+          DEFAULT: "hsl(var(--ticker))",
+          foreground: "hsl(var(--ticker-foreground))",
+        },
+        hairline: "hsl(var(--hairline))",
+        "surface-muted": "hsl(var(--surface-muted))",
+        "brand-gold": "hsl(var(--brand-gold))",
+        "brand-sand": "hsl(var(--brand-sand))",
+        "inverse-deep": "hsl(var(--inverse-deep))",
+        "inverse-purple": "hsl(var(--inverse-purple))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
@@ -63,8 +92,8 @@ const config: Config = {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 1px)",
+        sm: "0",
       },
     },
   },
@@ -72,4 +101,3 @@ const config: Config = {
 };
 
 export default config;
-

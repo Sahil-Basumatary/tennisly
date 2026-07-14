@@ -4,28 +4,64 @@
 
 @layer base {
   :root {
-    --background: 60 100% 97%;
-    --foreground: 240 10% 10%;
-    --card: 60 100% 97%;
-    --card-foreground: 240 10% 10%;
-    --popover: 60 100% 97%;
-    --popover-foreground: 240 10% 10%;
-    --primary: 153 100% 20%;
-    --primary-foreground: 60 100% 97%;
-    --secondary: 275 100% 25%;
-    --secondary-foreground: 60 100% 97%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 240 5% 35%;
-    --accent: 43 69% 47%;
-    --accent-foreground: 240 10% 10%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 60 100% 97%;
-    --border: 153 30% 80%;
-    --input: 153 30% 80%;
-    --ring: 153 100% 20%;
-    --radius: 0.5rem;
+    /* Sampled from live championship / sports-media references via CDP */
+    --chrome: 210 2% 17%;
+    --chrome-foreground: 0 0% 100%;
+    --ticker: 210 8% 95%;
+    --ticker-foreground: 210 2% 29%;
+    --surface-muted: 216 27% 96%;
+    --hairline: 210 14% 89%;
+    --brand-gold: 40 36% 37%;
+    --brand-sand: 40 10% 68%;
+    --inverse-deep: 150 57% 10%;
+    --inverse-purple: 282 86% 10%;
+
+    --background: 0 0% 100%;
+    --foreground: 200 15% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 15% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 15% 8%;
+    --primary: 150 100% 20%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 278 100% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 216 27% 96%;
+    --muted-foreground: 200 6% 45%;
+    --accent: 40 36% 37%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 356 77% 49%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 14% 89%;
+    --input: 210 14% 89%;
+    --ring: 150 100% 20%;
+    --radius: 0.125rem;
+
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-md: 1.125rem;
+    --text-lg: 1.5rem;
+    --text-xl: 2rem;
+    --text-2xl: 2.625rem;
+    --text-hero: 2.625rem;
+    --nav-height: 2.75rem;
+    --header-height: 4.375rem;
+    --ticker-height: 4.0625rem;
   }
+
   .dark {
+    --chrome: 210 2% 10%;
+    --chrome-foreground: 0 0% 100%;
+    --ticker: 210 4% 14%;
+    --ticker-foreground: 210 5% 78%;
+    --surface-muted: 152 20% 12%;
+    --hairline: 152 12% 20%;
+    --brand-gold: 40 36% 47%;
+    --brand-sand: 40 10% 58%;
+    --inverse-deep: 150 57% 10%;
+    --inverse-purple: 282 86% 10%;
+
     --background: 152 30% 8%;
     --foreground: 60 10% 93%;
     --card: 152 28% 11%;
@@ -34,17 +70,17 @@
     --popover-foreground: 60 10% 93%;
     --primary: 152 60% 40%;
     --primary-foreground: 152 30% 8%;
-    --secondary: 14 72% 47%;
-    --secondary-foreground: 60 10% 93%;
+    --secondary: 278 70% 45%;
+    --secondary-foreground: 0 0% 100%;
     --muted: 152 20% 15%;
     --muted-foreground: 150 10% 60%;
-    --accent: 43 69% 47%;
+    --accent: 40 36% 47%;
     --accent-foreground: 152 30% 8%;
     --destructive: 0 63% 50%;
     --destructive-foreground: 60 10% 93%;
     --border: 152 20% 18%;
     --input: 152 20% 18%;
-    --ring: 43 69% 47%;
+    --ring: 40 36% 47%;
   }
 }
 
@@ -53,6 +89,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans text-base;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
   }
 }

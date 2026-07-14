@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { playfair, cormorant, lato } from "@/lib/fonts";
+import { montserrat, montserratDisplay, robotoCondensed } from "@/lib/fonts";
 import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { SiteChrome } from "@/components/layout/SiteChrome";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,11 +20,11 @@ export default function RootLayout({
       <html
         lang="en"
         suppressHydrationWarning
-        className={`${playfair.variable} ${cormorant.variable} ${lato.variable}`}
+        className={`${montserrat.variable} ${montserratDisplay.variable} ${robotoCondensed.variable}`}
       >
         <body className="font-sans antialiased">
           <ThemeProvider>
-            {children}
+            <SiteChrome>{children}</SiteChrome>
           </ThemeProvider>
         </body>
       </html>
