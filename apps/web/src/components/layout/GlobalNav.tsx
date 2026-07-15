@@ -1,5 +1,6 @@
 "use client";
 
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -167,15 +168,29 @@ export function GlobalNav() {
                 />
               </label>
             ) : null}
-            <Link
-              href="/sign-in"
-              className={cn(
-                "ml-1 inline-flex h-8 items-center px-3 font-sans text-[12px] font-bold uppercase tracking-wide",
-                "border border-white/30 text-white transition-colors hover:bg-white hover:text-chrome",
-              )}
-            >
-              Sign In
-            </Link>
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className={cn(
+                  "ml-1 inline-flex h-8 items-center px-3 font-sans text-[12px] font-bold uppercase tracking-wide",
+                  "border border-white/30 text-white transition-colors hover:bg-white hover:text-chrome",
+                )}
+              >
+                Sign In
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <div className="ml-2 flex items-center">
+                <UserButton
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: "h-8 w-8",
+                    },
+                  }}
+                />
+              </div>
+            </SignedIn>
           </div>
         </div>
         <div className="border-t border-white/10 bg-[#1f2021]">
