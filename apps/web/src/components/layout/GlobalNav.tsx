@@ -13,7 +13,17 @@ import {
 import { primaryNav, utilityNav, type NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
-function NavDropdown({ item }: { item: NavItem }) {
+function NavDropdown({
+  item,
+  open,
+  onOpen,
+  onClose,
+}: {
+  item: NavItem;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
   if (!item.children?.length) {
     return (
       <Link
@@ -26,19 +36,42 @@ function NavDropdown({ item }: { item: NavItem }) {
   }
 
   return (
-    <div className="group relative">
+    <div
+      className="relative"
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+      onFocus={onOpen}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          onClose();
+        }
+      }}
+    >
       <Link
         href={item.href}
+        onClick={onClose}
+        aria-expanded={open}
+        aria-haspopup="menu"
         className="inline-flex h-nav items-center gap-1 px-3 font-sans text-[13px] font-semibold text-chrome-foreground/90 transition-colors hover:bg-white/10 hover:text-white"
       >
         {item.label}
         <ChevronDownIcon className="h-3.5 w-3.5 opacity-70" />
       </Link>
-      <div className="invisible absolute left-0 top-full z-50 min-w-[180px] border border-hairline bg-white py-1 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+      <div
+        role="menu"
+        className={cn(
+          "absolute left-0 top-full z-50 min-w-[180px] border border-hairline bg-white py-1 shadow-lg transition",
+          open
+            ? "visible opacity-100"
+            : "invisible pointer-events-none opacity-0",
+        )}
+      >
         {item.children.map((child) => (
           <Link
             key={child.id}
             href={child.href}
+            role="menuitem"
+            onClick={onClose}
             className="block px-4 py-2 font-sans text-[13px] text-foreground hover:bg-surface-muted"
           >
             {child.label}
@@ -123,6 +156,21 @@ export function GlobalNav() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOpenDropdownId(null);
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!openDropdownId) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenDropdownId(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [openDropdownId]);
 
   return (
     <>
@@ -144,7 +192,13 @@ export function GlobalNav() {
           </Link>
           <nav className="hidden flex-1 items-center lg:flex">
             {primaryNav.map((item) => (
-              <NavDropdown key={item.id} item={item} />
+              <NavDropdown
+                key={item.id}
+                item={item}
+                open={openDropdownId === item.id}
+                onOpen={() => setOpenDropdownId(item.id)}
+                onClose={() => setOpenDropdownId(null)}
+              />
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1">
