@@ -22,6 +22,10 @@ import {
   TermsBox,
 } from "@/components/auth/fields";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import {
+  setRememberPreference,
+  stashRememberBeforeRedirect,
+} from "@/lib/auth-session";
 
 function clerkMessage(err: unknown) {
   if (
@@ -153,6 +157,7 @@ export function SignUpForm() {
         code: code.trim(),
       });
       if (result.status === "complete" && result.createdSessionId) {
+        setRememberPreference(true);
         await setActive({ session: result.createdSessionId });
         router.push("/dashboard");
         return;
@@ -172,6 +177,7 @@ export function SignUpForm() {
     setPending(true);
     setFormError("");
     try {
+      stashRememberBeforeRedirect(true);
       await signUp.authenticateWithRedirect({
         strategy,
         redirectUrl: "/sso-callback",

@@ -12,6 +12,10 @@ import {
   AuthPrimaryButton,
 } from "@/components/auth/fields";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import {
+  setRememberPreference,
+  stashRememberBeforeRedirect,
+} from "@/lib/auth-session";
 
 function clerkMessage(err: unknown) {
   if (
@@ -62,6 +66,7 @@ export function SignInForm() {
         password,
       });
       if (result.status === "complete" && result.createdSessionId) {
+        setRememberPreference(remember);
         await setActive({ session: result.createdSessionId });
         router.push("/dashboard");
         return;
@@ -81,6 +86,7 @@ export function SignInForm() {
     setPending(true);
     setFormError("");
     try {
+      stashRememberBeforeRedirect(remember);
       await signIn.authenticateWithRedirect({
         strategy,
         redirectUrl: "/sso-callback",
@@ -131,6 +137,7 @@ export function SignInForm() {
         password: newPassword,
       });
       if (result.status === "complete" && result.createdSessionId) {
+        setRememberPreference(remember);
         await setActive({ session: result.createdSessionId });
         router.push("/dashboard");
         return;
