@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 function NavDropdown({
   item,
   open,
+  active,
   onOpen,
   onClose,
 }: {
   item: NavItem;
   open: boolean;
+  active: boolean;
   onOpen: () => void;
   onClose: () => void;
 }) {
@@ -28,7 +30,10 @@ function NavDropdown({
     return (
       <Link
         href={item.href}
-        className="inline-flex h-nav items-center px-3 font-sans text-[13px] font-semibold text-chrome-foreground/90 transition-colors hover:bg-white/10 hover:text-white"
+        className={cn(
+          "inline-flex h-nav items-center px-3 font-sans text-[13px] font-semibold transition-colors hover:bg-white/10 hover:text-white",
+          active ? "bg-white/10 text-white" : "text-chrome-foreground/90",
+        )}
       >
         {item.label}
       </Link>
@@ -52,7 +57,10 @@ function NavDropdown({
         onClick={onClose}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="inline-flex h-nav items-center gap-1 px-3 font-sans text-[13px] font-semibold text-chrome-foreground/90 transition-colors hover:bg-white/10 hover:text-white"
+        className={cn(
+          "inline-flex h-nav items-center gap-1 px-3 font-sans text-[13px] font-semibold transition-colors hover:bg-white/10 hover:text-white",
+          active || open ? "bg-white/10 text-white" : "text-chrome-foreground/90",
+        )}
       >
         {item.label}
         <ChevronDownIcon className="h-3.5 w-3.5 opacity-70" />
@@ -190,16 +198,21 @@ export function GlobalNav() {
           >
             Tennisly
           </Link>
-          <nav className="hidden flex-1 items-center lg:flex">
-            {primaryNav.map((item) => (
-              <NavDropdown
-                key={item.id}
-                item={item}
-                open={openDropdownId === item.id}
-                onOpen={() => setOpenDropdownId(item.id)}
-                onClose={() => setOpenDropdownId(null)}
-              />
-            ))}
+          <nav aria-label="Primary" className="hidden flex-1 items-center lg:flex">
+            {primaryNav.map((item) => {
+              const active =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <NavDropdown
+                  key={item.id}
+                  item={item}
+                  open={openDropdownId === item.id}
+                  active={active}
+                  onOpen={() => setOpenDropdownId(item.id)}
+                  onClose={() => setOpenDropdownId(null)}
+                />
+              );
+            })}
           </nav>
           <div className="ml-auto flex items-center gap-1">
             <button
@@ -248,7 +261,10 @@ export function GlobalNav() {
           </div>
         </div>
         <div className="border-t border-white/10 bg-[#1f2021]">
-          <div className="mx-auto flex h-9 max-w-[1400px] items-center gap-1 overflow-x-auto px-2 sm:px-4">
+          <nav
+            aria-label="Sections"
+            className="mx-auto flex h-9 max-w-[1400px] items-center gap-1 overflow-x-auto px-2 sm:px-4"
+          >
             {primaryNav.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -267,7 +283,7 @@ export function GlobalNav() {
                 </Link>
               );
             })}
-          </div>
+          </nav>
         </div>
       </header>
       <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />

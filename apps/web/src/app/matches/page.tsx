@@ -13,7 +13,7 @@ export default async function MatchesIndexPage() {
   return (
     <>
       <SectionSubnav items={subnav} activeId="live" />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <p className="mb-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
           Matches
         </p>

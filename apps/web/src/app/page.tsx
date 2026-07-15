@@ -8,7 +8,7 @@ export default async function HomePage() {
   const content = await getHomeContent();
 
   return (
-    <main>
+    <main id="main-content">
       <HomeHero {...content.hero} />
       <EditorialCarousel title="Editor’s picks" stories={content.editorsPicks} />
       <FeaturedBand {...content.featured} />

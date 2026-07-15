@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="mb-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
@@ -102,6 +102,6 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
           </div>
         </aside>
       </div>
-    </div>
+    </main>
   );
 }

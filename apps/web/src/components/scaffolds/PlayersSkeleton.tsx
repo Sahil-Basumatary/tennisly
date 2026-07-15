@@ -3,7 +3,7 @@ import type { PlayersBoard } from "@/types/scaffolds";
 
 export function PlayersSkeleton({ board }: { board: PlayersBoard }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <p className="mb-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
         Players
       </p>
@@ -38,6 +38,6 @@ export function PlayersSkeleton({ board }: { board: PlayersBoard }) {
           </Link>
         ))}
       </div>
-    </div>
+    </main>
   );
 }

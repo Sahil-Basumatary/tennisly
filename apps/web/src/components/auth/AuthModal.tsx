@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CloseIcon } from "@/components/ui/brandIcons";
 import { SignInForm } from "@/components/auth/SignInForm";
@@ -11,13 +12,20 @@ type AuthModalProps = {
 };
 
 export function AuthModal({ mode }: AuthModalProps) {
+  const router = useRouter();
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") router.push("/");
+    };
+    document.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [router]);
 
   return (
     <div

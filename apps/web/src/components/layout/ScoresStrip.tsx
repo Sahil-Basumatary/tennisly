@@ -87,15 +87,19 @@ export function ScoresStrip({ items }: ScoresStripProps) {
   };
 
   return (
-    <div className="border-b border-hairline bg-ticker text-ticker-foreground">
+    <div
+      role="region"
+      aria-label="Scores"
+      className="border-b border-hairline bg-ticker text-ticker-foreground"
+    >
       <div className="relative mx-auto flex h-ticker max-w-[1400px] items-stretch">
-        <div className="hidden w-[120px] shrink-0 flex-col justify-center border-r border-hairline bg-[#edeef0] px-3 sm:flex">
-          <span className="font-data text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        <div className="flex w-[88px] shrink-0 flex-col justify-center border-r border-hairline bg-[#edeef0] px-2 sm:w-[120px] sm:px-3">
+          <span className="font-data text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
             Tennis
           </span>
           <Link
             href="/scores"
-            className="font-sans text-[12px] font-semibold text-foreground hover:underline"
+            className="font-sans text-[11px] font-semibold text-foreground hover:underline sm:text-[12px]"
           >
             All Scores
           </Link>
