@@ -1,16 +1,21 @@
-export default function ScoresPage() {
+import { SectionSubnav } from "@/components/layout/SectionSubnav";
+import { ScoreboardSkeleton } from "@/components/scaffolds/ScoreboardSkeleton";
+import { getScoreboardDay } from "@/services/scaffolds";
+
+const subnav = [
+  { id: "all", label: "All Scores", href: "/scores" },
+  { id: "live", label: "Live", href: "/scores?status=live" },
+  { id: "upcoming", label: "Upcoming", href: "/scores?status=upcoming" },
+  { id: "final", label: "Results", href: "/scores?status=final" },
+];
+
+export default async function ScoresPage() {
+  const day = await getScoreboardDay();
+
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <p className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-        Scores
-      </p>
-      <h1 className="mb-3 font-display text-2xl font-semibold text-foreground">
-        Scoreboard
-      </h1>
-      <p className="max-w-2xl font-sans text-sm text-muted-foreground">
-        Skeleton route for the dense scoreboard surface. Full board lands with
-        section scaffolds.
-      </p>
-    </main>
+    <>
+      <SectionSubnav items={subnav} activeId="all" />
+      <ScoreboardSkeleton day={day} />
+    </>
   );
 }
