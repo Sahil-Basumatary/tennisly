@@ -1,11 +1,14 @@
 node_modules/
+node_modules.nosync/
 .pnpm-store/
 jspm_packages/
 dist/
 build/
 out/
 .next/
+.next.nosync/
 .turbo/
+.turbo.nosync/
 *.tsbuildinfo
 target/
 *.class
@@ -109,3 +112,9 @@ HELP.md
 sonar-project.properties
 storybook-static/
 generated/
+
+# Licensed 3D assets - never commit (redistribution prohibited by vendor licenses)
+apps/web/vendor-assets/**
+!apps/web/vendor-assets/README.md
+!apps/web/vendor-assets/convert_wimbledon.py
+apps/web/public/models/

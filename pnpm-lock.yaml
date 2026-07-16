@@ -35,6 +35,9 @@ importers:
       '@babylonjs/core':
         specifier: ^9.16.2
         version: 9.16.2
+      '@babylonjs/loaders':
+        specifier: ^9.16.2
+        version: 9.16.2(@babylonjs/core@9.16.2)(babylonjs-gltf2interface@9.16.2)
       '@clerk/nextjs':
         specifier: ^6.12.0
         version: 6.39.6(next@16.1.4(@babel/core@7.28.6)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -691,6 +694,12 @@ packages:
 
   '@babylonjs/core@9.16.2':
     resolution: {integrity: sha512-C4cIyQ/lwfH+Rx8HOhw3YmdhSWff4eSJjwsmGNiz4cyuygWFnOWw5ar+Q1g8yZuyy29rqn6+dQ++OqvhePeuXQ==}
+
+  '@babylonjs/loaders@9.16.2':
+    resolution: {integrity: sha512-iNmhiOc8XodJC19SsZ8mGlebPkuVHHKiC4r2quedkobkkb7aDoBp7NSSuuiKhYkhmCXQ9eUxWkWXnRHwpjgDZA==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
+      babylonjs-gltf2interface: ^9.0.0
 
   '@clerk/backend@2.33.6':
     resolution: {integrity: sha512-5foMmTHEQFt4mDv7AN0RDwUHZhGcg/JYe5hnl9SU/LFS8ZHY29Z2HDtIBmzKgjRfOJTMKj1AM81LgK2UFsGm9Q==}
@@ -2100,6 +2109,9 @@ packages:
     resolution: {integrity: sha512-hYm+XLYRMvupxiQzrvXUj7YyvFFVfv5gI0R71AJzudg1g2AI2vyCPPIFEBjk162/wFzti3inBHo7isWFuEVS/A==}
     peerDependencies:
       '@babel/core': ^7.4.0 || ^8.0.0-0 <8.0.0
+
+  babylonjs-gltf2interface@9.16.2:
+    resolution: {integrity: sha512-h1qvmBI4DCzcz8JHjGJfCkC0KGZ80m5f/AMZYK8T9/m7VSlDxxsMTrYVPPSkuRqucmS9t0aeznPep/Luuxm/IA==}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -5356,6 +5368,11 @@ snapshots:
 
   '@babylonjs/core@9.16.2': {}
 
+  '@babylonjs/loaders@9.16.2(@babylonjs/core@9.16.2)(babylonjs-gltf2interface@9.16.2)':
+    dependencies:
+      '@babylonjs/core': 9.16.2
+      babylonjs-gltf2interface: 9.16.2
+
   '@clerk/backend@2.33.6(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@clerk/shared': 3.47.8(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -6877,6 +6894,8 @@ snapshots:
       '@babel/helper-define-polyfill-provider': 0.6.6(@babel/core@7.28.6)
     transitivePeerDependencies:
       - supports-color
+
+  babylonjs-gltf2interface@9.16.2: {}
 
   balanced-match@1.0.2: {}
 
