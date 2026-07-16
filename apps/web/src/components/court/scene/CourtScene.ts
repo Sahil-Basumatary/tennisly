@@ -1,20 +1,26 @@
 import type { Surface } from "@/types/replay";
-import { HALF_LENGTH_METRES } from "@/lib/court-geometry";
 import {
   ArcRotateCamera,
   Engine,
   type Mesh,
   Scene,
-  Vector3,
 } from "@babylonjs/core";
 import { buildCourt } from "./buildCourt";
+import { buildDigiboards, type DigiboardBuild } from "./buildDigiboards";
 import { buildEnvironment } from "./buildEnvironment";
 import { buildLighting, type CourtLighting } from "./buildLighting";
+import { CameraDirector } from "./CameraDirector";
+import {
+  CAMERA_PRESETS,
+  type CameraPresetId,
+  DEFAULT_CAMERA_PRESET,
+} from "./cameraPresets";
 import { hasStadiumModel, loadStadium } from "./loadStadium";
 
 export type CourtSceneOptions = {
   canvas: HTMLCanvasElement;
   surface?: Surface;
+  cameraPreset?: CameraPresetId;
   onReady?: () => void;
 };
 
@@ -24,10 +30,13 @@ export class CourtScene {
   readonly camera: ArcRotateCamera;
   readonly lighting: CourtLighting;
   readonly courtRoot: Mesh;
+  readonly cameraDirector: CameraDirector;
   private disposed = false;
+  private digiboards: DigiboardBuild | null = null;
 
   constructor(options: CourtSceneOptions) {
     const surface = options.surface ?? "GRASS";
+    const initialPreset = options.cameraPreset ?? DEFAULT_CAMERA_PRESET;
     this.engine = new Engine(options.canvas, true, {
       preserveDrawingBuffer: true,
       adaptToDeviceRatio: true,
@@ -35,13 +44,13 @@ export class CourtScene {
     });
     this.scene = new Scene(this.engine);
 
-    // TV broadcast frame: court fills most of the viewport, stands as a rim
+    const pose = CAMERA_PRESETS[initialPreset];
     this.camera = new ArcRotateCamera(
       "broadcastCam",
-      Math.PI / 2,
-      1.1,
-      HALF_LENGTH_METRES * 1.7,
-      new Vector3(0, 0.2, 0),
+      pose.alpha,
+      pose.beta,
+      pose.radius,
+      pose.target.clone(),
       this.scene,
     );
     this.camera.lowerRadiusLimit = 12;
@@ -52,6 +61,7 @@ export class CourtScene {
     this.camera.panningSensibility = 0;
     this.camera.minZ = 0.1;
     this.camera.attachControl(options.canvas, true);
+    this.cameraDirector = new CameraDirector(this.camera, this.scene);
 
     const court = buildCourt(this.scene, surface);
     this.courtRoot = court.root;
@@ -64,7 +74,6 @@ export class CourtScene {
           if (this.disposed || !stadium) return;
           if (stadium.alignedTo) {
             if (surface === "CLAY") {
-              // Indoor bowl reused as clay venue — hide the model's blue court
               stadium.root
                 .getChildMeshes(false)
                 .find((m) => m.name === stadium.alignedTo)
@@ -77,6 +86,9 @@ export class CourtScene {
                   ?.setEnabled(false);
               }
             }
+          }
+          if (!this.disposed && surface === "GRASS") {
+            this.digiboards = buildDigiboards(this.scene);
           }
           if (process.env.NODE_ENV === "development") {
             console.info(
@@ -91,11 +103,19 @@ export class CourtScene {
           if (process.env.NODE_ENV === "development") {
             console.warn("[court] stadium model failed to load, procedural fallback", err);
           }
-          if (!this.disposed) buildEnvironment(this.scene);
+          if (!this.disposed) {
+            buildEnvironment(this.scene);
+            if (surface === "GRASS") {
+              this.digiboards = buildDigiboards(this.scene);
+            }
+          }
           options.onReady?.();
         });
     } else {
       buildEnvironment(this.scene);
+      if (surface === "GRASS") {
+        this.digiboards = buildDigiboards(this.scene);
+      }
       options.onReady?.();
     }
 
@@ -108,6 +128,10 @@ export class CourtScene {
     }
   }
 
+  setCameraPreset(preset: CameraPresetId, animate = true): void {
+    this.cameraDirector.goTo(preset, animate ? 0.9 : 0);
+  }
+
   resize(): void {
     this.engine.resize();
   }
@@ -115,6 +139,8 @@ export class CourtScene {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.digiboards?.dispose();
+    this.digiboards = null;
     this.engine.stopRenderLoop();
     this.scene.dispose();
     this.engine.dispose();

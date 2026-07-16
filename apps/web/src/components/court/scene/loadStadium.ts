@@ -150,13 +150,11 @@ function pickByRatio(candidates: AbstractMesh[]): AbstractMesh | null {
 }
 
 /**
- * Hides every model-owned net (and leftover cord/tape strips) after the court
- * has been centred at the origin. Indoor assets ship multiple net groups; some
- * remnants are only a few centimetres tall and fail a full-net height check.
+ * Hides only the model's tennis net (and thin cord remnants on the same line).
+ * Kept deliberately narrow so court-side props, digiboards, and scoreboards stay.
  */
 function disableModelNets(meshes: AbstractMesh[]): void {
   const halfWidth = DOUBLES_HALF_WIDTH_METRES;
-  const halfLength = FULL_LENGTH_METRES / 2;
   for (const mesh of meshes) {
     if (mesh.name.toLowerCase().includes("net")) {
       mesh.setEnabled(false);
@@ -164,14 +162,16 @@ function disableModelNets(meshes: AbstractMesh[]): void {
     }
     if (mesh.getTotalVertices() === 0) continue;
     const fp = footprintOf(mesh);
-    const spansCourt =
-      fp.sizeX >= halfWidth * 1.4 && fp.sizeX <= halfWidth * 3.6;
-    const thinAlongDepth = fp.sizeZ < 1.5;
-    // Full net (~0.9m) or a leftover cord/tape (~2cm+)
-    const netLikeHeight = fp.sizeY > 0.02 && fp.sizeY < 2.5;
-    const nearMidcourt = Math.abs(fp.centre.z) < halfLength * 0.45;
-    const nearPlayingSurface = fp.centre.y > -0.2 && fp.centre.y < 2.5;
-    if (spansCourt && thinAlongDepth && netLikeHeight && nearMidcourt && nearPlayingSurface) {
+    const spansNetWidth =
+      fp.sizeX >= halfWidth * 1.5 && fp.sizeX <= halfWidth * 2.6;
+    const thinAlongDepth = fp.sizeZ < 1.0;
+    // Full net mesh (~0.9m) or leftover tape/cord only
+    const netHeight =
+      (fp.sizeY > 0.55 && fp.sizeY < 1.2) || (fp.sizeY > 0.02 && fp.sizeY < 0.25);
+    // Centre net + the indoor duplicate that sits a few metres behind it
+    const onNetLine = Math.abs(fp.centre.z) < 3.5;
+    const nearPlayingSurface = fp.centre.y > -0.1 && fp.centre.y < 1.5;
+    if (spansNetWidth && thinAlongDepth && netHeight && onNetLine && nearPlayingSurface) {
       mesh.setEnabled(false);
     }
   }
