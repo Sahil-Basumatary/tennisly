@@ -1,4 +1,4 @@
-export type Surface = "HARD" | "CLAY" | "GRASS" | "CARPET";
+export type Surface = "HARD" | "CLAY" | "GRASS";
 
 export type ShotType =
   | "FIRST_SERVE"

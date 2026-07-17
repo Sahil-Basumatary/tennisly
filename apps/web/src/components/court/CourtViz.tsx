@@ -3,19 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import type { Surface } from "@/types/replay";
 import { cn } from "@/lib/utils";
+import type { CameraPresetId } from "./scene/cameraPresets";
+import type { CourtScene } from "./scene/CourtScene";
 
 type CourtVizProps = {
   surface?: Surface;
+  cameraPreset?: CameraPresetId;
   className?: string;
   label?: string;
 };
 
 export function CourtViz({
   surface = "GRASS",
+  cameraPreset = "tv",
   className,
   label = "3D court visualization",
 }: CourtVizProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef<CourtScene | null>(null);
+  const skipPresetAnim = useRef(true);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -23,15 +29,15 @@ export function CourtViz({
     const canvas = canvasRef.current;
     if (!canvas) return;
     let disposed = false;
-    let scene: { resize: () => void; dispose: () => void } | null = null;
     let observer: ResizeObserver | null = null;
+    skipPresetAnim.current = true;
 
     void (async () => {
       try {
         const { CourtScene } = await import("./scene/CourtScene");
         if (disposed) return;
-        const instance = new CourtScene({ canvas, surface });
-        scene = instance;
+        const instance = new CourtScene({ canvas, surface, cameraPreset });
+        sceneRef.current = instance;
         setReady(true);
         observer = new ResizeObserver(() => instance.resize());
         observer.observe(canvas.parentElement ?? canvas);
@@ -45,9 +51,20 @@ export function CourtViz({
     return () => {
       disposed = true;
       observer?.disconnect();
-      scene?.dispose();
+      sceneRef.current?.dispose();
+      sceneRef.current = null;
+      setReady(false);
     };
   }, [surface]);
+
+  useEffect(() => {
+    if (!ready || !sceneRef.current) return;
+    if (skipPresetAnim.current) {
+      skipPresetAnim.current = false;
+      return;
+    }
+    sceneRef.current.setCameraPreset(cameraPreset, true);
+  }, [cameraPreset, ready]);
 
   return (
     <div
