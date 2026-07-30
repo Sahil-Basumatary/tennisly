@@ -12,8 +12,10 @@ type CourtVizProps = {
   cameraPreset?: CameraPresetId;
   homeGender?: PlayerGender;
   awayGender?: PlayerGender;
+  animatePresets?: boolean;
   className?: string;
   label?: string;
+  onError?: (message: string) => void;
 };
 
 export function CourtViz({
@@ -21,12 +23,16 @@ export function CourtViz({
   cameraPreset = "tv",
   homeGender = "male",
   awayGender = "male",
+  animatePresets = true,
   className,
   label = "3D court visualization",
+  onError,
 }: CourtVizProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<CourtScene | null>(null);
   const skipPresetAnim = useRef(true);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -54,7 +60,9 @@ export function CourtViz({
         observer.observe(canvas.parentElement ?? canvas);
       } catch (err) {
         if (!disposed) {
-          setError(err instanceof Error ? err.message : "WebGL unavailable");
+          const message = err instanceof Error ? err.message : "WebGL unavailable";
+          setError(message);
+          onErrorRef.current?.(message);
         }
       }
     })();
@@ -74,8 +82,8 @@ export function CourtViz({
       skipPresetAnim.current = false;
       return;
     }
-    sceneRef.current.setCameraPreset(cameraPreset, true);
-  }, [cameraPreset, ready]);
+    sceneRef.current.setCameraPreset(cameraPreset, animatePresets);
+  }, [cameraPreset, ready, animatePresets]);
 
   return (
     <div
