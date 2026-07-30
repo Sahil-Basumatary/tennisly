@@ -2,6 +2,7 @@ import type { ReplayFrame, Surface } from "@/types/replay";
 import { interpolateAtTime } from "@/lib/replay-space";
 import { getMatchReplay } from "@/services/replay";
 import { usePlayback } from "@/stores/playback";
+import { useReplaySession } from "@/stores/replaySession";
 import {
   ArcRotateCamera,
   Engine,
@@ -21,6 +22,7 @@ import {
 import { hasStadiumModel, loadStadium } from "./loadStadium";
 import { ReplayActors } from "./ReplayActors";
 import type { PlayerGender } from "./loadPlayer";
+import { ShotOverlays } from "./ShotOverlays";
 
 export type CourtSceneOptions = {
   canvas: HTMLCanvasElement;
@@ -41,7 +43,10 @@ export class CourtScene {
   private disposed = false;
   private digiboards: DigiboardBuild | null = null;
   private actors: ReplayActors | null = null;
+  private overlays: ShotOverlays | null = null;
   private frames: ReplayFrame[] = [];
+  private lastShotIndex = -1;
+  private lastOverlayKey = "";
 
   constructor(options: CourtSceneOptions) {
     const surface = options.surface ?? "GRASS";
@@ -84,8 +89,15 @@ export class CourtScene {
       if (this.disposed) return;
       this.frames = replay.frames;
       usePlayback.getState().setDuration(replay.durationSeconds);
+      useReplaySession.getState().setShots(replay.shots);
+      this.overlays?.dispose();
+      this.overlays = new ShotOverlays(this.scene, replay.shots);
       const first = interpolateAtTime(this.frames, 0);
-      if (first) this.actors?.apply(first);
+      if (first) {
+        this.actors?.apply(first);
+        this.overlays.setActiveShot(first.shotIndex);
+        this.lastShotIndex = first.shotIndex;
+      }
     });
 
     if (hasStadiumModel(surface)) {
@@ -144,9 +156,22 @@ export class CourtScene {
       if (this.disposed) return;
       const dt = this.engine.getDeltaTime() / 1000;
       usePlayback.getState().tick(dt);
+      const session = useReplaySession.getState();
+      const overlayKey = `${session.overlays.arcs}|${session.overlays.landings}|${session.overlays.serveBox}`;
+      if (overlayKey !== this.lastOverlayKey) {
+        this.lastOverlayKey = overlayKey;
+        this.overlays?.setVisibility(session.overlays);
+      }
       if (this.actors && this.frames.length > 0) {
-        const pose = interpolateAtTime(this.frames, usePlayback.getState().timeSeconds);
-        if (pose) this.actors.apply(pose);
+        const framePose = interpolateAtTime(this.frames, usePlayback.getState().timeSeconds);
+        if (framePose) {
+          this.actors.apply(framePose);
+          if (framePose.shotIndex !== this.lastShotIndex) {
+            this.lastShotIndex = framePose.shotIndex;
+            this.overlays?.setActiveShot(framePose.shotIndex);
+            session.setActiveShotIndex(framePose.shotIndex);
+          }
+        }
       }
       this.scene.render();
     });
@@ -167,11 +192,14 @@ export class CourtScene {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.overlays?.dispose();
+    this.overlays = null;
     this.actors?.dispose();
     this.actors = null;
     this.digiboards?.dispose();
     this.digiboards = null;
     usePlayback.getState().pause();
+    useReplaySession.getState().reset();
     this.engine.stopRenderLoop();
     this.scene.dispose();
     this.engine.dispose();
