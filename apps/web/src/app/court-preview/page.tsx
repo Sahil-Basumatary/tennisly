@@ -31,6 +31,8 @@ const OVERLAY_KEYS = [
   { key: "arcs" as const, label: "Arcs" },
   { key: "landings" as const, label: "Landings" },
   { key: "serveBox" as const, label: "Serve box" },
+  { key: "heatmapHome" as const, label: "Home heat" },
+  { key: "heatmapAway" as const, label: "Away heat" },
 ];
 
 type TourLine = "men" | "women" | "mixed";
@@ -69,7 +71,8 @@ export default function CourtPreviewPage() {
           Broadcast court scene
         </h1>
         <p className="mt-1 max-w-2xl font-sans text-sm text-muted-foreground">
-          Shot arcs, landing markers, and serve-box highlight. Toggle overlays independently.
+          Shot arcs, landing markers, serve box, and positioning heatmaps. Toggle overlays
+          independently.
         </p>
       </header>
       <div className="mb-3 flex flex-wrap gap-2">
@@ -199,6 +202,22 @@ export default function CourtPreviewPage() {
             <p className="mt-0.5 font-sans text-xs tabular-nums text-muted-foreground">
               {Math.round(activeShot.launchSpeedKmh)} km/h · {activeShot.hitter.toLowerCase()}
             </p>
+            {(overlays.heatmapHome || overlays.heatmapAway) && (
+              <div className="mt-2 flex flex-col gap-1 border-t border-hairline pt-2">
+                {overlays.heatmapHome ? (
+                  <p className="flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span className="inline-block h-2 w-2 bg-[#ff7314]" aria-hidden />
+                    Home heat
+                  </p>
+                ) : null}
+                {overlays.heatmapAway ? (
+                  <p className="flex items-center gap-1.5 font-sans text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span className="inline-block h-2 w-2 bg-[#268cff]" aria-hidden />
+                    Away heat
+                  </p>
+                ) : null}
+              </div>
+            )}
           </aside>
         ) : null}
       </div>

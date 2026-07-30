@@ -5,6 +5,8 @@ type OverlayFlags = {
   arcs: boolean;
   landings: boolean;
   serveBox: boolean;
+  heatmapHome: boolean;
+  heatmapAway: boolean;
 };
 
 type ReplaySessionState = {
@@ -22,6 +24,8 @@ const DEFAULT_OVERLAYS: OverlayFlags = {
   arcs: true,
   landings: true,
   serveBox: true,
+  heatmapHome: false,
+  heatmapAway: false,
 };
 
 export const useReplaySession = create<ReplaySessionState>((set, get) => ({

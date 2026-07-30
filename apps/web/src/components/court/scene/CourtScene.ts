@@ -22,6 +22,7 @@ import {
 import { hasStadiumModel, loadStadium } from "./loadStadium";
 import { ReplayActors } from "./ReplayActors";
 import type { PlayerGender } from "./loadPlayer";
+import { PositioningHeatmaps } from "./PositioningHeatmaps";
 import { ShotOverlays } from "./ShotOverlays";
 
 export type CourtSceneOptions = {
@@ -44,6 +45,7 @@ export class CourtScene {
   private digiboards: DigiboardBuild | null = null;
   private actors: ReplayActors | null = null;
   private overlays: ShotOverlays | null = null;
+  private heatmaps: PositioningHeatmaps | null = null;
   private frames: ReplayFrame[] = [];
   private lastShotIndex = -1;
   private lastOverlayKey = "";
@@ -92,6 +94,9 @@ export class CourtScene {
       useReplaySession.getState().setShots(replay.shots);
       this.overlays?.dispose();
       this.overlays = new ShotOverlays(this.scene, replay.shots);
+      this.heatmaps?.dispose();
+      this.heatmaps = new PositioningHeatmaps(this.scene, replay.frames);
+      this.heatmaps.setVisibility(useReplaySession.getState().overlays);
       const first = interpolateAtTime(this.frames, 0);
       if (first) {
         this.actors?.apply(first);
@@ -157,10 +162,13 @@ export class CourtScene {
       const dt = this.engine.getDeltaTime() / 1000;
       usePlayback.getState().tick(dt);
       const session = useReplaySession.getState();
-      const overlayKey = `${session.overlays.arcs}|${session.overlays.landings}|${session.overlays.serveBox}`;
+      const overlayKey =
+        `${session.overlays.arcs}|${session.overlays.landings}|${session.overlays.serveBox}|` +
+        `${session.overlays.heatmapHome}|${session.overlays.heatmapAway}`;
       if (overlayKey !== this.lastOverlayKey) {
         this.lastOverlayKey = overlayKey;
         this.overlays?.setVisibility(session.overlays);
+        this.heatmaps?.setVisibility(session.overlays);
       }
       if (this.actors && this.frames.length > 0) {
         const framePose = interpolateAtTime(this.frames, usePlayback.getState().timeSeconds);
@@ -194,6 +202,8 @@ export class CourtScene {
     this.disposed = true;
     this.overlays?.dispose();
     this.overlays = null;
+    this.heatmaps?.dispose();
+    this.heatmaps = null;
     this.actors?.dispose();
     this.actors = null;
     this.digiboards?.dispose();
