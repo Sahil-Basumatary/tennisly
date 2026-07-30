@@ -1,4 +1,7 @@
-import type { Surface } from "@/types/replay";
+import type { ReplayFrame, Surface } from "@/types/replay";
+import { interpolateAtTime } from "@/lib/replay-space";
+import { getMatchReplay } from "@/services/replay";
+import { usePlayback } from "@/stores/playback";
 import {
   ArcRotateCamera,
   Engine,
@@ -16,11 +19,15 @@ import {
   DEFAULT_CAMERA_PRESET,
 } from "./cameraPresets";
 import { hasStadiumModel, loadStadium } from "./loadStadium";
+import { ReplayActors } from "./ReplayActors";
+import type { PlayerGender } from "./loadPlayer";
 
 export type CourtSceneOptions = {
   canvas: HTMLCanvasElement;
   surface?: Surface;
   cameraPreset?: CameraPresetId;
+  homeGender?: PlayerGender;
+  awayGender?: PlayerGender;
   onReady?: () => void;
 };
 
@@ -33,6 +40,8 @@ export class CourtScene {
   readonly cameraDirector: CameraDirector;
   private disposed = false;
   private digiboards: DigiboardBuild | null = null;
+  private actors: ReplayActors | null = null;
+  private frames: ReplayFrame[] = [];
 
   constructor(options: CourtSceneOptions) {
     const surface = options.surface ?? "GRASS";
@@ -66,6 +75,18 @@ export class CourtScene {
     const court = buildCourt(this.scene, surface);
     this.courtRoot = court.root;
     this.lighting = buildLighting(this.scene, court.shadowCasters);
+    this.actors = new ReplayActors(this.scene, {
+      homeGender: options.homeGender,
+      awayGender: options.awayGender,
+    });
+
+    void getMatchReplay().then((replay) => {
+      if (this.disposed) return;
+      this.frames = replay.frames;
+      usePlayback.getState().setDuration(replay.durationSeconds);
+      const first = interpolateAtTime(this.frames, 0);
+      if (first) this.actors?.apply(first);
+    });
 
     if (hasStadiumModel(surface)) {
       this.courtRoot.position.y = 0.02;
@@ -120,7 +141,14 @@ export class CourtScene {
     }
 
     this.engine.runRenderLoop(() => {
-      if (!this.disposed) this.scene.render();
+      if (this.disposed) return;
+      const dt = this.engine.getDeltaTime() / 1000;
+      usePlayback.getState().tick(dt);
+      if (this.actors && this.frames.length > 0) {
+        const pose = interpolateAtTime(this.frames, usePlayback.getState().timeSeconds);
+        if (pose) this.actors.apply(pose);
+      }
+      this.scene.render();
     });
 
     if (process.env.NODE_ENV === "development") {
@@ -139,8 +167,11 @@ export class CourtScene {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.actors?.dispose();
+    this.actors = null;
     this.digiboards?.dispose();
     this.digiboards = null;
+    usePlayback.getState().pause();
     this.engine.stopRenderLoop();
     this.scene.dispose();
     this.engine.dispose();

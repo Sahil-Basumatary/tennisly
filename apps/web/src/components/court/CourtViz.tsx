@@ -5,10 +5,13 @@ import type { Surface } from "@/types/replay";
 import { cn } from "@/lib/utils";
 import type { CameraPresetId } from "./scene/cameraPresets";
 import type { CourtScene } from "./scene/CourtScene";
+import type { PlayerGender } from "./scene/loadPlayer";
 
 type CourtVizProps = {
   surface?: Surface;
   cameraPreset?: CameraPresetId;
+  homeGender?: PlayerGender;
+  awayGender?: PlayerGender;
   className?: string;
   label?: string;
 };
@@ -16,6 +19,8 @@ type CourtVizProps = {
 export function CourtViz({
   surface = "GRASS",
   cameraPreset = "tv",
+  homeGender = "male",
+  awayGender = "male",
   className,
   label = "3D court visualization",
 }: CourtVizProps) {
@@ -36,7 +41,13 @@ export function CourtViz({
       try {
         const { CourtScene } = await import("./scene/CourtScene");
         if (disposed) return;
-        const instance = new CourtScene({ canvas, surface, cameraPreset });
+        const instance = new CourtScene({
+          canvas,
+          surface,
+          cameraPreset,
+          homeGender,
+          awayGender,
+        });
         sceneRef.current = instance;
         setReady(true);
         observer = new ResizeObserver(() => instance.resize());
@@ -55,7 +66,7 @@ export function CourtViz({
       sceneRef.current = null;
       setReady(false);
     };
-  }, [surface]);
+  }, [surface, homeGender, awayGender]);
 
   useEffect(() => {
     if (!ready || !sceneRef.current) return;
