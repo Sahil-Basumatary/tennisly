@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Surface } from "@/types/replay";
 import {
   CAMERA_PRESET_LABELS,
@@ -9,6 +9,9 @@ import {
   DEFAULT_CAMERA_PRESET,
 } from "@/components/court/scene/cameraPresets";
 import { CourtTopDownFallback } from "@/components/court/CourtTopDownFallback";
+import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
+import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
+import { TransportBar } from "@/components/court/controls/TransportBar";
 import { formatShotType } from "@/lib/shot-labels";
 import { isWebGLAvailable, prefersReducedMotion } from "@/lib/webgl";
 import { cn } from "@/lib/utils";
@@ -27,13 +30,17 @@ const CourtViz = dynamic(
   },
 );
 
-const PRESETS = Object.keys(CAMERA_PRESET_LABELS) as CameraPresetId[];
-const OVERLAY_KEYS = [
-  { key: "arcs" as const, label: "Arcs" },
-  { key: "landings" as const, label: "Marks" },
-  { key: "heatmapHome" as const, label: "Home" },
-  { key: "heatmapAway" as const, label: "Away" },
-];
+const CAMERA_OPTIONS = (Object.keys(CAMERA_PRESET_LABELS) as CameraPresetId[]).map((id) => ({
+  id,
+  label: CAMERA_PRESET_LABELS[id],
+}));
+
+const OVERLAY_OPTIONS = [
+  { key: "arcs", label: "Arcs" },
+  { key: "landings", label: "Marks" },
+  { key: "heatmapHome", label: "Home" },
+  { key: "heatmapAway", label: "Away" },
+] as const;
 
 type MatchCourtPanelProps = {
   homeName: string;
@@ -55,14 +62,13 @@ export function MatchCourtPanel({
   const [forceFallback, setForceFallback] = useState(false);
   const [cameraPreset, setCameraPreset] = useState<CameraPresetId>(DEFAULT_CAMERA_PRESET);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const playing = usePlayback((s) => s.playing);
-  const toggle = usePlayback((s) => s.toggle);
   const shots = useReplaySession((s) => s.shots);
   const activeShotIndex = useReplaySession((s) => s.activeShotIndex);
   const overlays = useReplaySession((s) => s.overlays);
   const toggleOverlay = useReplaySession((s) => s.toggleOverlay);
   const setOverlay = useReplaySession((s) => s.setOverlay);
   const activeShot = shots[activeShotIndex] ?? null;
+  const onVizError = useCallback(() => setForceFallback(true), []);
 
   useEffect(() => {
     setWebgl(isWebGLAvailable());
@@ -90,47 +96,21 @@ export function MatchCourtPanel({
   return (
     <div className={cn("flex min-h-[320px] flex-1 flex-col", className)}>
       {use3d ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-hairline bg-white px-3 py-2">
-          <button
-            type="button"
-            onClick={toggle}
-            className="border border-foreground bg-foreground px-2.5 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-background"
-          >
-            {playing ? "Pause" : "Play"}
-          </button>
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Camera presets">
-            {PRESETS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setCameraPreset(id)}
-                className={
-                  cameraPreset === id
-                    ? "border border-foreground bg-foreground px-2 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-background"
-                    : "border border-hairline bg-white px-2 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-foreground hover:border-foreground"
-                }
-              >
-                {CAMERA_PRESET_LABELS[id]}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Court overlays">
-            {OVERLAY_KEYS.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => toggleOverlay(key)}
-                aria-pressed={overlays[key]}
-                className={
-                  overlays[key]
-                    ? "border border-foreground bg-foreground px-2 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-background"
-                    : "border border-hairline bg-white px-2 py-1 font-sans text-[11px] font-semibold uppercase tracking-wide text-foreground hover:border-foreground"
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-hairline bg-white px-3 py-2.5">
+          <SegmentedControl
+            label="Camera"
+            options={CAMERA_OPTIONS}
+            value={cameraPreset}
+            onChange={setCameraPreset}
+            size="sm"
+          />
+          <OverlayChipGroup
+            label="Overlays"
+            options={OVERLAY_OPTIONS}
+            values={overlays}
+            onToggle={toggleOverlay}
+            size="sm"
+          />
         </div>
       ) : null}
       <div className="relative min-h-[280px] flex-1 overflow-hidden">
@@ -139,26 +119,29 @@ export function MatchCourtPanel({
             Loading court…
           </div>
         ) : use3d ? (
-          <CourtViz
-            surface={surface}
-            cameraPreset={cameraPreset}
-            animatePresets={!reducedMotion}
-            className="min-h-[280px] h-full w-full aspect-video lg:aspect-auto lg:min-h-[420px]"
-            label={liveText}
-            onError={() => setForceFallback(true)}
-          />
+          <>
+            <CourtViz
+              surface={surface}
+              cameraPreset={cameraPreset}
+              animatePresets={!reducedMotion}
+              className="min-h-[280px] h-full w-full aspect-video lg:aspect-auto lg:min-h-[420px]"
+              label={liveText}
+              onError={onVizError}
+            />
+            <TransportBar />
+          </>
         ) : (
           <CourtTopDownFallback homeName={homeName} awayName={awayName} className="h-full min-h-[280px]" />
         )}
         {use3d && activeShot ? (
-          <aside className="pointer-events-none absolute right-2 top-2 border border-hairline bg-white/95 px-2.5 py-1.5 shadow-sm">
-            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          <aside className="pointer-events-none absolute right-2 top-2 border-l-2 border-primary bg-black/75 px-2.5 py-1.5 text-white backdrop-blur-sm">
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
               Shot {activeShot.shotIndex + 1}
             </p>
-            <p className="font-display text-xs font-semibold text-foreground">
+            <p className="font-display text-xs font-semibold">
               {formatShotType(activeShot.shotType)}
             </p>
-            <p className="font-sans text-[11px] tabular-nums text-muted-foreground">
+            <p className="font-data text-[11px] tabular-nums text-white/80">
               {Math.round(activeShot.launchSpeedKmh)} km/h
             </p>
           </aside>

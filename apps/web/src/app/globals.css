@@ -116,3 +116,37 @@
     display: none;
   }
 }
+
+.transport-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  height: 3px;
+  border-radius: 0;
+  cursor: pointer;
+}
+.transport-range::-webkit-slider-runnable-track {
+  height: 3px;
+  background: transparent;
+}
+.transport-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 11px;
+  width: 11px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 9999px;
+  background: #fff;
+}
+.transport-range::-moz-range-track {
+  height: 3px;
+  background: transparent;
+}
+.transport-range::-moz-range-thumb {
+  height: 11px;
+  width: 11px;
+  border: 0;
+  border-radius: 9999px;
+  background: #fff;
+}
