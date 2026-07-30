@@ -1,4 +1,7 @@
 import type { MatchCentrePanel } from "@/types/scaffolds";
+import { MatchCourtPanel } from "@/components/court/MatchCourtPanel";
+import { MatchShotStatCard } from "@/components/match/MatchShotStatCard";
+import { MatchStatsRail } from "@/components/match/MatchStatsRail";
 import { cn } from "@/lib/utils";
 
 export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
@@ -22,85 +25,72 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
             match.status === "live" ? "text-[#da1e28]" : "text-muted-foreground",
           )}
         >
-          {match.status}
+          {match.status === "live" ? "LIVE" : match.status}
         </span>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.2fr_0.9fr]">
-        <aside className="border border-hairline bg-white p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)_minmax(0,0.9fr)]">
+        <aside className="order-2 border border-hairline bg-white p-4 lg:order-1">
           <h2 className="mb-3 font-sans text-[13px] font-bold uppercase tracking-wide">
             Line-ups
           </h2>
           <div className="space-y-4">
             <div>
-              <p className="font-sans text-[14px] font-semibold">
-                {match.home.seed ? `${match.home.seed}. ` : null}
-                {match.home.name}
-              </p>
-              <p className="font-data text-[12px] text-muted-foreground">
-                {match.home.country}
-              </p>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-sans text-[14px] font-semibold">
+                  {match.home.seed ? (
+                    <span className="mr-1 font-data text-muted-foreground">{match.home.seed}.</span>
+                  ) : null}
+                  {match.home.name}
+                </p>
+                <span className="font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {match.home.country}
+                </span>
+              </div>
             </div>
             <div className="border-t border-hairline pt-4">
-              <p className="font-sans text-[14px] font-semibold">
-                {match.away.seed ? `${match.away.seed}. ` : null}
-                {match.away.name}
-              </p>
-              <p className="font-data text-[12px] text-muted-foreground">
-                {match.away.country}
-              </p>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-sans text-[14px] font-semibold">
+                  {match.away.seed ? (
+                    <span className="mr-1 font-data text-muted-foreground">{match.away.seed}.</span>
+                  ) : null}
+                  {match.away.name}
+                </p>
+                <span className="font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {match.away.country}
+                </span>
+              </div>
             </div>
           </div>
         </aside>
-        <section className="flex min-h-[320px] flex-col border border-hairline bg-white">
+        <section className="order-1 flex min-h-[320px] flex-col border border-hairline bg-white lg:order-2">
           <div className="border-b border-hairline px-4 py-3">
             <div className="flex items-center justify-between gap-4 font-sans text-[15px] font-semibold">
-              <span>{match.home.name}</span>
-              <span className="font-data tabular-nums tracking-wide">
+              <span className="min-w-0 truncate">{match.home.name}</span>
+              <span className="shrink-0 font-data tabular-nums tracking-wide">
                 {match.score.homeSets.join(" ") || "—"}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-4 font-sans text-[15px] font-semibold">
-              <span>{match.away.name}</span>
-              <span className="font-data tabular-nums tracking-wide">
+              <span className="min-w-0 truncate">{match.away.name}</span>
+              <span className="shrink-0 font-data tabular-nums tracking-wide">
                 {match.score.awaySets.join(" ") || "—"}
               </span>
             </div>
           </div>
-          <div className="relative flex flex-1 items-center justify-center bg-[linear-gradient(180deg,#0b5c2e_0%,#087038_45%,#0b5c2e_100%)] p-6">
-            <div
-              className="h-full w-full max-w-md border-2 border-white/70"
-              aria-hidden
-            >
-              <div className="relative h-full w-full">
-                <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-white/70" />
-                <div className="absolute inset-y-[12%] left-1/2 w-px -translate-x-1/2 bg-white/50" />
-                <div className="absolute left-1/2 top-1/2 h-16 w-24 -translate-x-1/2 -translate-y-1/2 border border-white/60" />
-              </div>
-            </div>
-            <p className="absolute bottom-3 left-1/2 -translate-x-1/2 font-sans text-[11px] font-semibold uppercase tracking-wide text-white/80">
-              Court viz slot
-            </p>
-          </div>
+          <MatchCourtPanel
+            homeName={match.home.name}
+            awayName={match.away.name}
+            surface="GRASS"
+          />
         </section>
-        <aside className="border border-hairline bg-white p-4">
-          <h2 className="mb-3 font-sans text-[13px] font-bold uppercase tracking-wide">
-            Match stats
-          </h2>
-          <div className="space-y-3">
-            {match.stats.map((stat) => (
-              <div key={stat.label}>
-                <p className="mb-1 text-center font-sans text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {stat.label}
-                </p>
-                <div className="grid grid-cols-3 items-center gap-2 font-data text-[13px]">
-                  <span className="text-left font-semibold">{stat.home}</span>
-                  <span className="text-center text-muted-foreground">—</span>
-                  <span className="text-right font-semibold">{stat.away}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+        <MatchStatsRail
+          className="order-3"
+          stats={match.stats}
+          homeName={match.home.name}
+          awayName={match.away.name}
+        >
+          <MatchShotStatCard />
+        </MatchStatsRail>
       </div>
     </main>
   );
