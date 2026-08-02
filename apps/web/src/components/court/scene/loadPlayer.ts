@@ -6,6 +6,7 @@ import {
   Vector3,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
+import { applyKitColours, type PlayerSide } from "./playerKit";
 
 export type PlayerClip =
   | "idle"
@@ -46,6 +47,7 @@ export async function loadPlayer(
   scene: Scene,
   gender: PlayerGender,
   name: string,
+  side: PlayerSide,
 ): Promise<LoadedPlayer> {
   const result = await ImportMeshAsync(MODEL_URLS[gender], scene);
   const root =
@@ -58,6 +60,8 @@ export async function loadPlayer(
   for (const mesh of result.meshes) {
     mesh.isPickable = false;
   }
+
+  await applyKitColours(scene, result.meshes, side, name);
 
   const bounds = measureBounds(result.meshes);
   const targetHeight = TARGET_HEIGHT_METRES[gender];

@@ -1,58 +1,77 @@
 import { BALL_RADIUS_METRES } from "@/lib/court-geometry";
 import { toBabylon, type InterpolatedPose } from "@/lib/replay-space";
-import type { ShotType } from "@/types/replay";
 import {
   Color3,
+  DynamicTexture,
   Mesh,
   MeshBuilder,
+  PBRMaterial,
   type Scene,
+  type ShadowGenerator,
   StandardMaterial,
   Vector3,
 } from "@babylonjs/core";
+import { BallTrail } from "./BallTrail";
+import { loadPlayer, type LoadedPlayer, type PlayerGender } from "./loadPlayer";
 import {
-  loadPlayer,
-  type LoadedPlayer,
-  type PlayerClip,
-  type PlayerGender,
-} from "./loadPlayer";
+  PlayerAnimator,
+  SWING_FOLLOW_SECONDS,
+  SWING_LEAD_SECONDS,
+  type SwingPhase,
+} from "./PlayerAnimator";
+import type { SwingCue } from "./swingCues";
 
-const TRAIL_LENGTH = 18;
-const MOVE_SPEED_JOG = 1.2;
+/** Athletes pivot fast but not instantly; unclamped yaw snapped 180° in a frame. */
+const TURN_RATE_RAD_PER_SEC = 9;
+/** Smoothing constant for the ground-speed estimate feeding the jog blend. */
+const SPEED_SMOOTHING_TAU = 0.12;
+/** Above a flat-out sprint the delta came from a seek, not from running. */
+const MAX_TRACKED_SPEED_MPS = 12;
+/** Clock drift beyond this is a scrub rather than normal frame-to-frame advance. */
+const SEEK_TOLERANCE_SECONDS = 0.05;
 
 export type ReplayActorsOptions = {
   homeGender?: PlayerGender;
   awayGender?: PlayerGender;
+  shadows?: ShadowGenerator;
 };
 
 export class ReplayActors {
   readonly root: Mesh;
   private readonly ball: Mesh;
   private readonly ballShadow: Mesh;
-  private readonly trail: Mesh[];
-  private trailIndex = 0;
+  private readonly trail: BallTrail;
   private home: LoadedPlayer | null = null;
   private away: LoadedPlayer | null = null;
-  private homeClip: PlayerClip | null = null;
-  private awayClip: PlayerClip | null = null;
+  private homeAnimator: PlayerAnimator | null = null;
+  private awayAnimator: PlayerAnimator | null = null;
   private prevHome = new Vector3(0, 0, 0);
   private prevAway = new Vector3(0, 0, 0);
-  private prevShot: ShotType | null = null;
+  private homeSpeed = 0;
+  private awaySpeed = 0;
+  private prevTime = 0;
+  private cues: SwingCue[] = [];
   private ready = false;
   private readonly homeGender: PlayerGender;
   private readonly awayGender: PlayerGender;
+  private readonly shadows: ShadowGenerator | null;
 
   constructor(scene: Scene, options: ReplayActorsOptions = {}) {
     this.homeGender = options.homeGender ?? "male";
     this.awayGender = options.awayGender ?? "male";
+    this.shadows = options.shadows ?? null;
     this.root = new Mesh("replayActors", scene);
 
-    const ballMat = new StandardMaterial("ballMat", scene);
-    ballMat.diffuseColor = new Color3(0.95, 0.92, 0.2);
-    ballMat.emissiveColor = new Color3(0.35, 0.32, 0.05);
-    ballMat.specularColor = new Color3(0.4, 0.4, 0.3);
+    // Felt ball reads as a matte dielectric under ACES; emissive fakes the
+    // stadium-light rim that broadcast cameras always pick up on a live ball.
+    const ballMat = new PBRMaterial("ballMat", scene);
+    ballMat.albedoColor = new Color3(0.85, 0.88, 0.16);
+    ballMat.emissiveColor = new Color3(0.16, 0.17, 0.02);
+    ballMat.metallic = 0;
+    ballMat.roughness = 0.85;
     this.ball = MeshBuilder.CreateSphere(
       "ball",
-      { diameter: BALL_RADIUS_METRES * 2, segments: 16 },
+      { diameter: BALL_RADIUS_METRES * 2, segments: 20 },
       scene,
     );
     this.ball.material = ballMat;
@@ -60,12 +79,14 @@ export class ReplayActors {
     this.ball.isPickable = false;
 
     const shadowMat = new StandardMaterial("ballShadowMat", scene);
-    shadowMat.diffuseColor = new Color3(0, 0, 0);
-    shadowMat.alpha = 0.35;
+    shadowMat.diffuseTexture = createSoftShadowTexture(scene);
+    shadowMat.opacityTexture = shadowMat.diffuseTexture;
     shadowMat.disableLighting = true;
-    this.ballShadow = MeshBuilder.CreateDisc(
+    shadowMat.emissiveColor = Color3.Black();
+    shadowMat.specularColor = Color3.Black();
+    this.ballShadow = MeshBuilder.CreatePlane(
       "ballShadow",
-      { radius: BALL_RADIUS_METRES * 2.2, tessellation: 24 },
+      { size: BALL_RADIUS_METRES * 9 },
       scene,
     );
     this.ballShadow.rotation.x = Math.PI / 2;
@@ -73,38 +94,25 @@ export class ReplayActors {
     this.ballShadow.parent = this.root;
     this.ballShadow.isPickable = false;
 
-    this.trail = [];
-    const trailMat = new StandardMaterial("ballTrailMat", scene);
-    trailMat.diffuseColor = new Color3(1, 0.85, 0.2);
-    trailMat.emissiveColor = new Color3(0.8, 0.55, 0.05);
-    trailMat.alpha = 0.55;
-    trailMat.disableLighting = true;
-    for (let i = 0; i < TRAIL_LENGTH; i++) {
-      const bead = MeshBuilder.CreateSphere(
-        `trail_${i}`,
-        { diameter: BALL_RADIUS_METRES * 1.4, segments: 8 },
-        scene,
-      );
-      bead.material = trailMat;
-      bead.parent = this.root;
-      bead.isPickable = false;
-      bead.setEnabled(false);
-      this.trail.push(bead);
-    }
+    this.trail = new BallTrail(scene, this.root);
 
     void this.loadAthletes(scene);
   }
 
   private async loadAthletes(scene: Scene): Promise<void> {
     try {
-      this.home = await loadPlayer(scene, this.homeGender, "homePlayer");
-      this.away = await loadPlayer(scene, this.awayGender, "awayPlayer");
+      this.home = await loadPlayer(scene, this.homeGender, "homePlayer", "home");
+      this.away = await loadPlayer(scene, this.awayGender, "awayPlayer", "away");
       this.home.root.parent = this.root;
       this.away.root.parent = this.root;
-      this.playClip(this.home, "idle", true);
-      this.playClip(this.away, "idle", true);
-      this.homeClip = "idle";
-      this.awayClip = "idle";
+      for (const player of [this.home, this.away]) {
+        for (const mesh of player.root.getChildMeshes(false)) {
+          this.shadows?.addShadowCaster(mesh);
+          mesh.receiveShadows = true;
+        }
+      }
+      this.homeAnimator = new PlayerAnimator(this.home.clips);
+      this.awayAnimator = new PlayerAnimator(this.away.clips);
       this.ready = true;
     } catch (err) {
       if (process.env.NODE_ENV === "development") {
@@ -113,103 +121,137 @@ export class ReplayActors {
     }
   }
 
-  apply(pose: InterpolatedPose): void {
+  setSwingCues(cues: SwingCue[]): void {
+    this.cues = cues;
+  }
+
+  apply(pose: InterpolatedPose, deltaSeconds = 0, timeScale = 0): void {
     const ball = toBabylon(pose.ball);
     this.ball.position.set(ball.x, ball.y, ball.z);
     this.ballShadow.position.set(ball.x, 0.012, ball.z);
-    const shadowScale = Math.max(0.35, 1 - ball.y * 0.18);
-    this.ballShadow.scaling.setAll(shadowScale);
+    // Contact shadows tighten and darken as the ball nears the surface.
+    const height = Math.max(0, ball.y);
+    this.ballShadow.scaling.setAll(0.55 + Math.min(height, 6) * 0.14);
+    this.ballShadow.visibility = Math.max(0.12, 0.75 - height * 0.09);
+    this.trail.update(this.ball.position);
 
-    const bead = this.trail[this.trailIndex % TRAIL_LENGTH];
-    bead.position.set(ball.x, ball.y, ball.z);
-    bead.setEnabled(true);
-    this.trailIndex += 1;
-
-    if (!this.ready || !this.home || !this.away) return;
+    if (!this.ready || !this.home || !this.away || !this.homeAnimator || !this.awayAnimator) {
+      return;
+    }
 
     const homePos = toBabylon(pose.home);
     const awayPos = toBabylon(pose.away);
     this.home.root.position.set(homePos.x, this.home.footOffsetY, homePos.z);
     this.away.root.position.set(awayPos.x, this.away.footOffsetY, awayPos.z);
 
-    faceToward(this.home.root, ball.x, ball.z);
-    faceToward(this.away.root, ball.x, ball.z);
+    turnToward(this.home.root, ball.x, ball.z, deltaSeconds);
+    turnToward(this.away.root, ball.x, ball.z, deltaSeconds);
 
-    const homeSpeed = horizontalSpeed(this.prevHome, this.home.root.position);
-    const awaySpeed = horizontalSpeed(this.prevAway, this.away.root.position);
-    this.prevHome.copyFrom(this.home.root.position);
-    this.prevAway.copyFrom(this.away.root.position);
+    const home = this.home.root.position;
+    const away = this.away.root.position;
+    this.homeSpeed = this.trackSpeed(this.homeSpeed, this.prevHome, home, deltaSeconds);
+    this.awaySpeed = this.trackSpeed(this.awaySpeed, this.prevAway, away, deltaSeconds);
+    const expected = deltaSeconds * timeScale;
+    const seeked = Math.abs(pose.timeSeconds - this.prevTime - expected) > SEEK_TOLERANCE_SECONDS;
+    this.prevTime = pose.timeSeconds;
 
-    const shotChanged = this.prevShot !== null && this.prevShot !== pose.shotType;
-    this.prevShot = pose.shotType;
-    const swing = shotTypeToClip(pose.shotType);
+    this.homeAnimator.update(deltaSeconds, {
+      swing: this.swingAt(pose.timeSeconds, "home"),
+      groundSpeedMps: this.homeSpeed,
+      timeScale,
+      seeked,
+    });
+    this.awayAnimator.update(deltaSeconds, {
+      swing: this.swingAt(pose.timeSeconds, "away"),
+      groundSpeedMps: this.awaySpeed,
+      timeScale,
+      seeked,
+    });
+  }
 
-    if (shotChanged && swing) {
-      if (pose.shotType.includes("SERVE") || hitterIsHome(pose)) {
-        this.playClip(this.home, swing, false);
-        this.homeClip = swing;
-      } else {
-        this.playClip(this.away, swing, false);
-        this.awayClip = swing;
+  /** Nearest cue for this side whose stroke window covers the current time. */
+  private swingAt(timeSeconds: number, side: "home" | "away"): SwingPhase | null {
+    let best: SwingPhase | null = null;
+    let bestDistance = Infinity;
+    for (const cue of this.cues) {
+      if (cue.side !== side) continue;
+      const offset = timeSeconds - cue.timeSeconds;
+      if (offset < -SWING_LEAD_SECONDS || offset > SWING_FOLLOW_SECONDS) continue;
+      const distance = Math.abs(offset);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = { clip: cue.clip, secondsFromContact: offset };
       }
-    } else {
-      this.ensureLoco(this.home, homeSpeed, "home");
-      this.ensureLoco(this.away, awaySpeed, "away");
     }
+    return best;
   }
 
-  private ensureLoco(player: LoadedPlayer, speed: number, side: "home" | "away"): void {
-    const current = side === "home" ? this.homeClip : this.awayClip;
-    if (current && current !== "idle" && current !== "jog") {
-      const group = player.clips[current];
-      if (group && group.isPlaying) return;
-    }
-    const next: PlayerClip = speed >= MOVE_SPEED_JOG ? "jog" : "idle";
-    if (current === next) return;
-    this.playClip(player, next, true);
-    if (side === "home") this.homeClip = next;
-    else this.awayClip = next;
-  }
-
-  private playClip(player: LoadedPlayer, clip: PlayerClip, loop: boolean): void {
-    for (const group of Object.values(player.clips)) {
-      group?.stop();
-    }
-    const group = player.clips[clip] ?? player.clips.idle;
-    if (!group) return;
-    group.loopAnimation = loop;
-    group.start(loop, 1.0, group.from, group.to, false);
+  private trackSpeed(
+    smoothed: number,
+    previous: Vector3,
+    current: Vector3,
+    deltaSeconds: number,
+  ): number {
+    const travelled = Math.hypot(current.x - previous.x, current.z - previous.z);
+    previous.copyFrom(current);
+    if (deltaSeconds <= 0) return smoothed;
+    const instant = travelled / deltaSeconds;
+    // Scrubbing teleports the athlete, which would otherwise read as a sprint
+    // and kick the jog blend in on a stationary player.
+    if (instant > MAX_TRACKED_SPEED_MPS) return 0;
+    const alpha = 1 - Math.exp(-deltaSeconds / SPEED_SMOOTHING_TAU);
+    return smoothed + (instant - smoothed) * alpha;
   }
 
   dispose(): void {
+    this.homeAnimator?.dispose();
+    this.awayAnimator?.dispose();
+    this.trail.dispose();
     this.root.dispose();
   }
 }
 
-function faceToward(root: { rotation: Vector3; position: Vector3 }, x: number, z: number): void {
+/**
+ * Radial falloff disc — a hard-edged disc reads as a sticker, while broadcast
+ * ball shadows are soft penumbras from stadium floodlight arrays.
+ */
+function createSoftShadowTexture(scene: Scene): DynamicTexture {
+  const size = 128;
+  const texture = new DynamicTexture("ballShadowTex", { width: size, height: size }, scene, true);
+  const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
+  const half = size / 2;
+  const gradient = ctx.createRadialGradient(half, half, 0, half, half, half);
+  gradient.addColorStop(0, "rgba(0,0,0,0.9)");
+  gradient.addColorStop(0.45, "rgba(0,0,0,0.45)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  texture.hasAlpha = true;
+  texture.update();
+  return texture;
+}
+
+function turnToward(
+  root: { rotation: Vector3; position: Vector3 },
+  x: number,
+  z: number,
+  deltaSeconds: number,
+): void {
   const dx = x - root.position.x;
   const dz = z - root.position.z;
   if (dx * dx + dz * dz < 1e-6) return;
-  root.rotation.y = Math.atan2(dx, dz);
-}
-
-function horizontalSpeed(prev: Vector3, next: Vector3): number {
-  const dx = next.x - prev.x;
-  const dz = next.z - prev.z;
-  return Math.hypot(dx, dz) * 60;
-}
-
-function shotTypeToClip(shot: ShotType): PlayerClip | null {
-  if (shot.includes("SERVE")) return "serve";
-  if (shot.includes("SMASH") || shot.includes("OVERHEAD")) return "smash";
-  if (shot.includes("BACKHAND")) return "backhand";
-  if (shot.includes("FOREHAND") || shot.includes("GROUND") || shot.includes("VOLLEY")) {
-    return "forehand";
+  const target = Math.atan2(dx, dz);
+  if (deltaSeconds <= 0) {
+    root.rotation.y = target;
+    return;
   }
-  return "forehand";
+  const maxStep = TURN_RATE_RAD_PER_SEC * deltaSeconds;
+  root.rotation.y += clampAngle(target - root.rotation.y, maxStep);
 }
 
-function hitterIsHome(pose: InterpolatedPose): boolean {
-  // Rough: home stands negative depth in our mock; refine when shot.hitter is on the frame
-  return pose.home.y <= 0;
+/** Wraps to the shortest arc so crossing ±π turns the near way, not a full spin. */
+function clampAngle(delta: number, maxStep: number): number {
+  const wrapped = Math.atan2(Math.sin(delta), Math.cos(delta));
+  return Math.max(-maxStep, Math.min(maxStep, wrapped));
 }
