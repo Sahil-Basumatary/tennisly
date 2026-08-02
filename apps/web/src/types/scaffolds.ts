@@ -70,6 +70,14 @@ export type MatchCentrePanel = {
   court: string;
   home: { name: string; country: string; seed?: number };
   away: { name: string; country: string; seed?: number };
-  score: { homeSets: number[]; awaySets: number[] };
+  score: {
+    homeSets: number[];
+    awaySets: number[];
+    homeGames: number;
+    awayGames: number;
+    homePoints: string;
+    awayPoints: string;
+    server: "HOME" | "AWAY";
+  };
   stats: { label: string; home: string; away: string }[];
 };

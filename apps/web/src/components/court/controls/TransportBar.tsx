@@ -1,6 +1,7 @@
 "use client";
 
 import { PLAYBACK_SPEEDS, usePlayback } from "@/stores/playback";
+import { useReplaySession } from "@/stores/replaySession";
 import { cn } from "@/lib/utils";
 
 type TransportBarProps = {
@@ -8,8 +9,8 @@ type TransportBarProps = {
 };
 
 /**
- * Video-player transport docked over the canvas: gradient scrim, scrubber
- * with progress fill, play/pause icon, speed steps, clock readout.
+ * Video-player transport docked over the canvas: scrubber, play/pause, speed,
+ * and shot-step seeking so operators can jump contact-to-contact like Hawk-Eye.
  */
 export function TransportBar({ className }: TransportBarProps) {
   const playing = usePlayback((s) => s.playing);
@@ -19,7 +20,23 @@ export function TransportBar({ className }: TransportBarProps) {
   const toggle = usePlayback((s) => s.toggle);
   const seek = usePlayback((s) => s.seek);
   const setSpeed = usePlayback((s) => s.setSpeed);
+  const shots = useReplaySession((s) => s.shots);
+  const activeShotIndex = useReplaySession((s) => s.activeShotIndex);
+  const shotStarts = useReplaySession((s) => s.shotStartTimes);
   const progress = durationSeconds > 0 ? (timeSeconds / durationSeconds) * 100 : 0;
+
+  const stepShot = (delta: number) => {
+    if (shotStarts.length === 0) return;
+    // Resolve from the clock — activeShotIndex lags one frame behind a seek,
+    // so rapid clicks would otherwise keep targeting the same shot.
+    let current = 0;
+    for (let i = 0; i < shotStarts.length; i++) {
+      if (timeSeconds + 1e-3 >= (shotStarts[i] ?? 0)) current = i;
+    }
+    const next = Math.max(0, Math.min(shotStarts.length - 1, current + delta));
+    seek(shotStarts[next] ?? 0);
+    useReplaySession.getState().setActiveShotIndex(next);
+  };
 
   return (
     <div className={cn("pointer-events-none absolute inset-x-0 bottom-0", className)}>
@@ -37,24 +54,48 @@ export function TransportBar({ className }: TransportBarProps) {
             background: `linear-gradient(to right, #fff ${progress}%, rgba(255,255,255,0.28) ${progress}%)`,
           }}
         />
-        <div className="mt-2 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={playing ? "Pause" : "Play"}
-            className="text-white transition-opacity hover:opacity-80"
-          >
-            {playing ? (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                <rect x="2.5" y="1.5" width="4" height="13" />
-                <rect x="9.5" y="1.5" width="4" height="13" />
+        <div className="mt-2 flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => stepShot(-1)}
+              disabled={activeShotIndex <= 0 || shotStarts.length === 0}
+              aria-label="Previous shot"
+              className="text-white transition-opacity hover:opacity-80 disabled:opacity-30"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <path d="M11 2 4.5 7 11 12V2zM3 2h1.5v10H3V2z" />
               </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                <path d="M3 1.5 14 8 3 14.5z" />
+            </button>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={playing ? "Pause" : "Play"}
+              className="text-white transition-opacity hover:opacity-80"
+            >
+              {playing ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                  <rect x="2.5" y="1.5" width="4" height="13" />
+                  <rect x="9.5" y="1.5" width="4" height="13" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                  <path d="M3 1.5 14 8 3 14.5z" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => stepShot(1)}
+              disabled={activeShotIndex >= shotStarts.length - 1 || shotStarts.length === 0}
+              aria-label="Next shot"
+              className="text-white transition-opacity hover:opacity-80 disabled:opacity-30"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <path d="M3 2v10l6.5-5L3 2zm7.5 0H12v10h-1.5V2z" />
               </svg>
-            )}
-          </button>
+            </button>
+          </div>
           <div role="group" aria-label="Playback speed" className="flex items-center gap-3">
             {PLAYBACK_SPEEDS.map((rate) => (
               <button
@@ -72,6 +113,7 @@ export function TransportBar({ className }: TransportBarProps) {
             ))}
           </div>
           <span className="ml-auto font-data text-[11px] tabular-nums tracking-wide text-white/85">
+            {shots.length > 0 ? `Shot ${activeShotIndex + 1}/${shots.length} · ` : ""}
             {timeSeconds.toFixed(2)}s / {durationSeconds.toFixed(2)}s
           </span>
         </div>

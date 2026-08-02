@@ -1,10 +1,11 @@
 "use client";
 
 import { formatShotType } from "@/lib/shot-labels";
+import { landingIsIn } from "@/lib/court-bounds";
 import { useReplaySession } from "@/stores/replaySession";
 
 /**
- * Live point readout from the court viz session — ESPN-density chip in UEFA card chrome.
+ * Deeper point readout for the stats rail — canvas keeps the lean shot chip.
  */
 export function MatchShotStatCard() {
   const shots = useReplaySession((s) => s.shots);
@@ -22,6 +23,8 @@ export function MatchShotStatCard() {
     );
   }
 
+  const call = landingIsIn(shot.shotType, shot.landing, shot.hitter) ? "IN" : "OUT";
+
   return (
     <div className="mt-5 border-t border-hairline pt-4" aria-live="polite">
       <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -36,6 +39,10 @@ export function MatchShotStatCard() {
           <dd className="font-semibold tabular-nums">{Math.round(shot.launchSpeedKmh)} km/h</dd>
         </div>
         <div className="flex justify-between gap-2 border-b border-hairline pb-1">
+          <dt className="text-muted-foreground">Call</dt>
+          <dd className="font-semibold uppercase">{call}</dd>
+        </div>
+        <div className="flex justify-between gap-2 border-b border-hairline pb-1">
           <dt className="text-muted-foreground">Apex</dt>
           <dd className="font-semibold tabular-nums">{shot.apexHeightMetres.toFixed(1)} m</dd>
         </div>
@@ -43,13 +50,11 @@ export function MatchShotStatCard() {
           <dt className="text-muted-foreground">Flight</dt>
           <dd className="font-semibold tabular-nums">{shot.flightSeconds.toFixed(2)} s</dd>
         </div>
-        <div className="flex justify-between gap-2 border-b border-hairline pb-1">
-          <dt className="text-muted-foreground">Hitter</dt>
-          <dd className="font-semibold uppercase">{shot.hitter}</dd>
-        </div>
         <div className="col-span-2 flex justify-between gap-2">
-          <dt className="text-muted-foreground">Spin</dt>
-          <dd className="font-semibold uppercase">{shot.spin}</dd>
+          <dt className="text-muted-foreground">Spin · hitter</dt>
+          <dd className="font-semibold uppercase">
+            {shot.spin} · {shot.hitter}
+          </dd>
         </div>
       </dl>
     </div>

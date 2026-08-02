@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ShotSummary } from "@/types/replay";
+import type { PointSummary, ShotSummary } from "@/types/replay";
 
 type OverlayFlags = {
   arcs: boolean;
@@ -11,9 +11,14 @@ type OverlayFlags = {
 
 type ReplaySessionState = {
   shots: ShotSummary[];
+  points: PointSummary[];
+  /** First-frame clock time for each shotIndex, for transport stepping. */
+  shotStartTimes: number[];
   activeShotIndex: number;
   overlays: OverlayFlags;
   setShots: (shots: ShotSummary[]) => void;
+  setPoints: (points: PointSummary[]) => void;
+  setShotStartTimes: (times: number[]) => void;
   setActiveShotIndex: (index: number) => void;
   setOverlay: (key: keyof OverlayFlags, enabled: boolean) => void;
   toggleOverlay: (key: keyof OverlayFlags) => void;
@@ -30,9 +35,13 @@ const DEFAULT_OVERLAYS: OverlayFlags = {
 
 export const useReplaySession = create<ReplaySessionState>((set, get) => ({
   shots: [],
+  points: [],
+  shotStartTimes: [],
   activeShotIndex: 0,
   overlays: { ...DEFAULT_OVERLAYS },
   setShots: (shots) => set({ shots, activeShotIndex: 0 }),
+  setPoints: (points) => set({ points }),
+  setShotStartTimes: (shotStartTimes) => set({ shotStartTimes }),
   setActiveShotIndex: (index) => {
     if (get().activeShotIndex === index) return;
     set({ activeShotIndex: index });
@@ -41,5 +50,12 @@ export const useReplaySession = create<ReplaySessionState>((set, get) => ({
     set((s) => ({ overlays: { ...s.overlays, [key]: enabled } })),
   toggleOverlay: (key) =>
     set((s) => ({ overlays: { ...s.overlays, [key]: !s.overlays[key] } })),
-  reset: () => set({ shots: [], activeShotIndex: 0, overlays: { ...DEFAULT_OVERLAYS } }),
+  reset: () =>
+    set({
+      shots: [],
+      points: [],
+      shotStartTimes: [],
+      activeShotIndex: 0,
+      overlays: { ...DEFAULT_OVERLAYS },
+    }),
 }));

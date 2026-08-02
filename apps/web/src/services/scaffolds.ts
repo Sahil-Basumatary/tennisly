@@ -155,10 +155,22 @@ export async function getMatchCentre(
       country: "ITA",
       seed: 1,
     },
-    score: {
-      homeSets: card.home.sets,
-      awaySets: card.away.sets,
-    },
+    score: (() => {
+      const homeSets = [...card.home.sets];
+      const awaySets = [...card.away.sets];
+      const live = card.status === "live" && homeSets.length > 0 && awaySets.length > 0;
+      const homeGames = live ? (homeSets.pop() ?? 0) : 0;
+      const awayGames = live ? (awaySets.pop() ?? 0) : 0;
+      return {
+        homeSets,
+        awaySets,
+        homeGames,
+        awayGames,
+        homePoints: live ? "30" : "0",
+        awayPoints: live ? "40" : "0",
+        server: "HOME" as const,
+      };
+    })(),
     stats: [
       { label: "Aces", home: "8", away: "11" },
       { label: "Double faults", home: "2", away: "1" },

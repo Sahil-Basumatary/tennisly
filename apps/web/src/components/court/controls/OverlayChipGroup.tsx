@@ -13,6 +13,7 @@ type OverlayChipGroupProps<T extends string> = {
   values: Record<T, boolean>;
   onToggle: (key: T) => void;
   size?: "md" | "sm";
+  tone?: "light" | "dark";
   hideLabel?: boolean;
   className?: string;
 };
@@ -27,14 +28,17 @@ export function OverlayChipGroup<T extends string>({
   values,
   onToggle,
   size = "md",
+  tone = "light",
   hideLabel = false,
   className,
 }: OverlayChipGroupProps<T>) {
+  const dark = tone === "dark";
   return (
     <div className={className}>
       <p
         className={cn(
-          "mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+          "mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.16em]",
+          dark ? "text-white/55" : "text-muted-foreground",
           hideLabel && "sr-only",
         )}
       >
@@ -53,15 +57,19 @@ export function OverlayChipGroup<T extends string>({
                 "flex items-center gap-1.5 border font-sans font-semibold uppercase tracking-wide transition-colors",
                 size === "md" ? "px-3 py-1.5 text-[11px]" : "px-2.5 py-1 text-[10px]",
                 on
-                  ? "border-foreground bg-white text-foreground"
-                  : "border-hairline bg-white text-muted-foreground hover:border-foreground hover:text-foreground",
+                  ? dark
+                    ? "border-white/70 bg-white/15 text-white"
+                    : "border-foreground bg-white text-foreground"
+                  : dark
+                    ? "border-white/20 bg-black/25 text-white/55 hover:border-white/45 hover:text-white/85"
+                    : "border-hairline bg-white text-muted-foreground hover:border-foreground hover:text-foreground",
               )}
             >
               <span
                 aria-hidden
                 className={cn(
                   "h-1.5 w-1.5 rounded-full transition-colors",
-                  on ? "bg-primary" : "bg-muted-foreground/40",
+                  on ? "bg-primary" : dark ? "bg-white/30" : "bg-muted-foreground/40",
                 )}
               />
               {chipLabel}

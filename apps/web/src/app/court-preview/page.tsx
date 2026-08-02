@@ -8,11 +8,15 @@ import {
   type CameraPresetId,
   DEFAULT_CAMERA_PRESET,
 } from "@/components/court/scene/cameraPresets";
+import { CallStamp } from "@/components/court/controls/CallStamp";
 import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
+import { ScoreBug } from "@/components/court/controls/ScoreBug";
 import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
 import { TransportBar } from "@/components/court/controls/TransportBar";
 import type { PlayerGender } from "@/components/court/scene/loadPlayer";
+import { bounceCallAtTime } from "@/lib/bounce-call";
 import { formatShotType } from "@/lib/shot-labels";
+import { usePlayback } from "@/stores/playback";
 import { useReplaySession } from "@/stores/replaySession";
 
 const CourtViz = dynamic(
@@ -67,9 +71,15 @@ export default function CourtPreviewPage() {
   const genders = useMemo(() => TOUR_GENDERS[tour], [tour]);
   const shots = useReplaySession((s) => s.shots);
   const activeShotIndex = useReplaySession((s) => s.activeShotIndex);
+  const shotStarts = useReplaySession((s) => s.shotStartTimes);
   const overlays = useReplaySession((s) => s.overlays);
   const toggleOverlay = useReplaySession((s) => s.toggleOverlay);
+  const timeSeconds = usePlayback((s) => s.timeSeconds);
   const activeShot = shots[activeShotIndex] ?? null;
+  const callStamp = useMemo(
+    () => bounceCallAtTime(activeShot, timeSeconds, shotStarts[activeShotIndex] ?? 0),
+    [activeShot, activeShotIndex, shotStarts, timeSeconds],
+  );
 
   return (
     <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -88,15 +98,8 @@ export default function CourtPreviewPage() {
       <div className="mb-4 flex flex-wrap items-start gap-x-8 gap-y-4 border border-hairline bg-white px-4 py-3.5">
         <SegmentedControl label="Surface" options={SURFACE_OPTIONS} value={surface} onChange={setSurface} />
         <SegmentedControl label="Tour" options={TOUR_OPTIONS} value={tour} onChange={setTour} />
-        <SegmentedControl label="Camera" options={CAMERA_OPTIONS} value={cameraPreset} onChange={setCameraPreset} />
-        <OverlayChipGroup
-          label="Overlays"
-          options={OVERLAY_OPTIONS}
-          values={overlays}
-          onToggle={toggleOverlay}
-        />
       </div>
-      <div className="relative overflow-hidden border border-hairline">
+      <div className="relative overflow-hidden border border-hairline bg-black">
         <CourtViz
           key={`${surface}-${genders.home}-${genders.away}`}
           surface={surface}
@@ -106,10 +109,36 @@ export default function CourtPreviewPage() {
           className="min-h-[70vh] aspect-video"
           label={`${surface.toLowerCase()} tennis court in 3D`}
         />
+        <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/75 via-black/30 to-transparent px-3 pb-10 pt-3">
+          <div className="pointer-events-auto flex flex-wrap items-start gap-x-6 gap-y-3">
+            <SegmentedControl
+              label="Camera"
+              options={CAMERA_OPTIONS}
+              value={cameraPreset}
+              onChange={setCameraPreset}
+              tone="dark"
+            />
+            <OverlayChipGroup
+              label="Overlays"
+              options={OVERLAY_OPTIONS}
+              values={overlays}
+              onToggle={toggleOverlay}
+              tone="dark"
+            />
+          </div>
+        </div>
+        <ScoreBug
+          className="top-16"
+          home={{ name: "Home", sets: [6, 3], games: 4, points: "30", serving: true }}
+          away={{ name: "Away", sets: [4, 6], games: 5, points: "40" }}
+        />
+        {callStamp ? (
+          <CallStamp key={`${activeShotIndex}-${callStamp}`} call={callStamp} />
+        ) : null}
         <TransportBar />
         {activeShot ? (
           <aside
-            className="pointer-events-none absolute right-3 top-3 border-l-2 border-primary bg-black/75 px-3 py-2 text-white backdrop-blur-sm"
+            className="pointer-events-none absolute right-3 top-16 border-l-2 border-primary bg-black/75 px-3 py-2 text-white backdrop-blur-sm"
             aria-live="polite"
           >
             <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">

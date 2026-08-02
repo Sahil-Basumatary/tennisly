@@ -57,7 +57,7 @@ function buildSampleShots(): ShotSpec[] {
   const bhContact = v(2.1, -(HALF_LENGTH_METRES - 1.6), GROUNDSTROKE_CONTACT_HEIGHT_METRES);
   const bhLanding = v(-3.2, HALF_LENGTH_METRES - 3.0, 0);
   const winnerContact = v(-2.8, HALF_LENGTH_METRES - 2.2, GROUNDSTROKE_CONTACT_HEIGHT_METRES);
-  const winnerLanding = v(3.6, -(HALF_LENGTH_METRES - 0.8), 0);
+  const winnerLanding = v(4.55, -(HALF_LENGTH_METRES - 0.8), 0);
 
   return [
     {

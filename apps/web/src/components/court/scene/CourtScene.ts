@@ -13,6 +13,7 @@ import { buildCourt } from "./buildCourt";
 import { buildDigiboards, type DigiboardBuild } from "./buildDigiboards";
 import { buildEnvironment } from "./buildEnvironment";
 import { buildLighting, type CourtLighting } from "./buildLighting";
+import { buildPostProcess, type CourtPostProcess } from "./buildPostProcess";
 import { CameraDirector } from "./CameraDirector";
 import {
   CAMERA_PRESETS,
@@ -24,6 +25,7 @@ import { ReplayActors } from "./ReplayActors";
 import type { PlayerGender } from "./loadPlayer";
 import { PositioningHeatmaps } from "./PositioningHeatmaps";
 import { ShotOverlays } from "./ShotOverlays";
+import { buildSwingCues } from "./swingCues";
 
 export type CourtSceneOptions = {
   canvas: HTMLCanvasElement;
@@ -41,6 +43,7 @@ export class CourtScene {
   readonly lighting: CourtLighting;
   readonly courtRoot: Mesh;
   readonly cameraDirector: CameraDirector;
+  readonly postProcess: CourtPostProcess;
   private disposed = false;
   private digiboards: DigiboardBuild | null = null;
   private actors: ReplayActors | null = null;
@@ -82,9 +85,11 @@ export class CourtScene {
     const court = buildCourt(this.scene, surface);
     this.courtRoot = court.root;
     this.lighting = buildLighting(this.scene, court.shadowCasters);
+    this.postProcess = buildPostProcess(this.scene, this.camera);
     this.actors = new ReplayActors(this.scene, {
       homeGender: options.homeGender,
       awayGender: options.awayGender,
+      shadows: this.lighting.shadows,
     });
 
     void getMatchReplay().then((replay) => {
@@ -97,6 +102,15 @@ export class CourtScene {
       this.heatmaps?.dispose();
       this.heatmaps = new PositioningHeatmaps(this.scene, replay.frames);
       this.heatmaps.setVisibility(useReplaySession.getState().overlays);
+      this.actors?.setSwingCues(buildSwingCues(replay.frames, replay.shots));
+      useReplaySession.getState().setPoints(replay.points);
+      const starts: number[] = [];
+      for (const frame of replay.frames) {
+        if (starts[frame.shotIndex] === undefined) {
+          starts[frame.shotIndex] = frame.timeSeconds;
+        }
+      }
+      useReplaySession.getState().setShotStartTimes(starts);
       const first = interpolateAtTime(this.frames, 0);
       if (first) {
         this.actors?.apply(first);
@@ -125,6 +139,7 @@ export class CourtScene {
               }
             }
           }
+          this.enableStadiumShadowReceivers(stadium.root);
           if (!this.disposed && surface === "GRASS") {
             this.digiboards = buildDigiboards(this.scene);
           }
@@ -159,7 +174,7 @@ export class CourtScene {
 
     this.engine.runRenderLoop(() => {
       if (this.disposed) return;
-      const dt = this.engine.getDeltaTime() / 1000;
+      const dt = Math.min(this.engine.getDeltaTime() / 1000, 0.1);
       usePlayback.getState().tick(dt);
       const session = useReplaySession.getState();
       const overlayKey =
@@ -171,9 +186,10 @@ export class CourtScene {
         this.heatmaps?.setVisibility(session.overlays);
       }
       if (this.actors && this.frames.length > 0) {
-        const framePose = interpolateAtTime(this.frames, usePlayback.getState().timeSeconds);
+        const playback = usePlayback.getState();
+        const framePose = interpolateAtTime(this.frames, playback.timeSeconds);
         if (framePose) {
-          this.actors.apply(framePose);
+          this.actors.apply(framePose, dt, playback.playing ? playback.speed : 0);
           if (framePose.shotIndex !== this.lastShotIndex) {
             this.lastShotIndex = framePose.shotIndex;
             this.overlays?.setActiveShot(framePose.shotIndex);
@@ -186,6 +202,16 @@ export class CourtScene {
 
     if (process.env.NODE_ENV === "development") {
       (window as unknown as { __tennislyCourt?: CourtScene }).__tennislyCourt = this;
+    }
+  }
+
+  private enableStadiumShadowReceivers(root: Mesh): void {
+    for (const mesh of root.getChildMeshes(false)) {
+      if (mesh.getTotalVertices() === 0) continue;
+      const box = mesh.getBoundingInfo().boundingBox;
+      if (box.maximumWorld.y < 1.5) {
+        mesh.receiveShadows = true;
+      }
     }
   }
 
@@ -208,6 +234,7 @@ export class CourtScene {
     this.actors = null;
     this.digiboards?.dispose();
     this.digiboards = null;
+    this.postProcess.dispose();
     usePlayback.getState().pause();
     useReplaySession.getState().reset();
     this.engine.stopRenderLoop();

@@ -67,19 +67,21 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
             <div className="flex items-center justify-between gap-4 font-sans text-[15px] font-semibold">
               <span className="min-w-0 truncate">{match.home.name}</span>
               <span className="shrink-0 font-data tabular-nums tracking-wide">
-                {match.score.homeSets.join(" ") || "—"}
+                {[...match.score.homeSets, match.score.homeGames].filter((n) => n !== undefined).join(" ") || "—"}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-4 font-sans text-[15px] font-semibold">
               <span className="min-w-0 truncate">{match.away.name}</span>
               <span className="shrink-0 font-data tabular-nums tracking-wide">
-                {match.score.awaySets.join(" ") || "—"}
+                {[...match.score.awaySets, match.score.awayGames].filter((n) => n !== undefined).join(" ") || "—"}
               </span>
             </div>
           </div>
           <MatchCourtPanel
             homeName={match.home.name}
             awayName={match.away.name}
+            score={match.score}
+            status={match.status}
             surface="GRASS"
           />
         </section>

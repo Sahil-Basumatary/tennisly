@@ -1,19 +1,23 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Surface } from "@/types/replay";
+import type { MatchCentrePanel } from "@/types/scaffolds";
 import {
   CAMERA_PRESET_LABELS,
   type CameraPresetId,
   DEFAULT_CAMERA_PRESET,
 } from "@/components/court/scene/cameraPresets";
 import { CourtTopDownFallback } from "@/components/court/CourtTopDownFallback";
+import { CallStamp } from "@/components/court/controls/CallStamp";
 import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
+import { ScoreBug } from "@/components/court/controls/ScoreBug";
 import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
 import { TransportBar } from "@/components/court/controls/TransportBar";
+import { useReducedMotion, useWebGLSupport } from "@/hooks/useClientCapabilities";
+import { bounceCallAtTime } from "@/lib/bounce-call";
 import { formatShotType } from "@/lib/shot-labels";
-import { isWebGLAvailable, prefersReducedMotion } from "@/lib/webgl";
 import { cn } from "@/lib/utils";
 import { usePlayback } from "@/stores/playback";
 import { useReplaySession } from "@/stores/replaySession";
@@ -38,6 +42,7 @@ const CAMERA_OPTIONS = (Object.keys(CAMERA_PRESET_LABELS) as CameraPresetId[]).m
 const OVERLAY_OPTIONS = [
   { key: "arcs", label: "Arcs" },
   { key: "landings", label: "Marks" },
+  { key: "serveBox", label: "Serve" },
   { key: "heatmapHome", label: "Home" },
   { key: "heatmapAway", label: "Away" },
 ] as const;
@@ -45,40 +50,40 @@ const OVERLAY_OPTIONS = [
 type MatchCourtPanelProps = {
   homeName: string;
   awayName: string;
+  score: MatchCentrePanel["score"];
+  status: MatchCentrePanel["status"];
   surface?: Surface;
   className?: string;
 };
 
 /**
  * Match-centre court slot: Babylon when WebGL works, static SVG otherwise.
+ * Broadcast chrome (score bug, dark feed controls, transport) sits on the feed.
  */
 export function MatchCourtPanel({
   homeName,
   awayName,
+  score,
+  status,
   surface = "GRASS",
   className,
 }: MatchCourtPanelProps) {
-  const [webgl, setWebgl] = useState<boolean | null>(null);
   const [forceFallback, setForceFallback] = useState(false);
   const [cameraPreset, setCameraPreset] = useState<CameraPresetId>(DEFAULT_CAMERA_PRESET);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const webgl = useWebGLSupport();
+  const reducedMotion = useReducedMotion();
   const shots = useReplaySession((s) => s.shots);
   const activeShotIndex = useReplaySession((s) => s.activeShotIndex);
+  const shotStarts = useReplaySession((s) => s.shotStartTimes);
   const overlays = useReplaySession((s) => s.overlays);
   const toggleOverlay = useReplaySession((s) => s.toggleOverlay);
-  const setOverlay = useReplaySession((s) => s.setOverlay);
+  const timeSeconds = usePlayback((s) => s.timeSeconds);
   const activeShot = shots[activeShotIndex] ?? null;
   const onVizError = useCallback(() => setForceFallback(true), []);
-
-  useEffect(() => {
-    setWebgl(isWebGLAvailable());
-    const reduced = prefersReducedMotion();
-    setReducedMotion(reduced);
-    if (reduced) {
-      setOverlay("arcs", true);
-      usePlayback.getState().pause();
-    }
-  }, [setOverlay]);
+  const callStamp = useMemo(
+    () => bounceCallAtTime(activeShot, timeSeconds, shotStarts[activeShotIndex] ?? 0),
+    [activeShot, activeShotIndex, shotStarts, timeSeconds],
+  );
 
   const liveText = useMemo(() => {
     if (!activeShot) {
@@ -95,24 +100,6 @@ export function MatchCourtPanel({
 
   return (
     <div className={cn("flex min-h-[320px] flex-1 flex-col", className)}>
-      {use3d ? (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-2 border-b border-hairline bg-white px-3 py-2.5">
-          <SegmentedControl
-            label="Camera"
-            options={CAMERA_OPTIONS}
-            value={cameraPreset}
-            onChange={setCameraPreset}
-            size="sm"
-          />
-          <OverlayChipGroup
-            label="Overlays"
-            options={OVERLAY_OPTIONS}
-            values={overlays}
-            onToggle={toggleOverlay}
-            size="sm"
-          />
-        </div>
-      ) : null}
       <div className="relative min-h-[280px] flex-1 overflow-hidden">
         {webgl === null ? (
           <div className="flex h-full min-h-[280px] items-center justify-center bg-[#0b5c2e] font-sans text-xs font-semibold uppercase tracking-wide text-white/80">
@@ -128,13 +115,54 @@ export function MatchCourtPanel({
               label={liveText}
               onError={onVizError}
             />
+            <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 via-black/25 to-transparent px-2 pb-8 pt-2">
+              <div className="pointer-events-auto flex flex-wrap items-start gap-x-5 gap-y-2">
+                <SegmentedControl
+                  label="Camera"
+                  options={CAMERA_OPTIONS}
+                  value={cameraPreset}
+                  onChange={setCameraPreset}
+                  size="sm"
+                  tone="dark"
+                />
+                <OverlayChipGroup
+                  label="Overlays"
+                  options={OVERLAY_OPTIONS}
+                  values={overlays}
+                  onToggle={toggleOverlay}
+                  size="sm"
+                  tone="dark"
+                />
+              </div>
+            </div>
+            <ScoreBug
+              status={status}
+              home={{
+                name: homeName,
+                sets: score.homeSets,
+                games: score.homeGames,
+                points: score.homePoints,
+                serving: score.server === "HOME",
+              }}
+              away={{
+                name: awayName,
+                sets: score.awaySets,
+                games: score.awayGames,
+                points: score.awayPoints,
+                serving: score.server === "AWAY",
+              }}
+              className="top-14"
+            />
+            {callStamp ? (
+              <CallStamp key={`${activeShotIndex}-${callStamp}`} call={callStamp} />
+            ) : null}
             <TransportBar />
           </>
         ) : (
           <CourtTopDownFallback homeName={homeName} awayName={awayName} className="h-full min-h-[280px]" />
         )}
         {use3d && activeShot ? (
-          <aside className="pointer-events-none absolute right-2 top-2 border-l-2 border-primary bg-black/75 px-2.5 py-1.5 text-white backdrop-blur-sm">
+          <aside className="pointer-events-none absolute right-2 top-14 border-l-2 border-primary bg-black/75 px-2.5 py-1.5 text-white backdrop-blur-sm">
             <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
               Shot {activeShot.shotIndex + 1}
             </p>
@@ -149,7 +177,7 @@ export function MatchCourtPanel({
       </div>
       <p className="sr-only" aria-live="polite">
         {liveText}
-        {reducedMotion ? " Reduced motion is on; playback stays paused until you press play." : ""}
+        {reducedMotion ? " Reduced motion is on; camera cuts are instant and playback stays paused." : ""}
       </p>
       {webgl === false || forceFallback ? null : (
         <button

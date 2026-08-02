@@ -150,3 +150,25 @@
   border-radius: 9999px;
   background: #fff;
 }
+
+@keyframes call-stamp-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.call-stamp-pop {
+  animation: call-stamp-pop 1.4s ease-out forwards;
+}
