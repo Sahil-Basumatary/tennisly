@@ -93,6 +93,7 @@ public class MockTennisDataProvider implements TennisDataProvider {
         list.add(atp("atp-028", "Alexander", "Bublik", "KAZ", 1997, 6, 17, Hand.RIGHT, Backhand.TWO_HANDED, 196, 81, 2017, 28, 1140));
         list.add(atp("atp-029", "Nicolas", "Jarry", "CHL", 1995, 10, 11, Hand.RIGHT, Backhand.TWO_HANDED, 198, 96, 2016, 29, 1080));
         list.add(atp("atp-030", "Flavio", "Cobolli", "ITA", 2002, 5, 30, Hand.RIGHT, Backhand.TWO_HANDED, 183, 74, 2021, 30, 1010));
+        list.add(atp("atp-031", "Joao", "Fonseca", "BRA", 2006, 8, 31, Hand.RIGHT, Backhand.TWO_HANDED, 185, 78, 2023, 45, 620));
         // WTA top 25
         list.add(wta("wta-001", "Aryna", "Sabalenka", "BLR", 1998, 5, 5, Hand.RIGHT, Backhand.TWO_HANDED, 182, 82, 2015, 1, 10585));
         list.add(wta("wta-002", "Iga", "Swiatek", "POL", 2001, 5, 31, Hand.RIGHT, Backhand.TWO_HANDED, 176, 57, 2019, 2, 8460));

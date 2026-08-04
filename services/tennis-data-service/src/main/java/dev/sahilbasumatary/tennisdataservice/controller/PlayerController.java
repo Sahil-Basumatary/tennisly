@@ -30,6 +30,11 @@ public class PlayerController {
         return ResponseEntity.ok(playerService.listPlayers(gender, nationality));
     }
 
+    @GetMapping("/external/{externalId}")
+    public ResponseEntity<PlayerResponse> getPlayerByExternalId(@PathVariable String externalId) {
+        return ResponseEntity.ok(playerService.getPlayerByExternalId(externalId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<PlayerResponse> getPlayer(@PathVariable UUID id) {
         return ResponseEntity.ok(playerService.getPlayer(id));
