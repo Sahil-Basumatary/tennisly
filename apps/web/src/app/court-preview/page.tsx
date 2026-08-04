@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Surface } from "@/types/replay";
 import {
   CAMERA_PRESET_LABELS,
@@ -10,12 +11,18 @@ import {
 } from "@/components/court/scene/cameraPresets";
 import { CallStamp } from "@/components/court/controls/CallStamp";
 import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
+import { ReplayStatsOverlay } from "@/components/court/controls/ReplayStatsOverlay";
 import { ScoreBug } from "@/components/court/controls/ScoreBug";
 import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
 import { TransportBar } from "@/components/court/controls/TransportBar";
 import type { PlayerGender } from "@/components/court/scene/loadPlayer";
+import { useReplayHotkeys } from "@/hooks/useReplayHotkeys";
 import { bounceCallAtTime } from "@/lib/bounce-call";
 import { formatShotType } from "@/lib/shot-labels";
+import {
+  MOCK_REPLAY_AWAY_PLAYER_ID,
+  MOCK_REPLAY_HOME_PLAYER_ID,
+} from "@/services/replay";
 import { usePlayback } from "@/stores/playback";
 import { useReplaySession } from "@/stores/replaySession";
 
@@ -64,7 +71,9 @@ const TOUR_GENDERS: Record<TourLine, { home: PlayerGender; away: PlayerGender }>
   mixed: { home: "male", away: "female" },
 };
 
-export default function CourtPreviewPage() {
+function CourtPreviewInner() {
+  const searchParams = useSearchParams();
+  const matchId = searchParams.get("matchId") ?? undefined;
   const [surface, setSurface] = useState<Surface>("GRASS");
   const [cameraPreset, setCameraPreset] = useState<CameraPresetId>(DEFAULT_CAMERA_PRESET);
   const [tour, setTour] = useState<TourLine>("men");
@@ -80,6 +89,7 @@ export default function CourtPreviewPage() {
     () => bounceCallAtTime(activeShot, timeSeconds, shotStarts[activeShotIndex] ?? 0),
     [activeShot, activeShotIndex, shotStarts, timeSeconds],
   );
+  useReplayHotkeys({ enabled: true });
 
   return (
     <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -93,19 +103,25 @@ export default function CourtPreviewPage() {
         <p className="mt-1 max-w-2xl font-sans text-sm text-muted-foreground">
           Rally playback with athletes, shot overlays, and positioning heatmaps. Orbit freely or
           cut between broadcast cameras.
+          {matchId ? " Live replay matchId is set from the URL." : ""}
         </p>
       </header>
       <div className="mb-4 flex flex-wrap items-start gap-x-8 gap-y-4 border border-hairline bg-white px-4 py-3.5">
         <SegmentedControl label="Surface" options={SURFACE_OPTIONS} value={surface} onChange={setSurface} />
         <SegmentedControl label="Tour" options={TOUR_OPTIONS} value={tour} onChange={setTour} />
       </div>
-      <div className="relative overflow-hidden border border-hairline bg-black">
+      <div
+        className="relative overflow-hidden border border-hairline bg-black"
+        tabIndex={0}
+        aria-keyshortcuts="Space, ArrowLeft, ArrowRight, Shift+ArrowLeft, Shift+ArrowRight, Digit1, Digit2, Digit3, Digit4, KeyJ, KeyL"
+      >
         <CourtViz
-          key={`${surface}-${genders.home}-${genders.away}`}
+          key={`${surface}-${genders.home}-${genders.away}-${matchId ?? "mock"}`}
           surface={surface}
           cameraPreset={cameraPreset}
           homeGender={genders.home}
           awayGender={genders.away}
+          matchId={matchId}
           className="min-h-[70vh] aspect-video"
           label={`${surface.toLowerCase()} tennis court in 3D`}
         />
@@ -132,6 +148,13 @@ export default function CourtPreviewPage() {
           home={{ name: "Home", sets: [6, 3], games: 4, points: "30", serving: true }}
           away={{ name: "Away", sets: [4, 6], games: 5, points: "40" }}
         />
+        <ReplayStatsOverlay
+          homePlayerId={MOCK_REPLAY_HOME_PLAYER_ID}
+          awayPlayerId={MOCK_REPLAY_AWAY_PLAYER_ID}
+          homeLabel="HOM"
+          awayLabel="AWY"
+          className="top-36 sm:top-40"
+        />
         {callStamp ? (
           <CallStamp key={`${activeShotIndex}-${callStamp}`} call={callStamp} />
         ) : null}
@@ -153,6 +176,26 @@ export default function CourtPreviewPage() {
           </aside>
         ) : null}
       </div>
+      <p className="sr-only">
+        Keyboard: Space play or pause. Left and right arrows step shots. Shift plus arrows step
+        points. Keys 1 to 4 set speed. J and L seek one second.
+      </p>
     </main>
+  );
+}
+
+export default function CourtPreviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex min-h-[50vh] max-w-6xl items-center justify-center px-4">
+          <p className="font-sans text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Loading preview…
+          </p>
+        </main>
+      }
+    >
+      <CourtPreviewInner />
+    </Suspense>
   );
 }

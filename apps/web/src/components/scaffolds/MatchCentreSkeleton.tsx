@@ -82,6 +82,9 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
             awayName={match.away.name}
             score={match.score}
             status={match.status}
+            matchId={match.id}
+            homePlayerId={match.home.id}
+            awayPlayerId={match.away.id}
             surface="GRASS"
           />
         </section>

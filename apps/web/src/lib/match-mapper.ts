@@ -215,11 +215,13 @@ export function toMatchCentrePanel(
     round: metaString(match, "round", metaString(match, "roundCode", "—")),
     court: metaString(match, "court", "Centre Court"),
     home: {
+      id: home.playerId,
       name: home.displayName,
       country: playerCountry(home.playerId, metaString(match, "homeExternalId") || undefined),
       seed: home.seedNumber ?? undefined,
     },
     away: {
+      id: away.playerId,
       name: away.displayName,
       country: playerCountry(away.playerId, metaString(match, "awayExternalId") || undefined),
       seed: away.seedNumber ?? undefined,

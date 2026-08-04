@@ -68,8 +68,8 @@ export type MatchCentrePanel = {
   tournament: string;
   round: string;
   court: string;
-  home: { name: string; country: string; seed?: number };
-  away: { name: string; country: string; seed?: number };
+  home: { id: string; name: string; country: string; seed?: number };
+  away: { id: string; name: string; country: string; seed?: number };
   score: {
     homeSets: number[];
     awaySets: number[];

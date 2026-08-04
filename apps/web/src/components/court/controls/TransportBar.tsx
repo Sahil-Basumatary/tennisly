@@ -2,6 +2,7 @@
 
 import { PLAYBACK_SPEEDS, usePlayback } from "@/stores/playback";
 import { useReplaySession } from "@/stores/replaySession";
+import { indexAtOrBefore, stepPoint, stepShot } from "@/lib/replay-transport";
 import { cn } from "@/lib/utils";
 
 type TransportBarProps = {
@@ -10,7 +11,7 @@ type TransportBarProps = {
 
 /**
  * Video-player transport docked over the canvas: scrubber, play/pause, speed,
- * and shot-step seeking so operators can jump contact-to-contact like Hawk-Eye.
+ * and shot/point seeking so operators can jump like Hawk-Eye.
  */
 export function TransportBar({ className }: TransportBarProps) {
   const playing = usePlayback((s) => s.playing);
@@ -21,22 +22,12 @@ export function TransportBar({ className }: TransportBarProps) {
   const seek = usePlayback((s) => s.seek);
   const setSpeed = usePlayback((s) => s.setSpeed);
   const shots = useReplaySession((s) => s.shots);
+  const points = useReplaySession((s) => s.points);
   const activeShotIndex = useReplaySession((s) => s.activeShotIndex);
   const shotStarts = useReplaySession((s) => s.shotStartTimes);
+  const pointStarts = useReplaySession((s) => s.pointStartTimes);
   const progress = durationSeconds > 0 ? (timeSeconds / durationSeconds) * 100 : 0;
-
-  const stepShot = (delta: number) => {
-    if (shotStarts.length === 0) return;
-    // Resolve from the clock — activeShotIndex lags one frame behind a seek,
-    // so rapid clicks would otherwise keep targeting the same shot.
-    let current = 0;
-    for (let i = 0; i < shotStarts.length; i++) {
-      if (timeSeconds + 1e-3 >= (shotStarts[i] ?? 0)) current = i;
-    }
-    const next = Math.max(0, Math.min(shotStarts.length - 1, current + delta));
-    seek(shotStarts[next] ?? 0);
-    useReplaySession.getState().setActiveShotIndex(next);
-  };
+  const pointIndex = pointStarts.length > 0 ? indexAtOrBefore(pointStarts, timeSeconds) : 0;
 
   return (
     <div className={cn("pointer-events-none absolute inset-x-0 bottom-0", className)}>
@@ -55,7 +46,18 @@ export function TransportBar({ className }: TransportBarProps) {
           }}
         />
         <div className="mt-2 flex items-center gap-3 sm:gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => stepPoint(-1)}
+              disabled={pointIndex <= 0 || pointStarts.length === 0}
+              aria-label="Previous point"
+              className="text-white transition-opacity hover:opacity-80 disabled:opacity-30"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <path d="M12 2 7 7l5 5V2zM7 2 2 7l5 5V2zM1 2h1.4v10H1V2z" />
+              </svg>
+            </button>
             <button
               type="button"
               onClick={() => stepShot(-1)}
@@ -95,6 +97,17 @@ export function TransportBar({ className }: TransportBarProps) {
                 <path d="M3 2v10l6.5-5L3 2zm7.5 0H12v10h-1.5V2z" />
               </svg>
             </button>
+            <button
+              type="button"
+              onClick={() => stepPoint(1)}
+              disabled={pointIndex >= pointStarts.length - 1 || pointStarts.length === 0}
+              aria-label="Next point"
+              className="text-white transition-opacity hover:opacity-80 disabled:opacity-30"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                <path d="M2 2v10l5-5-5-5zm5 0v10l5-5-5-5zM11.6 2H13v10h-1.4V2z" />
+              </svg>
+            </button>
           </div>
           <div role="group" aria-label="Playback speed" className="flex items-center gap-3">
             {PLAYBACK_SPEEDS.map((rate) => (
@@ -113,6 +126,7 @@ export function TransportBar({ className }: TransportBarProps) {
             ))}
           </div>
           <span className="ml-auto font-data text-[11px] tabular-nums tracking-wide text-white/85">
+            {points.length > 0 ? `Pt ${pointIndex + 1}/${points.length} · ` : ""}
             {shots.length > 0 ? `Shot ${activeShotIndex + 1}/${shots.length} · ` : ""}
             {timeSeconds.toFixed(2)}s / {durationSeconds.toFixed(2)}s
           </span>

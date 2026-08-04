@@ -6,6 +6,7 @@ import {
   SERVICE_LINE_FROM_NET_METRES,
   SINGLES_HALF_WIDTH_METRES,
 } from "@/lib/court-geometry";
+import { isReplayMatchUuid } from "@/lib/replay-index";
 import {
   lerpVector3,
   roundMetres,
@@ -22,8 +23,11 @@ import type {
   Vector3,
 } from "@/types/replay";
 
-const HOME_ID = "00000000-0000-4000-8000-000000000001";
-const AWAY_ID = "00000000-0000-4000-8000-000000000002";
+/** Mock player UUIDs — court-preview stats HUD buckets against these. */
+export const MOCK_REPLAY_HOME_PLAYER_ID = "00000000-0000-4000-8000-000000000001";
+export const MOCK_REPLAY_AWAY_PLAYER_ID = "00000000-0000-4000-8000-000000000002";
+const HOME_ID = MOCK_REPLAY_HOME_PLAYER_ID;
+const AWAY_ID = MOCK_REPLAY_AWAY_PLAYER_ID;
 const MATCH_ID = "00000000-0000-4000-8000-0000000000aa";
 
 const BASELINE_REST = HALF_LENGTH_METRES - 0.9;
@@ -160,54 +164,85 @@ function framesForShot(
 }
 
 function buildMatchReplay(): MatchReplay {
-  const shots = buildSampleShots();
-  const pointSequence = 1;
-  const summaries: ShotSummary[] = shots.map((s, shotIndex) => ({
-    pointSequence,
-    shotIndex,
-    shotType: s.shotType,
-    hitter: s.hitter,
-    spin: s.spin,
-    contact: s.contact,
-    landing: s.landing,
-    launchSpeedKmh: s.launchSpeedKmh,
-    apexHeightMetres: s.apexHeightMetres,
-    flightSeconds: s.flightSeconds,
-  }));
+  const pointOneShots = buildSampleShots();
+  const aceContact = v(0.2, -(HALF_LENGTH_METRES - 0.35), SERVE_CONTACT_HEIGHT_METRES);
+  const aceLanding = v(1.4, SERVICE_LINE_FROM_NET_METRES - 0.9, 0);
+  const pointTwoShots: ShotSpec[] = [
+    {
+      shotType: "FIRST_SERVE",
+      hitter: "HOME",
+      spin: "FLAT",
+      contact: aceContact,
+      landing: aceLanding,
+      apexHeightMetres: 2.9,
+      flightSeconds: 0.78,
+      launchSpeedKmh: 204,
+      receiverStart: v(0.4, BASELINE_REST, 0),
+      receiverEnd: v(aceLanding.x, aceLanding.y + 0.6, 0),
+    },
+  ];
 
+  const summaries: ShotSummary[] = [];
   const frames: ReplayFrame[] = [];
+  const points: PointSummary[] = [];
   let cursor = 0;
-  for (let i = 0; i < shots.length; i++) {
-    const shotFrames = framesForShot(shots[i], i, pointSequence, cursor);
-    // Drop duplicate seam frame when chaining shots (except first)
-    if (frames.length > 0 && shotFrames.length > 0) {
-      frames.push(...shotFrames.slice(1));
-    } else {
-      frames.push(...shotFrames);
-    }
-    cursor += shots[i].flightSeconds;
-  }
+  let shotIndex = 0;
 
-  const durationSeconds = roundMetres(cursor);
-  const point: PointSummary = {
-    sequence: pointSequence,
-    serverId: HOME_ID,
-    winnerId: AWAY_ID,
-    outcome: "WINNER",
-    rallyLength: shots.length,
-    shotCount: shots.length,
-    durationSeconds,
+  const appendPoint = (
+    sequence: number,
+    specs: ShotSpec[],
+    outcome: PointSummary["outcome"],
+    winnerId: string,
+    serverId: string,
+  ) => {
+    const pointStart = cursor;
+    for (const spec of specs) {
+      summaries.push({
+        pointSequence: sequence,
+        shotIndex,
+        shotType: spec.shotType,
+        hitter: spec.hitter,
+        spin: spec.spin,
+        contact: spec.contact,
+        landing: spec.landing,
+        launchSpeedKmh: spec.launchSpeedKmh,
+        apexHeightMetres: spec.apexHeightMetres,
+        flightSeconds: spec.flightSeconds,
+      });
+      const shotFrames = framesForShot(spec, shotIndex, sequence, cursor);
+      if (frames.length > 0 && shotFrames.length > 0) {
+        frames.push(...shotFrames.slice(1));
+      } else {
+        frames.push(...shotFrames);
+      }
+      cursor += spec.flightSeconds;
+      shotIndex += 1;
+    }
+    points.push({
+      sequence,
+      serverId,
+      winnerId,
+      outcome,
+      rallyLength: specs.length,
+      shotCount: specs.length,
+      durationSeconds: roundMetres(cursor - pointStart),
+    });
   };
+
+  appendPoint(1, pointOneShots, "WINNER", AWAY_ID, HOME_ID);
+  // Small pause between points so the transport clock reads like a real cut.
+  cursor = roundMetres(cursor + 0.35);
+  appendPoint(2, pointTwoShots, "ACE", HOME_ID, HOME_ID);
 
   return {
     matchId: MATCH_ID,
     surface: "GRASS",
     frameRate: FRAME_RATE,
-    pointCount: 1,
+    pointCount: points.length,
     shotCount: summaries.length,
     frameCount: frames.length,
-    durationSeconds,
-    points: [point],
+    durationSeconds: roundMetres(cursor),
+    points,
     shots: summaries,
     frames,
   };
@@ -215,14 +250,66 @@ function buildMatchReplay(): MatchReplay {
 
 const CACHED = buildMatchReplay();
 
-/** Typed mock shaped like MatchReplayResponse — swap for live fetch in phase4-replay-player. */
-export async function getMatchReplay(_matchId?: string): Promise<MatchReplay> {
+function asStringId(value: unknown): string {
+  return typeof value === "string" ? value : String(value ?? "");
+}
+
+/** Jackson emits UUID fields as strings; keep the web types stringly typed. */
+export function normalizeMatchReplay(raw: Record<string, unknown>): MatchReplay {
+  const points = Array.isArray(raw.points) ? raw.points : [];
+  const shots = Array.isArray(raw.shots) ? raw.shots : [];
+  const frames = Array.isArray(raw.frames) ? raw.frames : [];
+  return {
+    matchId: asStringId(raw.matchId),
+    surface: (raw.surface as MatchReplay["surface"]) ?? "HARD",
+    frameRate: Number(raw.frameRate) || FRAME_RATE,
+    pointCount: Number(raw.pointCount) || points.length,
+    shotCount: Number(raw.shotCount) || shots.length,
+    frameCount: Number(raw.frameCount) || frames.length,
+    durationSeconds: Number(raw.durationSeconds) || 0,
+    points: points.map((point) => {
+      const p = point as Record<string, unknown>;
+      return {
+        sequence: Number(p.sequence),
+        serverId: asStringId(p.serverId),
+        winnerId: asStringId(p.winnerId),
+        outcome: p.outcome as PointSummary["outcome"],
+        rallyLength: Number(p.rallyLength),
+        shotCount: Number(p.shotCount),
+        durationSeconds: Number(p.durationSeconds),
+      };
+    }),
+    shots: shots as ShotSummary[],
+    frames: frames as ReplayFrame[],
+  };
+}
+
+/**
+ * Live path: UUID matchId → Next BFF → replay-service.
+ * Scaffold ids (m-alcaraz-…) and offline failures keep the authored mock rally.
+ */
+export async function getMatchReplay(matchId?: string): Promise<MatchReplay> {
+  if (matchId && isReplayMatchUuid(matchId)) {
+    try {
+      const response = await fetch(`/api/replays/matches/${matchId}`, { cache: "no-store" });
+      if (response.ok) {
+        return normalizeMatchReplay((await response.json()) as Record<string, unknown>);
+      }
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[replay] upstream", response.status, "— using mock");
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[replay] fetch failed — using mock", err);
+      }
+    }
+  }
   return CACHED;
 }
 
 export async function getPointReplay(
-  _matchId?: string,
-  _sequence?: number,
+  matchId?: string,
+  sequence?: number,
 ): Promise<{
   matchId: string;
   surface: MatchReplay["surface"];
@@ -231,14 +318,18 @@ export async function getPointReplay(
   shots: ShotSummary[];
   frames: ReplayFrame[];
 }> {
-  const replay = await getMatchReplay();
+  const replay = await getMatchReplay(matchId);
+  const point =
+    replay.points.find((entry) => entry.sequence === sequence) ?? replay.points[0];
+  const shots = replay.shots.filter((shot) => shot.pointSequence === point.sequence);
+  const frames = replay.frames.filter((frame) => frame.pointSequence === point.sequence);
   return {
     matchId: replay.matchId,
     surface: replay.surface,
     frameRate: replay.frameRate,
-    point: replay.points[0],
-    shots: replay.shots,
-    frames: replay.frames,
+    point,
+    shots,
+    frames,
   };
 }
 

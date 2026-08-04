@@ -12,10 +12,12 @@ import {
 import { CourtTopDownFallback } from "@/components/court/CourtTopDownFallback";
 import { CallStamp } from "@/components/court/controls/CallStamp";
 import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
+import { ReplayStatsOverlay } from "@/components/court/controls/ReplayStatsOverlay";
 import { ScoreBug } from "@/components/court/controls/ScoreBug";
 import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
 import { TransportBar } from "@/components/court/controls/TransportBar";
 import { useReducedMotion, useWebGLSupport } from "@/hooks/useClientCapabilities";
+import { useReplayHotkeys } from "@/hooks/useReplayHotkeys";
 import { bounceCallAtTime } from "@/lib/bounce-call";
 import { formatShotType } from "@/lib/shot-labels";
 import { cn } from "@/lib/utils";
@@ -53,6 +55,10 @@ type MatchCourtPanelProps = {
   score: MatchCentrePanel["score"];
   status: MatchCentrePanel["status"];
   surface?: Surface;
+  /** UUID → live replay-service; scaffold ids keep the mock. */
+  matchId?: string;
+  homePlayerId?: string;
+  awayPlayerId?: string;
   className?: string;
 };
 
@@ -66,6 +72,9 @@ export function MatchCourtPanel({
   score,
   status,
   surface = "GRASS",
+  matchId,
+  homePlayerId,
+  awayPlayerId,
   className,
 }: MatchCourtPanelProps) {
   const [forceFallback, setForceFallback] = useState(false);
@@ -85,6 +94,9 @@ export function MatchCourtPanel({
     [activeShot, activeShotIndex, shotStarts, timeSeconds],
   );
 
+  const use3d = webgl === true && !forceFallback;
+  useReplayHotkeys({ enabled: use3d });
+
   const liveText = useMemo(() => {
     if (!activeShot) {
       return `3D court visualization for ${homeName} versus ${awayName}.`;
@@ -96,10 +108,12 @@ export function MatchCourtPanel({
     );
   }, [activeShot, awayName, homeName]);
 
-  const use3d = webgl === true && !forceFallback;
-
   return (
-    <div className={cn("flex min-h-[320px] flex-1 flex-col", className)}>
+    <div
+      className={cn("flex min-h-[320px] flex-1 flex-col", className)}
+      tabIndex={use3d ? 0 : undefined}
+      aria-keyshortcuts="Space, ArrowLeft, ArrowRight, Shift+ArrowLeft, Shift+ArrowRight, Digit1, Digit2, Digit3, Digit4, KeyJ, KeyL"
+    >
       <div className="relative min-h-[280px] flex-1 overflow-hidden">
         {webgl === null ? (
           <div className="flex h-full min-h-[280px] items-center justify-center bg-[#0b5c2e] font-sans text-xs font-semibold uppercase tracking-wide text-white/80">
@@ -110,6 +124,7 @@ export function MatchCourtPanel({
             <CourtViz
               surface={surface}
               cameraPreset={cameraPreset}
+              matchId={matchId}
               animatePresets={!reducedMotion}
               className="min-h-[280px] h-full w-full aspect-video lg:aspect-auto lg:min-h-[420px]"
               label={liveText}
@@ -153,6 +168,15 @@ export function MatchCourtPanel({
               }}
               className="top-14"
             />
+            {homePlayerId && awayPlayerId ? (
+              <ReplayStatsOverlay
+                homePlayerId={homePlayerId}
+                awayPlayerId={awayPlayerId}
+                homeLabel={homeName.slice(0, 3).toUpperCase()}
+                awayLabel={awayName.slice(0, 3).toUpperCase()}
+                className="top-32 sm:top-36"
+              />
+            ) : null}
             {callStamp ? (
               <CallStamp key={`${activeShotIndex}-${callStamp}`} call={callStamp} />
             ) : null}
@@ -178,6 +202,10 @@ export function MatchCourtPanel({
       <p className="sr-only" aria-live="polite">
         {liveText}
         {reducedMotion ? " Reduced motion is on; camera cuts are instant and playback stays paused." : ""}
+      </p>
+      <p className="sr-only">
+        Keyboard: Space play or pause. Left and right arrows step shots. Shift plus arrows step
+        points. Keys 1 to 4 set speed. J and L seek one second.
       </p>
       {webgl === false || forceFallback ? null : (
         <button
