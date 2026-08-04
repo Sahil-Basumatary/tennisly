@@ -21,26 +21,33 @@ export default async function MatchesIndexPage() {
           Live Centre
         </h1>
         <ul className="divide-y divide-hairline border border-hairline bg-white">
-          {feed.items.map((match) => (
-            <li key={match.id}>
-              <Link
-                href={match.href}
-                className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-muted"
-              >
-                <div>
-                  <p className="font-sans text-[14px] font-semibold">
-                    {match.home.name} vs {match.away.name}
-                  </p>
-                  <p className="font-sans text-[12px] text-muted-foreground">
-                    {match.tournament} · {match.round}
-                  </p>
-                </div>
-                <span className="font-data text-[12px] font-bold uppercase tracking-wide text-primary">
-                  Open
-                </span>
-              </Link>
+          {feed.items.length === 0 ? (
+            <li className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
+              No live-centre matches yet. Ensure match-service is running with the catalogue seed.
             </li>
-          ))}
+          ) : (
+            feed.items.map((match) => (
+              <li key={match.id}>
+                <Link
+                  href={match.href}
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-muted"
+                >
+                  <div>
+                    <p className="font-sans text-[14px] font-semibold">
+                      {match.home.name} vs {match.away.name}
+                    </p>
+                    <p className="font-sans text-[12px] text-muted-foreground">
+                      {match.tournament} · {match.round}
+                      {match.status === "live" ? " · LIVE" : ""}
+                    </p>
+                  </div>
+                  <span className="font-data text-[12px] font-bold uppercase tracking-wide text-primary">
+                    Open
+                  </span>
+                </Link>
+              </li>
+            ))
+          )}
         </ul>
       </main>
     </>

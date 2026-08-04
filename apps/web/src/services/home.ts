@@ -1,3 +1,5 @@
+import { getScoresFeed } from "@/services/scores";
+
 export type StoryTag = "News" | "Feature" | "Analysis" | "Video";
 
 export type HomeStory = {
@@ -47,10 +49,18 @@ const IMG = {
 } as const;
 
 export async function getHomeContent(): Promise<HomeContent> {
+  const feed = await getScoresFeed();
+  const featuredMatch =
+    feed.items.find((item) => item.status === "live") ?? feed.items[0] ?? null;
+  const matchHref = featuredMatch?.href ?? "/matches";
+  const matchTitle = featuredMatch
+    ? `${featuredMatch.home.name} vs ${featuredMatch.away.name}`
+    : "Live Centre";
+
   return {
     hero: {
       headline: "Replay every point from centre court",
-      ctaLabel: "Learn More",
+      ctaLabel: "Open Live Centre",
       ctaHref: "/matches",
       imageSrc: IMG.grassAction,
       imageAlt: "Tennis player celebrating on a grass court",
@@ -59,11 +69,13 @@ export async function getHomeContent(): Promise<HomeContent> {
       {
         id: "pick-1",
         tag: "News",
-        title: "How Alcaraz turned a break point into the set",
-        href: "/matches/m-alcaraz-sinner",
+        title: featuredMatch
+          ? `${matchTitle}: point-by-point on ${featuredMatch.tournament}`
+          : "How Alcaraz turned a break point into the set",
+        href: matchHref,
         imageSrc: IMG.serve,
         imageAlt: "Player serving on outdoor court",
-        publishedLabel: "Yesterday",
+        publishedLabel: "Live board",
         readMinutes: 6,
       },
       {
@@ -108,10 +120,10 @@ export async function getHomeContent(): Promise<HomeContent> {
       },
     ],
     featured: {
-      eyebrow: "Tennisly Originals",
-      headline: "Member exclusives",
-      label: "Featured",
-      href: "/sign-up",
+      eyebrow: "Match Centre",
+      headline: matchTitle,
+      label: featuredMatch?.status === "live" ? "LIVE" : "Featured",
+      href: matchHref,
       imageSrc: IMG.grassAction,
       imageAlt: "Stadium lights over a tennis arena",
     },
@@ -119,8 +131,8 @@ export async function getHomeContent(): Promise<HomeContent> {
       {
         id: "latest-1",
         tag: "News",
-        title: "Live centre now streams point markers in under 200ms",
-        href: "/matches?status=live",
+        title: "Live centre streams the seeded broadcast catalogue",
+        href: "/matches",
         imageSrc: IMG.crowd,
         imageAlt: "Crowd watching a tennis match",
         publishedLabel: "Today",
@@ -150,7 +162,7 @@ export async function getHomeContent(): Promise<HomeContent> {
         id: "latest-4",
         tag: "Video",
         title: "Watch: full-rally reconstruction at 60 frames per second",
-        href: "/matches?view=replays",
+        href: matchHref,
         imageSrc: IMG.serve,
         imageAlt: "Player hitting a serve",
         publishedLabel: "1 week ago",

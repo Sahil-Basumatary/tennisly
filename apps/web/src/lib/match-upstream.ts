@@ -1,0 +1,63 @@
+import { isReplayMatchUuid } from "@/lib/replay-index";
+import type { UpstreamMatch, UpstreamMatchStatus } from "@/types/match-catalogue";
+
+function matchServiceBase(): string {
+  return (process.env.MATCH_SERVICE_URL ?? "http://localhost:8084").replace(/\/$/, "");
+}
+
+export class MatchUpstreamError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "MatchUpstreamError";
+  }
+}
+
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw new MatchUpstreamError(`match-service ${response.status}`, response.status);
+  }
+  return (await response.json()) as T;
+}
+
+export async function fetchUpstreamMatches(options?: {
+  status?: UpstreamMatchStatus;
+  tournamentId?: string;
+}): Promise<UpstreamMatch[]> {
+  const params = new URLSearchParams();
+  if (options?.status) params.set("status", options.status);
+  if (options?.tournamentId) params.set("tournamentId", options.tournamentId);
+  const query = params.toString();
+  const url = `${matchServiceBase()}/api/matches${query ? `?${query}` : ""}`;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+  } catch {
+    throw new MatchUpstreamError("match-service unreachable", 502);
+  }
+  return readJson<UpstreamMatch[]>(response);
+}
+
+/** Resolve a route id that may be a UUID or a broadcast externalId. */
+export async function fetchUpstreamMatch(idOrExternal: string): Promise<UpstreamMatch | null> {
+  const base = matchServiceBase();
+  const path = isReplayMatchUuid(idOrExternal)
+    ? `${base}/api/matches/${idOrExternal}`
+    : `${base}/api/matches/external/${encodeURIComponent(idOrExternal)}`;
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+  } catch {
+    throw new MatchUpstreamError("match-service unreachable", 502);
+  }
+  if (response.status === 404) return null;
+  return readJson<UpstreamMatch>(response);
+}

@@ -28,25 +28,31 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
               <span>L</span>
               <span className="text-right">Pts</span>
             </div>
-            {board.standings.map((row) => (
-              <div
-                key={row.position}
-                className="grid grid-cols-[40px_1fr_40px_40px_40px_56px] gap-2 border-b border-hairline px-3 py-2.5"
-              >
-                <span className="font-data text-[13px] text-muted-foreground">
-                  {row.position}
-                </span>
-                <span className="truncate font-sans text-[14px] font-medium">
-                  {row.player}
-                </span>
-                <span className="font-data text-[13px]">{row.played}</span>
-                <span className="font-data text-[13px]">{row.won}</span>
-                <span className="font-data text-[13px]">{row.lost}</span>
-                <span className="text-right font-data text-[13px] font-semibold">
-                  {row.points}
-                </span>
-              </div>
-            ))}
+            {board.standings.length === 0 ? (
+              <p className="px-3 py-6 font-sans text-sm text-muted-foreground">
+                Standings land when tennis-data rankings are wired. Fixtures below are live.
+              </p>
+            ) : (
+              board.standings.map((row) => (
+                <div
+                  key={row.position}
+                  className="grid grid-cols-[40px_1fr_40px_40px_40px_56px] gap-2 border-b border-hairline px-3 py-2.5"
+                >
+                  <span className="font-data text-[13px] text-muted-foreground">
+                    {row.position}
+                  </span>
+                  <span className="truncate font-sans text-[14px] font-medium">
+                    {row.player}
+                  </span>
+                  <span className="font-data text-[13px]">{row.played}</span>
+                  <span className="font-data text-[13px]">{row.won}</span>
+                  <span className="font-data text-[13px]">{row.lost}</span>
+                  <span className="text-right font-data text-[13px] font-semibold">
+                    {row.points}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </section>
         <section>
@@ -54,29 +60,35 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
             Fixtures & results
           </h2>
           <div className="space-y-2">
-            {board.fixtures.map((fx) => (
-              <Link
-                key={fx.id}
-                href={fx.href}
-                className="block border border-hairline bg-white px-4 py-3 transition-colors hover:bg-surface-muted"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2 font-data text-[11px] uppercase tracking-wide text-muted-foreground">
-                  <span>{fx.round}</span>
-                  <span
-                    className={cn(
-                      fx.status === "live" && "font-bold text-[#da1e28]",
-                    )}
-                  >
-                    {fx.startLabel}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3 font-sans text-[14px]">
-                  <span className="font-semibold">{fx.home}</span>
-                  <span className="text-muted-foreground">vs</span>
-                  <span className="font-semibold">{fx.away}</span>
-                </div>
-              </Link>
-            ))}
+            {board.fixtures.length === 0 ? (
+              <p className="border border-hairline bg-white px-4 py-8 text-center font-sans text-sm text-muted-foreground">
+                No fixtures yet — start match-service with the broadcast catalogue.
+              </p>
+            ) : (
+              board.fixtures.map((fx) => (
+                <Link
+                  key={fx.id}
+                  href={fx.href}
+                  className="block border border-hairline bg-white px-4 py-3 transition-colors hover:bg-surface-muted"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2 font-data text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <span>{fx.round}</span>
+                    <span
+                      className={cn(
+                        fx.status === "live" && "font-bold text-[#da1e28]",
+                      )}
+                    >
+                      {fx.startLabel}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 font-sans text-[14px]">
+                    <span className="font-semibold">{fx.home}</span>
+                    <span className="text-muted-foreground">vs</span>
+                    <span className="font-semibold">{fx.away}</span>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </section>
       </div>

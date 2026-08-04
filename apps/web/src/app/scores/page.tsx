@@ -9,12 +9,19 @@ const subnav = [
   { id: "final", label: "Results", href: "/scores?status=final" },
 ];
 
-export default async function ScoresPage() {
-  const day = await getScoreboardDay();
+type PageProps = {
+  searchParams: Promise<{ status?: string }>;
+};
+
+export default async function ScoresPage({ searchParams }: PageProps) {
+  const { status } = await searchParams;
+  const active =
+    status === "live" || status === "upcoming" || status === "final" ? status : "all";
+  const day = await getScoreboardDay(active === "all" ? undefined : active);
 
   return (
     <>
-      <SectionSubnav items={subnav} activeId="all" />
+      <SectionSubnav items={subnav} activeId={active} />
       <ScoreboardSkeleton day={day} />
     </>
   );

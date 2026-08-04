@@ -91,23 +91,32 @@ export function ScoreboardSkeleton({ day }: { day: ScoreboardDay }) {
         ))}
       </div>
       <div className="space-y-6">
-        {day.groups.map((group) => (
-          <section key={group.tournamentId} className="border border-hairline bg-white">
-            <header className="border-b border-hairline bg-[#f2f4f8] px-4 py-3 sm:px-5">
-              <h2 className="font-sans text-[15px] font-bold text-foreground">
-                {group.tournamentName}
-              </h2>
-              <p className="font-sans text-[12px] text-muted-foreground">
-                {group.location}
-              </p>
-            </header>
-            <div>
-              {group.matches.map((match) => (
-                <MatchRow key={match.id} match={match} />
-              ))}
-            </div>
-          </section>
-        ))}
+        {day.groups.length === 0 ? (
+          <div className="border border-hairline bg-white px-4 py-10 text-center">
+            <p className="font-sans text-sm font-semibold text-foreground">No matches on the board</p>
+            <p className="mt-1 font-sans text-sm text-muted-foreground">
+              Start match-service with the broadcast catalogue seed, then refresh.
+            </p>
+          </div>
+        ) : (
+          day.groups.map((group) => (
+            <section key={group.tournamentId} className="border border-hairline bg-white">
+              <header className="border-b border-hairline bg-[#f2f4f8] px-4 py-3 sm:px-5">
+                <h2 className="font-sans text-[15px] font-bold text-foreground">
+                  {group.tournamentName}
+                </h2>
+                <p className="font-sans text-[12px] text-muted-foreground">
+                  {group.location}
+                </p>
+              </header>
+              <div>
+                {group.matches.map((match) => (
+                  <MatchRow key={match.id} match={match} />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
       </div>
     </main>
   );
