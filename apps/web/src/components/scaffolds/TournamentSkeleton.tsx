@@ -30,7 +30,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
             </div>
             {board.standings.length === 0 ? (
               <p className="px-3 py-6 font-sans text-sm text-muted-foreground">
-                Standings land when tennis-data rankings are wired. Fixtures below are live.
+                Rankings unavailable — start tennis-data-service to fill standings.
               </p>
             ) : (
               board.standings.map((row) => (

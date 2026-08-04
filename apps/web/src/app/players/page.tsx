@@ -2,17 +2,22 @@ import { SectionSubnav } from "@/components/layout/SectionSubnav";
 import { PlayersSkeleton } from "@/components/scaffolds/PlayersSkeleton";
 import { getPlayersBoard } from "@/services/scaffolds";
 
-const subnav = [
-  { id: "rankings", label: "Rankings", href: "/players" },
-  { id: "search", label: "Search", href: "/players?view=search" },
-];
+type PageProps = {
+  searchParams: Promise<{ tour?: string }>;
+};
 
-export default async function PlayersPage() {
-  const board = await getPlayersBoard();
+export default async function PlayersPage({ searchParams }: PageProps) {
+  const { tour: tourParam } = await searchParams;
+  const tour = tourParam === "wta" ? "wta" : "atp";
+  const board = await getPlayersBoard(tour);
+  const subnav = [
+    { id: "atp", label: "ATP Singles", href: "/players?tour=atp" },
+    { id: "wta", label: "WTA Singles", href: "/players?tour=wta" },
+  ];
 
   return (
     <>
-      <SectionSubnav items={subnav} activeId="rankings" />
+      <SectionSubnav items={subnav} activeId={tour} />
       <PlayersSkeleton board={board} />
     </>
   );

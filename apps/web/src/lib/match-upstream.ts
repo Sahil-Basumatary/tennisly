@@ -1,4 +1,5 @@
 import { isReplayMatchUuid } from "@/lib/replay-index";
+import type { UpstreamMatchPoint } from "@/lib/match-stats";
 import type { UpstreamMatch, UpstreamMatchStatus } from "@/types/match-catalogue";
 
 function matchServiceBase(): string {
@@ -60,4 +61,18 @@ export async function fetchUpstreamMatch(idOrExternal: string): Promise<Upstream
   }
   if (response.status === 404) return null;
   return readJson<UpstreamMatch>(response);
+}
+
+export async function fetchUpstreamMatchPoints(matchId: string): Promise<UpstreamMatchPoint[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${matchServiceBase()}/api/matches/${matchId}/points`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+  } catch {
+    throw new MatchUpstreamError("match-service unreachable", 502);
+  }
+  if (response.status === 404) return [];
+  return readJson<UpstreamMatchPoint[]>(response);
 }

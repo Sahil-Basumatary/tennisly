@@ -1,7 +1,13 @@
 import { playerCountry, playerShortName } from "@/lib/player-directory";
+import { aggregateMatchStats, type UpstreamMatchPoint } from "@/lib/match-stats";
 import type { UpstreamMatch, UpstreamMatchPlayer } from "@/types/match-catalogue";
 import { toUiMatchStatus } from "@/types/match-catalogue";
-import type { MatchCentrePanel, ScoreboardDay, TournamentBoard } from "@/types/scaffolds";
+import type {
+  MatchCentrePanel,
+  ScoreboardDay,
+  StandingRow,
+  TournamentBoard,
+} from "@/types/scaffolds";
 import type { ScoreCard, ScoresFeed } from "@/types/scores";
 
 function metaString(match: UpstreamMatch, key: string, fallback = ""): string {
@@ -169,7 +175,10 @@ export function toScoreboardDay(matches: UpstreamMatch[], date = new Date()): Sc
   };
 }
 
-export function toMatchCentrePanel(match: UpstreamMatch): MatchCentrePanel {
+export function toMatchCentrePanel(
+  match: UpstreamMatch,
+  points: UpstreamMatchPoint[] = [],
+): MatchCentrePanel {
   const home = sideOf(match, "HOME");
   const away = sideOf(match, "AWAY");
   const status = toUiMatchStatus(match.status);
@@ -183,6 +192,14 @@ export function toMatchCentrePanel(match: UpstreamMatch): MatchCentrePanel {
   const serverId = String(match.currentScore?.serverId ?? "");
   const server: "HOME" | "AWAY" =
     serverId === away.playerId ? "AWAY" : "HOME";
+  const stats =
+    points.length > 0
+      ? aggregateMatchStats(match, points)
+      : [
+          { label: "Points played", home: String(match.pointsPlayed), away: String(match.pointsPlayed) },
+          { label: "Surface", home: match.surface, away: match.surface },
+          { label: "Best of", home: String(match.bestOfSets), away: String(match.bestOfSets) },
+        ];
   return {
     id: match.id,
     status,
@@ -208,20 +225,14 @@ export function toMatchCentrePanel(match: UpstreamMatch): MatchCentrePanel {
       awayPoints: live ? pointLabel(match, "AWAY") : "0",
       server,
     },
-    stats: [
-      { label: "Points played", home: String(match.pointsPlayed), away: "—" },
-      { label: "Surface", home: match.surface, away: match.surface },
-      { label: "Best of", home: String(match.bestOfSets), away: String(match.bestOfSets) },
-      {
-        label: "Tour",
-        home: metaString(match, "tour", "—"),
-        away: metaString(match, "draw", "—"),
-      },
-    ],
+    stats,
   };
 }
 
-export function toTournamentBoard(matches: UpstreamMatch[]): TournamentBoard {
+export function toTournamentBoard(
+  matches: UpstreamMatch[],
+  standings: StandingRow[] = [],
+): TournamentBoard {
   const primary =
     matches.find((match) => metaString(match, "tournamentShortName") === "Wimbledon") ??
     matches[0];
@@ -240,7 +251,7 @@ export function toTournamentBoard(matches: UpstreamMatch[]): TournamentBoard {
       : "Tour board",
     surface: primary?.surface ?? "Grass",
     location: primary ? metaString(primary, "location", "—") : "—",
-    standings: [],
+    standings,
     fixtures,
   };
 }
