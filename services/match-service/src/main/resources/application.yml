@@ -32,6 +32,8 @@ tennisly:
   seed:
     # Multi-tournament ESPN/UEFA-style day board + replay point ledgers (idempotent).
     broadcast-catalogue: ${SEED_BROADCAST_CATALOGUE:true}
+  clients:
+    tennis-data-service-uri: ${TENNIS_DATA_SERVICE_URI:http://localhost:8083}
 eureka:
   client:
     service-url:

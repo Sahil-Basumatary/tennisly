@@ -1,6 +1,7 @@
 package dev.sahilbasumatary.matchservice.seed;
 
 import static dev.sahilbasumatary.matchservice.seed.BroadcastCatalogueIds.*;
+import static dev.sahilbasumatary.matchservice.seed.CataloguePlayerIdentity.*;
 
 import dev.sahilbasumatary.matchservice.entity.Match;
 import dev.sahilbasumatary.matchservice.entity.MatchPlayer;
@@ -25,8 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Idempotent broadcast-day catalogue: three tournaments, mixed tours/rounds/courts/statuses, and
- * replay-ready point ledgers on live/completed fixtures. Skips Kafka by writing through the
- * repository so local boot still works without the full event bus.
+ * replay-ready point ledgers. Player IDs resolve from tennis-data by externalId when available.
  */
 @Component
 @ConditionalOnProperty(
@@ -38,16 +38,23 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(BroadcastCatalogueSeeder.class);
 
     private final MatchRepository matchRepository;
+    private final CataloguePlayerResolver playerResolver;
+    private final CatalogueIdentityReconciler identityReconciler;
 
-    public BroadcastCatalogueSeeder(MatchRepository matchRepository) {
+    public BroadcastCatalogueSeeder(
+            MatchRepository matchRepository,
+            CataloguePlayerResolver playerResolver,
+            CatalogueIdentityReconciler identityReconciler) {
         this.matchRepository = matchRepository;
+        this.playerResolver = playerResolver;
+        this.identityReconciler = identityReconciler;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         if (matchRepository.findByExternalId("wimbledon-2026-ms-sf-alcaraz-sinner").isPresent()) {
-            log.info("Broadcast catalogue already seeded — skipping");
+            identityReconciler.reconcile();
             return;
         }
         Instant day = Instant.parse("2026-07-14T12:00:00Z");
@@ -71,8 +78,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "London, GBR",
                         2026),
-                player(PLAYER_ALCARAZ, "Carlos Alcaraz", PlayerSide.HOME, 2),
-                player(PLAYER_SINNER, "Jannik Sinner", PlayerSide.AWAY, 1),
+                player(EXT_ALCARAZ, "Carlos Alcaraz", PlayerSide.HOME, 2),
+                player(EXT_SINNER, "Jannik Sinner", PlayerSide.AWAY, 1),
                 22);
         seedMatch(
                 MATCH_WIM_SF_DJO_MED,
@@ -94,8 +101,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "London, GBR",
                         2026),
-                player(PLAYER_DJOKOVIC, "Novak Djokovic", PlayerSide.HOME, 3),
-                player(PLAYER_MEDVEDEV, "Daniil Medvedev", PlayerSide.AWAY, 5),
+                player(EXT_DJOKOVIC, "Novak Djokovic", PlayerSide.HOME, 3),
+                player(EXT_MEDVEDEV, "Daniil Medvedev", PlayerSide.AWAY, 5),
                 0);
         seedMatch(
                 MATCH_WIM_QF_ZVE_RUU,
@@ -117,8 +124,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "London, GBR",
                         2026),
-                player(PLAYER_ZVEREV, "Alexander Zverev", PlayerSide.HOME, 4),
-                player(PLAYER_RUUD, "Casper Ruud", PlayerSide.AWAY, 8),
+                player(EXT_ZVEREV, "Alexander Zverev", PlayerSide.HOME, 4),
+                player(EXT_RUUD, "Casper Ruud", PlayerSide.AWAY, 8),
                 18);
         seedMatch(
                 MATCH_WIM_QF_SWI_GAU,
@@ -140,8 +147,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Women's Singles",
                         "London, GBR",
                         2026),
-                player(PLAYER_SWIATEK, "Iga Swiatek", PlayerSide.HOME, 1),
-                player(PLAYER_GAUFF, "Coco Gauff", PlayerSide.AWAY, 2),
+                player(EXT_SWIATEK, "Iga Swiatek", PlayerSide.HOME, 1),
+                player(EXT_GAUFF, "Coco Gauff", PlayerSide.AWAY, 2),
                 16);
         seedMatch(
                 MATCH_WIM_QF_SAB_RYB,
@@ -163,8 +170,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Women's Singles",
                         "London, GBR",
                         2026),
-                player(PLAYER_SABALENKA, "Aryna Sabalenka", PlayerSide.HOME, 3),
-                player(PLAYER_RYBAKINA, "Elena Rybakina", PlayerSide.AWAY, 4),
+                player(EXT_SABALENKA, "Aryna Sabalenka", PlayerSide.HOME, 3),
+                player(EXT_RYBAKINA, "Elena Rybakina", PlayerSide.AWAY, 4),
                 14);
         seedMatch(
                 MATCH_RG_QF_ALC_ZVE,
@@ -186,8 +193,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "Paris, FRA",
                         2026),
-                player(PLAYER_ALCARAZ, "Carlos Alcaraz", PlayerSide.HOME, 2),
-                player(PLAYER_ZVEREV, "Alexander Zverev", PlayerSide.AWAY, 4),
+                player(EXT_ALCARAZ, "Carlos Alcaraz", PlayerSide.HOME, 2),
+                player(EXT_ZVEREV, "Alexander Zverev", PlayerSide.AWAY, 4),
                 20);
         seedMatch(
                 MATCH_RG_SF_SIN_DJO,
@@ -209,8 +216,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "Paris, FRA",
                         2026),
-                player(PLAYER_SINNER, "Jannik Sinner", PlayerSide.HOME, 1),
-                player(PLAYER_DJOKOVIC, "Novak Djokovic", PlayerSide.AWAY, 3),
+                player(EXT_SINNER, "Jannik Sinner", PlayerSide.HOME, 1),
+                player(EXT_DJOKOVIC, "Novak Djokovic", PlayerSide.AWAY, 3),
                 0);
         seedMatch(
                 MATCH_RG_R16_GAU_KEY,
@@ -232,8 +239,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Women's Singles",
                         "Paris, FRA",
                         2026),
-                player(PLAYER_GAUFF, "Coco Gauff", PlayerSide.HOME, 2),
-                player(PLAYER_KEYS, "Madison Keys", PlayerSide.AWAY, 12),
+                player(EXT_GAUFF, "Coco Gauff", PlayerSide.HOME, 2),
+                player(EXT_KEYS, "Madison Keys", PlayerSide.AWAY, 12),
                 15);
         seedMatch(
                 MATCH_USO_R32_SIN_FON,
@@ -255,8 +262,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "New York, USA",
                         2026),
-                player(PLAYER_SINNER, "Jannik Sinner", PlayerSide.HOME, 1),
-                player(PLAYER_FONSECA, "Joao Fonseca", PlayerSide.AWAY, null),
+                player(EXT_SINNER, "Jannik Sinner", PlayerSide.HOME, 1),
+                player(EXT_FONSECA, "Joao Fonseca", PlayerSide.AWAY, null),
                 17);
         seedMatch(
                 MATCH_USO_R32_MED_RUB,
@@ -278,8 +285,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "New York, USA",
                         2026),
-                player(PLAYER_MEDVEDEV, "Daniil Medvedev", PlayerSide.HOME, 5),
-                player(PLAYER_RUBLEV, "Andrey Rublev", PlayerSide.AWAY, 7),
+                player(EXT_MEDVEDEV, "Daniil Medvedev", PlayerSide.HOME, 5),
+                player(EXT_RUBLEV, "Andrey Rublev", PlayerSide.AWAY, 7),
                 0);
         seedMatch(
                 MATCH_USO_R16_SWI_PAO,
@@ -301,8 +308,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Women's Singles",
                         "New York, USA",
                         2026),
-                player(PLAYER_SWIATEK, "Iga Swiatek", PlayerSide.HOME, 1),
-                player(PLAYER_PAOLINI, "Jasmine Paolini", PlayerSide.AWAY, 6),
+                player(EXT_SWIATEK, "Iga Swiatek", PlayerSide.HOME, 1),
+                player(EXT_PAOLINI, "Jasmine Paolini", PlayerSide.AWAY, 6),
                 13);
         seedMatch(
                 MATCH_USO_R64_RUU_TSI,
@@ -324,8 +331,8 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
                         "Men's Singles",
                         "New York, USA",
                         2026),
-                player(PLAYER_RUUD, "Casper Ruud", PlayerSide.HOME, 8),
-                player(PLAYER_TSITSIPAS, "Stefanos Tsitsipas", PlayerSide.AWAY, 11),
+                player(EXT_RUUD, "Casper Ruud", PlayerSide.HOME, 8),
+                player(EXT_TSITSIPAS, "Stefanos Tsitsipas", PlayerSide.AWAY, 11),
                 12);
         log.info(
                 "Seeded broadcast catalogue: 12 matches across Wimbledon, Roland-Garros, US Open");
@@ -355,6 +362,14 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
         match.setScheduledAt(scheduledAt);
         match.setStartedAt(startedAt);
         match.setEndedAt(endedAt);
+        CataloguePlayerIdentity.CATALOGUE_MATCHES.stream()
+                .filter(identity -> identity.matchExternalId().equals(externalId))
+                .findFirst()
+                .ifPresent(
+                        identity -> {
+                            metadata.put("homeExternalId", identity.homeExternalId());
+                            metadata.put("awayExternalId", identity.awayExternalId());
+                        });
         match.setMetadata(metadata);
         match.addPlayer(home);
         match.addPlayer(away);
@@ -368,10 +383,10 @@ public class BroadcastCatalogueSeeder implements ApplicationRunner {
         matchRepository.save(match);
     }
 
-    private static MatchPlayer player(
-            UUID playerId, String displayName, PlayerSide side, Integer seedNumber) {
+    private MatchPlayer player(
+            String externalId, String displayName, PlayerSide side, Integer seedNumber) {
         MatchPlayer player = new MatchPlayer();
-        player.setPlayerId(playerId);
+        player.setPlayerId(playerResolver.resolve(externalId));
         player.setDisplayName(displayName);
         player.setSide(side);
         player.setSeedNumber(seedNumber);
