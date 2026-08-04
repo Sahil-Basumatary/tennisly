@@ -11,5 +11,12 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 
     Optional<Match> findByExternalId(String externalId);
 
+    List<Match> findAllByOrderByScheduledAtAsc();
+
     List<Match> findByStatusOrderByScheduledAtAsc(MatchStatus status);
+
+    List<Match> findByTournamentIdOrderByScheduledAtAsc(UUID tournamentId);
+
+    List<Match> findByTournamentIdAndStatusOrderByScheduledAtAsc(
+            UUID tournamentId, MatchStatus status);
 }

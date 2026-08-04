@@ -29,6 +29,9 @@ spring:
 tennisly:
   websocket:
     allowed-origins: ${MATCH_SERVICE_WS_ALLOWED_ORIGINS:http://localhost:3000}
+  seed:
+    # Multi-tournament ESPN/UEFA-style day board + replay point ledgers (idempotent).
+    broadcast-catalogue: ${SEED_BROADCAST_CATALOGUE:true}
 eureka:
   client:
     service-url:

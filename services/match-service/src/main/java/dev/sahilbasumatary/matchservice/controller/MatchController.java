@@ -46,9 +46,16 @@ public class MatchController {
 
     @GetMapping
     public ResponseEntity<List<MatchResponse>> listMatches(
-            @RequestParam(required = false) MatchStatus status) {
-        log.debug("GET /api/matches status={}", status);
-        return ResponseEntity.ok(matchService.listMatches(status));
+            @RequestParam(required = false) MatchStatus status,
+            @RequestParam(required = false) UUID tournamentId) {
+        log.debug("GET /api/matches status={} tournamentId={}", status, tournamentId);
+        return ResponseEntity.ok(matchService.listMatches(status, tournamentId));
+    }
+
+    @GetMapping("/external/{externalId}")
+    public ResponseEntity<MatchResponse> getMatchByExternalId(@PathVariable String externalId) {
+        log.debug("GET /api/matches/external/{}", externalId);
+        return ResponseEntity.ok(matchService.getMatchByExternalId(externalId));
     }
 
     @GetMapping("/{matchId}")

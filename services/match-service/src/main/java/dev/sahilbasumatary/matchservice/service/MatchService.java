@@ -86,17 +86,34 @@ public class MatchService {
     }
 
     @Transactional(readOnly = true)
-    public List<MatchResponse> listMatches(MatchStatus status) {
-        List<Match> matches =
-                status == null
-                        ? matchRepository.findAll()
-                        : matchRepository.findByStatusOrderByScheduledAtAsc(status);
+    public List<MatchResponse> listMatches(MatchStatus status, UUID tournamentId) {
+        List<Match> matches;
+        if (tournamentId != null && status != null) {
+            matches =
+                    matchRepository.findByTournamentIdAndStatusOrderByScheduledAtAsc(
+                            tournamentId, status);
+        } else if (tournamentId != null) {
+            matches = matchRepository.findByTournamentIdOrderByScheduledAtAsc(tournamentId);
+        } else if (status != null) {
+            matches = matchRepository.findByStatusOrderByScheduledAtAsc(status);
+        } else {
+            matches = matchRepository.findAllByOrderByScheduledAtAsc();
+        }
         return matches.stream().map(MatchResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public MatchResponse getMatch(UUID matchId) {
         return MatchResponse.from(findMatch(matchId));
+    }
+
+    @Transactional(readOnly = true)
+    public MatchResponse getMatchByExternalId(String externalId) {
+        return MatchResponse.from(
+                matchRepository
+                        .findByExternalId(externalId)
+                        .orElseThrow(
+                                () -> new ResourceNotFoundException("Match externalId", externalId)));
     }
 
     @Transactional
