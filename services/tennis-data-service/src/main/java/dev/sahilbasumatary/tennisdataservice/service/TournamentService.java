@@ -1,5 +1,6 @@
 package dev.sahilbasumatary.tennisdataservice.service;
 
+import dev.sahilbasumatary.tennisdataservice.config.RedisCacheConfig;
 import dev.sahilbasumatary.tennisdataservice.dto.response.TournamentResponse;
 import dev.sahilbasumatary.tennisdataservice.entity.Gender;
 import dev.sahilbasumatary.tennisdataservice.entity.Surface;
@@ -9,6 +10,7 @@ import dev.sahilbasumatary.tennisdataservice.exception.ResourceNotFoundException
 import dev.sahilbasumatary.tennisdataservice.repository.TournamentRepository;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,12 @@ public class TournamentService {
         this.tournamentRepository = tournamentRepository;
     }
 
+    @Cacheable(
+            cacheNames = RedisCacheConfig.TOURNAMENTS_CACHE,
+            key =
+                    "(#level != null ? #level.name() : 'ALL') + ':' + (#surface != null ?"
+                            + " #surface.name() : 'ALL') + ':' + (#gender != null ? #gender.name() :"
+                            + " 'ALL')")
     @Transactional(readOnly = true)
     public List<TournamentResponse> listTournaments(
             TournamentLevel level, Surface surface, Gender gender) {

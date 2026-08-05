@@ -1,10 +1,12 @@
 package dev.sahilbasumatary.tennisdataservice.service;
 
+import dev.sahilbasumatary.tennisdataservice.config.RedisCacheConfig;
 import dev.sahilbasumatary.tennisdataservice.dto.response.RankingResponse;
 import dev.sahilbasumatary.tennisdataservice.entity.Gender;
 import dev.sahilbasumatary.tennisdataservice.entity.RankingType;
 import dev.sahilbasumatary.tennisdataservice.repository.RankingRepository;
 import java.util.List;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,9 @@ public class RankingService {
         this.rankingRepository = rankingRepository;
     }
 
+    @Cacheable(
+            cacheNames = RedisCacheConfig.RANKINGS_CACHE,
+            key = "#gender.name() + ':' + #rankingType.name()")
     @Transactional(readOnly = true)
     public List<RankingResponse> getCurrentRankings(Gender gender, RankingType rankingType) {
         // "Current" means the most recent snapshot we hold, not a hard-coded date.
