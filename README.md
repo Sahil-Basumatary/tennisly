@@ -39,6 +39,10 @@ TENNIS_LIVETENNIS_API_KEY=...
 
 Optional BallDontLie knobs (useful after downgrading to Free): `TENNIS_BALLDONTLIE_PER_PAGE` (default `100`), `TENNIS_BALLDONTLIE_REQUESTS_PER_MINUTE` (default `5`), `TENNIS_BALLDONTLIE_MAX_PAGES`.
 
+### Local ports
+
+Tennisly uses its own host port block (e.g. postgres `15432`, redis `16379`, web `13000`) so it can run beside other Docker stacks. `make up` runs `scripts/allocate-ports.sh`: if a preferred port is busy it walks upward to the next free port and writes `.run/ports.env`. Inspect with `make ports-print`.
+
 Optional ingest toggles on match-service: `MATCH_INGEST_ENABLED`, `MATCH_INGEST_LIVE_DELAY_MS`, `MATCH_INGEST_COMPLETED_DELAY_MS`.
 
 ## Status

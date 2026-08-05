@@ -1,10 +1,10 @@
 server:
-  port: 8085
+  port: ${SERVER_PORT:18085}
 spring:
   application:
     name: replay-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_REPLAY:tennisly_replay}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_REPLAY:tennisly_replay}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
@@ -17,14 +17,14 @@ spring:
     enabled: true
     baseline-on-migrate: false
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19094}
     consumer:
       group-id: replay-service-group
       auto-offset-reset: earliest
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:18761/eureka}
   instance:
     prefer-ip-address: true
 management:
@@ -49,7 +49,7 @@ replay:
     solver-tolerance-metres: ${REPLAY_ENGINE_SOLVER_TOLERANCE:0.05}
     max-rally-length: ${REPLAY_ENGINE_MAX_RALLY:40}
   storage:
-    endpoint: ${REPLAY_STORAGE_ENDPOINT:http://localhost:9000}
+    endpoint: ${REPLAY_STORAGE_ENDPOINT:http://localhost:19000}
     region: ${REPLAY_STORAGE_REGION:us-east-1}
     bucket: ${REPLAY_STORAGE_BUCKET:tennisly-replays}
     access-key: ${REPLAY_STORAGE_ACCESS_KEY:minioadmin}

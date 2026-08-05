@@ -2,7 +2,9 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 ENV_FILE := infrastructure/docker/.env
-COMPOSE := docker compose -f infrastructure/docker/docker-compose.yml --env-file $(ENV_FILE)
+PORTS_FILE := .run/ports.env
+COMPOSE_FILE := infrastructure/docker/docker-compose.yml
+COMPOSE = docker compose -f $(COMPOSE_FILE) --env-file $(ENV_FILE) $(if $(wildcard $(PORTS_FILE)),--env-file $(PORTS_FILE),)
 MVNW := ./mvnw
 RUN_DIR := .run
 PID_DIR := $(RUN_DIR)/pids
@@ -11,8 +13,13 @@ LOG_DIR := $(RUN_DIR)/logs
 # Spring Boot 3.2 does not support the JDK 25 that ships as this machine's default.
 JAVA_HOME ?= $(shell /usr/libexec/java_home -v 21 2>/dev/null)
 
-# Java services run outside Docker, so secrets have to be loaded into their JVM.
-LOAD_ENV = set -a; [ -f $(ENV_FILE) ] && source $(ENV_FILE); set +a; export JAVA_HOME=$(JAVA_HOME); export PATH=$$JAVA_HOME/bin:$$PATH;
+# Secrets from .env, then dynamic ports from .run/ports.env (ports win on clash).
+LOAD_ENV = set -a; \
+	[ -f $(ENV_FILE) ] && source $(ENV_FILE); \
+	[ -f $(PORTS_FILE) ] && source $(PORTS_FILE); \
+	set +a; \
+	export JAVA_HOME=$(JAVA_HOME); \
+	export PATH=$$JAVA_HOME/bin:$$PATH;
 
 .PHONY: help
 help:
@@ -30,8 +37,14 @@ check-env: ## Verify the API keys are present before booting anything
 	@test -n "$(JAVA_HOME)" || { echo "no JDK 21 found — install temurin-21"; exit 1; }
 	@echo "JDK 21 at $(JAVA_HOME)"
 
+.PHONY: ports
+ports: ## Allocate free host ports into .run/ports.env
+	@./scripts/allocate-ports.sh
+	@echo "active ports:"
+	@grep -E '^(POSTGRES_PORT|REDIS_PORT|KAFKA_EXTERNAL_PORT|MINIO_API_PORT|EUREKA_SERVER_PORT|TENNIS_DATA_SERVER_PORT|MATCH_SERVER_PORT|REPLAY_SERVER_PORT|WEB_PORT)=' $(PORTS_FILE)
+
 .PHONY: infra-up
-infra-up: ## Start postgres, redis, kafka and minio
+infra-up: ports ## Start postgres, redis, kafka and minio on allocated ports
 	$(COMPOSE) --profile infra up -d postgres redis kafka minio
 	@$(COMPOSE) ps
 
@@ -52,29 +65,50 @@ infra-logs: ## Tail infrastructure logs
 	$(COMPOSE) logs -f
 
 .PHONY: tools-up
-tools-up: ## Start pgadmin, redis-commander and kafka-ui
+tools-up: ports ## Start pgadmin, redis-commander and kafka-ui
 	$(COMPOSE) --profile tools up -d
 
 # --- one-command boot -------------------------------------------------------
 
 .PHONY: up
-up: check-env infra-up ## Start infra + every app service in the background
+up: check-env ports ## Start infra + every app service in the background
 	@mkdir -p $(PID_DIR) $(LOG_DIR)
+	$(COMPOSE) --profile infra up -d postgres redis kafka minio
 	@echo "waiting for postgres/redis/kafka"
 	@$(COMPOSE) up -d --wait postgres redis kafka 2>/dev/null || true
-	@$(MAKE) --no-print-directory _start-bg NAME=eureka CMD='$(MVNW) -pl services/eureka-server spring-boot:run'
-	@$(MAKE) --no-print-directory _wait-http PORT=8761 LABEL=eureka
-	@$(MAKE) --no-print-directory _start-bg NAME=tennis-data CMD='$(MVNW) -pl services/tennis-data-service spring-boot:run'
-	@$(MAKE) --no-print-directory _wait-http PORT=8083 LABEL=tennis-data
-	@$(MAKE) --no-print-directory _start-bg NAME=match CMD='$(MVNW) -pl services/match-service spring-boot:run'
-	@$(MAKE) --no-print-directory _start-bg NAME=replay CMD='$(MVNW) -pl services/replay-service spring-boot:run'
-	@$(MAKE) --no-print-directory _start-bg NAME=web CMD='pnpm --filter @tennisly/web dev'
+	@$(LOAD_ENV) \
+		$(MAKE) --no-print-directory _start-bg NAME=eureka \
+			CMD='SERVER_PORT=$$EUREKA_SERVER_PORT $(MVNW) -pl services/eureka-server spring-boot:run'; \
+		$(MAKE) --no-print-directory _wait-http PORT=$$EUREKA_SERVER_PORT LABEL=eureka; \
+		$(MAKE) --no-print-directory _start-bg NAME=tennis-data \
+			CMD='SERVER_PORT=$$TENNIS_DATA_SERVER_PORT $(MVNW) -pl services/tennis-data-service spring-boot:run'; \
+		$(MAKE) --no-print-directory _wait-http PORT=$$TENNIS_DATA_SERVER_PORT LABEL=tennis-data; \
+		$(MAKE) --no-print-directory _start-bg NAME=match \
+			CMD='SERVER_PORT=$$MATCH_SERVER_PORT $(MVNW) -pl services/match-service spring-boot:run'; \
+		$(MAKE) --no-print-directory _start-bg NAME=replay \
+			CMD='SERVER_PORT=$$REPLAY_SERVER_PORT $(MVNW) -pl services/replay-service spring-boot:run'; \
+		$(MAKE) --no-print-directory _start-bg NAME=web \
+			CMD='pnpm --filter @tennisly/web dev'
 	@echo ""
 	@echo "stack starting — first JVM boot is slow (~1–2 min)"
+	@$(MAKE) --no-print-directory ports-print
 	@echo "  make status   # who's up"
 	@echo "  make logs     # follow all app logs"
 	@echo "  make health   # probe health endpoints"
 	@echo "  make down     # stop everything"
+
+.PHONY: ports-print
+ports-print: ## Print the currently allocated app URLs
+	@$(LOAD_ENV) \
+		echo "  web          http://localhost:$$WEB_PORT"; \
+		echo "  eureka       http://localhost:$$EUREKA_SERVER_PORT"; \
+		echo "  tennis-data  http://localhost:$$TENNIS_DATA_SERVER_PORT"; \
+		echo "  match        http://localhost:$$MATCH_SERVER_PORT"; \
+		echo "  replay       http://localhost:$$REPLAY_SERVER_PORT"; \
+		echo "  postgres     localhost:$$POSTGRES_PORT"; \
+		echo "  redis        localhost:$$REDIS_PORT"; \
+		echo "  kafka        localhost:$$KAFKA_EXTERNAL_PORT"; \
+		echo "  minio        http://localhost:$$MINIO_API_PORT";
 
 .PHONY: down
 down: ## Stop app services and infrastructure
@@ -113,32 +147,33 @@ logs: ## Tail app service logs (Ctrl-C to stop)
 # --- single-service foreground (debug) --------------------------------------
 
 .PHONY: eureka
-eureka: ## Run the service registry in the foreground (port 8761)
-	@$(LOAD_ENV) $(MVNW) -pl services/eureka-server spring-boot:run
+eureka: ports ## Run eureka in the foreground
+	@$(LOAD_ENV) SERVER_PORT=$$EUREKA_SERVER_PORT $(MVNW) -pl services/eureka-server spring-boot:run
 
 .PHONY: tennis-data
-tennis-data: check-env ## Run tennis-data-service in the foreground (port 8083)
-	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service spring-boot:run
+tennis-data: check-env ports ## Run tennis-data-service in the foreground
+	@$(LOAD_ENV) SERVER_PORT=$$TENNIS_DATA_SERVER_PORT $(MVNW) -pl services/tennis-data-service spring-boot:run
 
 .PHONY: match
-match: ## Run match-service in the foreground (port 8084)
-	@$(LOAD_ENV) $(MVNW) -pl services/match-service spring-boot:run
+match: ports ## Run match-service in the foreground
+	@$(LOAD_ENV) SERVER_PORT=$$MATCH_SERVER_PORT $(MVNW) -pl services/match-service spring-boot:run
 
 .PHONY: replay
-replay: ## Run replay-service in the foreground (port 8085)
-	@$(LOAD_ENV) $(MVNW) -pl services/replay-service spring-boot:run
+replay: ports ## Run replay-service in the foreground
+	@$(LOAD_ENV) SERVER_PORT=$$REPLAY_SERVER_PORT $(MVNW) -pl services/replay-service spring-boot:run
 
 .PHONY: web
-web: ## Run the Next.js app in the foreground (port 3000)
-	pnpm --filter @tennisly/web dev
+web: ports ## Run the Next.js app in the foreground
+	@$(LOAD_ENV) pnpm --filter @tennisly/web dev
 
 .PHONY: test
 test: ## Run the JVM test suites
 	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service,services/match-service,services/replay-service -am test
 
 .PHONY: health
-health: ## Probe every local service health endpoint
-	@for pair in "8761:eureka" "8083:tennis-data" "8084:match" "8085:replay" "3000:web"; do \
+health: ## Probe every local service health endpoint using allocated ports
+	@$(LOAD_ENV) \
+	for pair in "$$EUREKA_SERVER_PORT:eureka" "$$TENNIS_DATA_SERVER_PORT:tennis-data" "$$MATCH_SERVER_PORT:match" "$$REPLAY_SERVER_PORT:replay" "$$WEB_PORT:web"; do \
 		port=$${pair%%:*}; name=$${pair##*:}; \
 		code=$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$$port/actuator/health 2>/dev/null \
 			|| curl -s -o /dev/null -w "%{http_code}" http://localhost:$$port 2>/dev/null \

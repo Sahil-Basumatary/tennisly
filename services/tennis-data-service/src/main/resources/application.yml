@@ -1,10 +1,10 @@
 server:
-  port: 8083
+  port: ${SERVER_PORT:18083}
 spring:
   application:
     name: tennis-data-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_TENNIS_DATA:tennisly_tennis_data}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_TENNIS_DATA:tennisly_tennis_data}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
@@ -16,13 +16,13 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      port: ${REDIS_PORT:16379}
       timeout: 2s
   flyway:
     enabled: true
     baseline-on-migrate: false
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19094}
     producer:
       acks: all
       retries: 3
@@ -57,7 +57,7 @@ tennis:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+      defaultZone: ${EUREKA_URI:http://localhost:18761/eureka}
   instance:
     prefer-ip-address: true
 management:
