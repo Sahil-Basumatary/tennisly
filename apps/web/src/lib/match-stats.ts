@@ -6,29 +6,20 @@ export type UpstreamMatchPoint = {
   serverId: string;
   winnerId: string;
   outcome: string;
-  rallyLength: number;
+  rallyLength: number | null;
+  scoreSnapshot?: Record<string, unknown> | null;
 };
 
 type SideBag = { homeId: string; awayId: string };
 
 type SideBucket = {
-  aces: number;
-  winners: number;
-  unforcedErrors: number;
-  forcedErrors: number;
-  doubleFaults: number;
   pointsWon: number;
+  servicePointsWon: number;
+  breakPointsWon: number;
 };
 
 function emptyBucket(): SideBucket {
-  return {
-    aces: 0,
-    winners: 0,
-    unforcedErrors: 0,
-    forcedErrors: 0,
-    doubleFaults: 0,
-    pointsWon: 0,
-  };
+  return { pointsWon: 0, servicePointsWon: 0, breakPointsWon: 0 };
 }
 
 function sideIds(players: UpstreamMatchPlayer[]): SideBag {
@@ -44,13 +35,14 @@ function bucketFor(map: SideBag, playerId: string, home: SideBucket, away: SideB
   return playerId === map.awayId ? away : home;
 }
 
-function opponent(map: SideBag, playerId: string): string {
-  return playerId === map.homeId ? map.awayId : map.homeId;
+function isServiceBreak(point: UpstreamMatchPoint): boolean {
+  if (point.winnerId === point.serverId) return false;
+  const pts = point.scoreSnapshot?.points;
+  if (!Array.isArray(pts) || pts.length < 2) return false;
+  return String(pts[0]) === "0" && String(pts[1]) === "0";
 }
 
-/**
- * ESPN/UEFA-style box score from the point ledger (aces, winners, errors, DF, avg rally).
- */
+/** Box score from the point ledger — only metrics the tape can prove. */
 export function aggregateMatchStats(
   match: UpstreamMatch,
   points: UpstreamMatchPoint[],
@@ -60,62 +52,30 @@ export function aggregateMatchStats(
   const away = emptyBucket();
 
   for (const point of points) {
-    const winner = bucketFor(map, point.winnerId, home, away);
-    winner.pointsWon += 1;
-    const outcome = point.outcome.toUpperCase();
-    if (outcome === "ACE") {
-      bucketFor(map, point.winnerId, home, away).aces += 1;
-      continue;
-    }
-    if (outcome === "WINNER") {
-      bucketFor(map, point.winnerId, home, away).winners += 1;
-      continue;
-    }
-    if (outcome === "DOUBLE_FAULT") {
-      bucketFor(map, point.serverId, home, away).doubleFaults += 1;
-      continue;
-    }
-    if (outcome === "UNFORCED_ERROR") {
-      bucketFor(map, opponent(map, point.winnerId), home, away).unforcedErrors += 1;
-      continue;
-    }
-    if (outcome === "FORCED_ERROR") {
-      bucketFor(map, opponent(map, point.winnerId), home, away).forcedErrors += 1;
+    bucketFor(map, point.winnerId, home, away).pointsWon += 1;
+    if (point.winnerId === point.serverId) {
+      bucketFor(map, point.serverId, home, away).servicePointsWon += 1;
+    } else if (isServiceBreak(point)) {
+      bucketFor(map, point.winnerId, home, away).breakPointsWon += 1;
     }
   }
 
-  const rallyPoints = points.filter((point) => point.rallyLength > 0);
-  const avgRally =
-    rallyPoints.length === 0
-      ? "—"
-      : (
-          rallyPoints.reduce((sum, point) => sum + point.rallyLength, 0) / rallyPoints.length
-        ).toFixed(1);
-
   return [
-    { label: "Aces", home: String(home.aces), away: String(away.aces) },
-    { label: "Winners", home: String(home.winners), away: String(away.winners) },
-    {
-      label: "Unforced errors",
-      home: String(home.unforcedErrors),
-      away: String(away.unforcedErrors),
-    },
-    {
-      label: "Forced errors",
-      home: String(home.forcedErrors),
-      away: String(away.forcedErrors),
-    },
-    {
-      label: "Double faults",
-      home: String(home.doubleFaults),
-      away: String(away.doubleFaults),
-    },
     {
       label: "Points won",
       home: String(home.pointsWon),
       away: String(away.pointsWon),
     },
-    { label: "Avg rally length", home: avgRally, away: avgRally },
+    {
+      label: "Service points won",
+      home: String(home.servicePointsWon),
+      away: String(away.servicePointsWon),
+    },
+    {
+      label: "Breaks",
+      home: String(home.breakPointsWon),
+      away: String(away.breakPointsWon),
+    },
     { label: "Points played", home: String(points.length), away: String(points.length) },
   ];
 }

@@ -19,7 +19,7 @@ export function PlayersSkeleton({ board }: { board: PlayersBoard }) {
         </div>
         {board.rows.length === 0 ? (
           <p className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
-            No rankings yet. Start tennis-data-service (startup sync fills the mock board).
+            No rankings yet. Start tennis-data-service with a BallDontLie API key so rankings can sync.
           </p>
         ) : (
           board.rows.map((row) => (

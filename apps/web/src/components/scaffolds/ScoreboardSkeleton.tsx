@@ -95,7 +95,7 @@ export function ScoreboardSkeleton({ day }: { day: ScoreboardDay }) {
           <div className="border border-hairline bg-white px-4 py-10 text-center">
             <p className="font-sans text-sm font-semibold text-foreground">No matches on the board</p>
             <p className="mt-1 font-sans text-sm text-muted-foreground">
-              Start match-service with the broadcast catalogue seed, then refresh.
+              Start match-service with Live Tennis API ingestion enabled, then refresh.
             </p>
           </div>
         ) : (

@@ -23,7 +23,7 @@ export default async function MatchesIndexPage() {
         <ul className="divide-y divide-hairline border border-hairline bg-white">
           {feed.items.length === 0 ? (
             <li className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
-              No live-centre matches yet. Ensure match-service is running with the catalogue seed.
+              No live-centre matches yet. Ensure match-service is ingesting from Live Tennis API.
             </li>
           ) : (
             feed.items.map((match) => (

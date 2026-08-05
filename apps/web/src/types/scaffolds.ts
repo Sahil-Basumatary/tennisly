@@ -38,9 +38,6 @@ export type PlayersBoard = {
 export type StandingRow = {
   position: number;
   player: string;
-  played: number;
-  won: number;
-  lost: number;
   points: number;
 };
 

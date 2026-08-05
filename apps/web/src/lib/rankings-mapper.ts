@@ -33,9 +33,6 @@ export function toStandingRows(rankings: UpstreamRanking[], limit = 8): Standing
     .map((row) => ({
       position: row.rank,
       player: row.playerName,
-      played: 0,
-      won: 0,
-      lost: 0,
       points: row.points,
     }));
 }

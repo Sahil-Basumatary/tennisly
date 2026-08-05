@@ -1,6 +1,7 @@
+import { getPlayersBoard } from "@/services/catalogue";
 import { getScoresFeed } from "@/services/scores";
 
-export type StoryTag = "News" | "Feature" | "Analysis" | "Video";
+export type StoryTag = "News" | "Feature" | "Analysis" | "Live";
 
 export type HomeStory = {
   id: string;
@@ -29,8 +30,9 @@ export type HomeContent = {
     href: string;
     imageSrc: string;
     imageAlt: string;
-  };
+  } | null;
   latest: HomeStory[];
+  empty: boolean;
 };
 
 const IMG = {
@@ -38,20 +40,64 @@ const IMG = {
     "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=2400&q=80",
   serve:
     "https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=1200&q=80",
-  racket:
-    "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1200&q=80",
-  clayBall:
-    "https://images.unsplash.com/photo-1534158914592-062992fbe900?auto=format&fit=crop&w=1200&q=80",
   crowd:
     "https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80",
-  gear:
-    "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=1200&q=80",
 } as const;
 
 export async function getHomeContent(): Promise<HomeContent> {
-  const feed = await getScoresFeed();
-  const featuredMatch =
-    feed.items.find((item) => item.status === "live") ?? feed.items[0] ?? null;
+  const [feed, atpBoard, wtaBoard] = await Promise.all([
+    getScoresFeed(),
+    getPlayersBoard("atp").catch(() => ({ tour: "atp" as const, updatedAt: "", rows: [] })),
+    getPlayersBoard("wta").catch(() => ({ tour: "wta" as const, updatedAt: "", rows: [] })),
+  ]);
+
+  const live = feed.items.filter((item) => item.status === "live");
+  const featuredMatch = live[0] ?? feed.items[0] ?? null;
+  const editorsPicks: HomeStory[] = [];
+
+  for (const match of [...live, ...feed.items.filter((item) => item.status !== "live")].slice(
+    0,
+    5,
+  )) {
+    editorsPicks.push({
+      id: match.id,
+      tag: match.status === "live" ? "Live" : "News",
+      title: `${match.home.name} vs ${match.away.name} · ${match.tournament}`,
+      href: match.href,
+      imageSrc: IMG.serve,
+      imageAlt: `${match.home.name} versus ${match.away.name}`,
+      publishedLabel: match.status === "live" ? "Live now" : match.round,
+      readMinutes: 3,
+    });
+  }
+
+  const rankingStories: HomeStory[] = [];
+  for (const row of atpBoard.rows.slice(0, 2)) {
+    rankingStories.push({
+      id: `atp-${row.id}`,
+      tag: "Analysis",
+      title: `ATP #${row.rank} ${row.name} · ${row.points} pts`,
+      href: row.href,
+      imageSrc: IMG.crowd,
+      imageAlt: row.name,
+      publishedLabel: "ATP rankings",
+      readMinutes: 2,
+    });
+  }
+  for (const row of wtaBoard.rows.slice(0, 2)) {
+    rankingStories.push({
+      id: `wta-${row.id}`,
+      tag: "Analysis",
+      title: `WTA #${row.rank} ${row.name} · ${row.points} pts`,
+      href: row.href,
+      imageSrc: IMG.crowd,
+      imageAlt: row.name,
+      publishedLabel: "WTA rankings",
+      readMinutes: 2,
+    });
+  }
+
+  const empty = editorsPicks.length === 0 && rankingStories.length === 0;
   const matchHref = featuredMatch?.href ?? "/matches";
   const matchTitle = featuredMatch
     ? `${featuredMatch.home.name} vs ${featuredMatch.away.name}`
@@ -59,115 +105,26 @@ export async function getHomeContent(): Promise<HomeContent> {
 
   return {
     hero: {
-      headline: "Replay every point from centre court",
+      headline: empty
+        ? "Waiting on live tennis data"
+        : "Replay every point from centre court",
       ctaLabel: "Open Live Centre",
       ctaHref: "/matches",
       imageSrc: IMG.grassAction,
       imageAlt: "Tennis player celebrating on a grass court",
     },
-    editorsPicks: [
-      {
-        id: "pick-1",
-        tag: "News",
-        title: featuredMatch
-          ? `${matchTitle}: point-by-point on ${featuredMatch.tournament}`
-          : "How Alcaraz turned a break point into the set",
-        href: matchHref,
-        imageSrc: IMG.serve,
-        imageAlt: "Player serving on outdoor court",
-        publishedLabel: "Live board",
-        readMinutes: 6,
-      },
-      {
-        id: "pick-2",
-        tag: "Feature",
-        title: "Inside the physics behind a kicking second serve",
-        href: "/matches?view=replays",
-        imageSrc: IMG.racket,
-        imageAlt: "Close-up of tennis racket and ball",
-        publishedLabel: "12 Jul 2026",
-        readMinutes: 4,
-      },
-      {
-        id: "pick-3",
-        tag: "Analysis",
-        title: "Why baseline depth decided the third-set tiebreak",
-        href: "/scores",
-        imageSrc: IMG.clayBall,
-        imageAlt: "Tennis ball bouncing on clay",
-        publishedLabel: "2 days ago",
-        readMinutes: 5,
-      },
-      {
-        id: "pick-4",
-        tag: "News",
-        title: "Swiatek’s return patterns mapped shot by shot",
-        href: "/players",
-        imageSrc: IMG.crowd,
-        imageAlt: "Crowd watching a tennis match",
-        publishedLabel: "3 days ago",
-        readMinutes: 4,
-      },
-      {
-        id: "pick-5",
-        tag: "Feature",
-        title: "Court visualisation: reading spin from trajectory alone",
-        href: "/matches",
-        imageSrc: IMG.gear,
-        imageAlt: "Tennis balls and racket on court",
-        publishedLabel: "4 days ago",
-        readMinutes: 7,
-      },
-    ],
-    featured: {
-      eyebrow: "Match Centre",
-      headline: matchTitle,
-      label: featuredMatch?.status === "live" ? "LIVE" : "Featured",
-      href: matchHref,
-      imageSrc: IMG.grassAction,
-      imageAlt: "Stadium lights over a tennis arena",
-    },
-    latest: [
-      {
-        id: "latest-1",
-        tag: "News",
-        title: "Live centre streams the seeded broadcast catalogue",
-        href: "/matches",
-        imageSrc: IMG.crowd,
-        imageAlt: "Crowd watching a tennis match",
-        publishedLabel: "Today",
-        readMinutes: 3,
-      },
-      {
-        id: "latest-2",
-        tag: "Analysis",
-        title: "Surface bounce models: grass vs hard court coefficients",
-        href: "/tournaments",
-        imageSrc: IMG.grassAction,
-        imageAlt: "Grass court tennis action",
-        publishedLabel: "Yesterday",
-        readMinutes: 8,
-      },
-      {
-        id: "latest-3",
-        tag: "Feature",
-        title: "Building trust into every replay frame checksum",
-        href: "/dashboard",
-        imageSrc: IMG.gear,
-        imageAlt: "Tennis balls and racket on court",
-        publishedLabel: "5 days ago",
-        readMinutes: 5,
-      },
-      {
-        id: "latest-4",
-        tag: "Video",
-        title: "Watch: full-rally reconstruction at 60 frames per second",
-        href: matchHref,
-        imageSrc: IMG.serve,
-        imageAlt: "Player hitting a serve",
-        publishedLabel: "1 week ago",
-        readMinutes: 2,
-      },
-    ],
+    editorsPicks,
+    featured: featuredMatch
+      ? {
+          eyebrow: "Match Centre",
+          headline: matchTitle,
+          label: featuredMatch.status === "live" ? "LIVE" : "Featured",
+          href: matchHref,
+          imageSrc: IMG.grassAction,
+          imageAlt: "Stadium lights over a tennis arena",
+        }
+      : null,
+    latest: rankingStories,
+    empty,
   };
 }

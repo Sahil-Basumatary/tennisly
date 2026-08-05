@@ -20,23 +20,20 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
             Standings
           </h2>
           <div className="overflow-hidden border border-hairline bg-white">
-            <div className="grid grid-cols-[40px_1fr_40px_40px_40px_56px] gap-2 border-b border-hairline bg-[#f2f4f8] px-3 py-2 font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="grid grid-cols-[40px_1fr_56px] gap-2 border-b border-hairline bg-[#f2f4f8] px-3 py-2 font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               <span>#</span>
               <span>Player</span>
-              <span>P</span>
-              <span>W</span>
-              <span>L</span>
               <span className="text-right">Pts</span>
             </div>
             {board.standings.length === 0 ? (
               <p className="px-3 py-6 font-sans text-sm text-muted-foreground">
-                Rankings unavailable — start tennis-data-service to fill standings.
+                Rankings unavailable — start tennis-data-service with a BallDontLie API key.
               </p>
             ) : (
               board.standings.map((row) => (
                 <div
                   key={row.position}
-                  className="grid grid-cols-[40px_1fr_40px_40px_40px_56px] gap-2 border-b border-hairline px-3 py-2.5"
+                  className="grid grid-cols-[40px_1fr_56px] gap-2 border-b border-hairline px-3 py-2.5"
                 >
                   <span className="font-data text-[13px] text-muted-foreground">
                     {row.position}
@@ -44,9 +41,6 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
                   <span className="truncate font-sans text-[14px] font-medium">
                     {row.player}
                   </span>
-                  <span className="font-data text-[13px]">{row.played}</span>
-                  <span className="font-data text-[13px]">{row.won}</span>
-                  <span className="font-data text-[13px]">{row.lost}</span>
                   <span className="text-right font-data text-[13px] font-semibold">
                     {row.points}
                   </span>
@@ -62,7 +56,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
           <div className="space-y-2">
             {board.fixtures.length === 0 ? (
               <p className="border border-hairline bg-white px-4 py-8 text-center font-sans text-sm text-muted-foreground">
-                No fixtures yet — start match-service with the broadcast catalogue.
+                No fixtures yet — start match-service with Live Tennis API ingestion enabled.
               </p>
             ) : (
               board.fixtures.map((fx) => (

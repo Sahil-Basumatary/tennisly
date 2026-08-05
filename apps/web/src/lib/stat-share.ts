@@ -1,7 +1,3 @@
-/**
- * Parse scaffold stat strings ("24", "68%", "3/7") into a comparable magnitude.
- * Used only for bar share — displayed text stays as authored.
- */
 export function parseStatMagnitude(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed || trimmed === "—") return null;

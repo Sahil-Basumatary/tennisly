@@ -14,16 +14,16 @@ type ReplayStatsOverlayProps = {
   className?: string;
 };
 
-const ROWS: { key: "aces" | "winners" | "unforcedErrors" | "pointsWon"; label: string }[] = [
-  { key: "aces", label: "Aces" },
-  { key: "winners", label: "Winners" },
-  { key: "unforcedErrors", label: "UEs" },
+const ROWS: {
+  key: "pointsWon" | "gamesWon" | "servicePointsWon" | "breakPointsWon";
+  label: string;
+}[] = [
   { key: "pointsWon", label: "Pts won" },
+  { key: "gamesWon", label: "Games" },
+  { key: "servicePointsWon", label: "Svc pts" },
+  { key: "breakPointsWon", label: "Breaks" },
 ];
 
-/**
- * Compact running box score on the feed — updates as points complete under the scrubber.
- */
 export function ReplayStatsOverlay({
   homePlayerId,
   awayPlayerId,

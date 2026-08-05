@@ -10,9 +10,11 @@ export default async function HomePage() {
   return (
     <main id="main-content">
       <HomeHero {...content.hero} />
-      <EditorialCarousel title="Editor’s picks" stories={content.editorsPicks} />
-      <FeaturedBand {...content.featured} />
-      <LatestGrid title="Latest" stories={content.latest} />
+      {content.editorsPicks.length > 0 ? (
+        <EditorialCarousel title="Editor’s picks" stories={content.editorsPicks} />
+      ) : null}
+      {content.featured ? <FeaturedBand {...content.featured} /> : null}
+      {content.latest.length > 0 ? <LatestGrid title="Latest" stories={content.latest} /> : null}
     </main>
   );
 }

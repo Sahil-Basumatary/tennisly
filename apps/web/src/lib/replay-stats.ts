@@ -2,10 +2,10 @@ import type { PointSummary } from "@/types/replay";
 import { indexAtOrBefore } from "@/lib/replay-transport";
 
 export type ReplaySideStats = {
-  aces: number;
-  winners: number;
-  unforcedErrors: number;
   pointsWon: number;
+  gamesWon: number;
+  servicePointsWon: number;
+  breakPointsWon: number;
 };
 
 export type ReplayRunningStats = {
@@ -16,26 +16,9 @@ export type ReplayRunningStats = {
 };
 
 function emptySide(): ReplaySideStats {
-  return { aces: 0, winners: 0, unforcedErrors: 0, pointsWon: 0 };
+  return { pointsWon: 0, gamesWon: 0, servicePointsWon: 0, breakPointsWon: 0 };
 }
 
-function sideFor(
-  playerId: string,
-  homePlayerId: string,
-  awayPlayerId: string,
-  home: ReplaySideStats,
-  away: ReplaySideStats,
-): ReplaySideStats {
-  return playerId === awayPlayerId ? away : home;
-}
-
-function opponentId(playerId: string, homePlayerId: string, awayPlayerId: string): string {
-  return playerId === homePlayerId ? awayPlayerId : homePlayerId;
-}
-
-/**
- * Points fully behind the scrubber (current point excluded until the match clock ends).
- */
 export function completedPointCount(
   pointStartTimes: number[],
   timeSeconds: number,
@@ -48,9 +31,7 @@ export function completedPointCount(
   return indexAtOrBefore(pointStartTimes, timeSeconds);
 }
 
-/**
- * Running box-score for the on-canvas HUD — only points already completed.
- */
+/** Running box-score from the point tape — only metrics the ledger can prove. */
 export function aggregateReplayStats(
   points: PointSummary[],
   homePlayerId: string,
@@ -62,25 +43,20 @@ export function aggregateReplayStats(
   const slice = points.slice(0, Math.max(0, Math.min(completedCount, points.length)));
 
   for (const point of slice) {
-    const winner = sideFor(point.winnerId, homePlayerId, awayPlayerId, home, away);
+    const winnerIsAway = point.winnerId === awayPlayerId;
+    const winner = winnerIsAway ? away : home;
     winner.pointsWon += 1;
-    const outcome = point.outcome.toUpperCase();
-    if (outcome === "ACE") {
-      sideFor(point.winnerId, homePlayerId, awayPlayerId, home, away).aces += 1;
-      continue;
+    if (point.winnerId === point.serverId) {
+      if (point.serverId === homePlayerId) home.servicePointsWon += 1;
+      else away.servicePointsWon += 1;
+    } else if (isServiceBreak(point)) {
+      if (winnerIsAway) away.breakPointsWon += 1;
+      else home.breakPointsWon += 1;
     }
-    if (outcome === "WINNER") {
-      sideFor(point.winnerId, homePlayerId, awayPlayerId, home, away).winners += 1;
-      continue;
-    }
-    if (outcome === "UNFORCED_ERROR") {
-      sideFor(
-        opponentId(point.winnerId, homePlayerId, awayPlayerId),
-        homePlayerId,
-        awayPlayerId,
-        home,
-        away,
-      ).unforcedErrors += 1;
+    const games = totalGamesFromSnapshot(point.scoreSnapshot);
+    if (games) {
+      home.gamesWon = Math.max(home.gamesWon, games.home);
+      away.gamesWon = Math.max(away.gamesWon, games.away);
     }
   }
 
@@ -90,4 +66,29 @@ export function aggregateReplayStats(
     completedCount: slice.length,
     totalCount: points.length,
   };
+}
+
+function isServiceBreak(point: PointSummary): boolean {
+  if (point.winnerId === point.serverId) return false;
+  const snap = point.scoreSnapshot;
+  if (!snap) return false;
+  const pts = snap.points;
+  if (!Array.isArray(pts) || pts.length < 2) return false;
+  return String(pts[0]) === "0" && String(pts[1]) === "0";
+}
+
+function totalGamesFromSnapshot(
+  snap?: Record<string, unknown>,
+): { home: number; away: number } | null {
+  if (!snap) return null;
+  const games = snap.games;
+  if (!Array.isArray(games) || games.length === 0) return null;
+  let home = 0;
+  let away = 0;
+  for (const set of games) {
+    if (!Array.isArray(set) || set.length < 2) continue;
+    home += Number(set[0]) || 0;
+    away += Number(set[1]) || 0;
+  }
+  return { home, away };
 }

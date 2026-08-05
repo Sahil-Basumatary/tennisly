@@ -107,21 +107,13 @@ export function toScoreCard(match: UpstreamMatch): ScoreCard {
     href: hrefFor(match),
     home: {
       name: shortDisplayName(home.displayName),
-      shortName: playerShortName(
-        home.playerId,
-        home.displayName,
-        metaString(match, "homeExternalId") || undefined,
-      ),
+      shortName: playerShortName(home.displayName),
       sets: homeSets,
       winner: homeWinner || undefined,
     },
     away: {
       name: shortDisplayName(away.displayName),
-      shortName: playerShortName(
-        away.playerId,
-        away.displayName,
-        metaString(match, "awayExternalId") || undefined,
-      ),
+      shortName: playerShortName(away.displayName),
       sets: awaySets,
       winner: awayWinner || undefined,
     },
@@ -217,13 +209,13 @@ export function toMatchCentrePanel(
     home: {
       id: home.playerId,
       name: home.displayName,
-      country: playerCountry(home.playerId, metaString(match, "homeExternalId") || undefined),
+      country: playerCountry(metaString(match, "homeNationality") || undefined),
       seed: home.seedNumber ?? undefined,
     },
     away: {
       id: away.playerId,
       name: away.displayName,
-      country: playerCountry(away.playerId, metaString(match, "awayExternalId") || undefined),
+      country: playerCountry(metaString(match, "awayNationality") || undefined),
       seed: away.seedNumber ?? undefined,
     },
     score: {
