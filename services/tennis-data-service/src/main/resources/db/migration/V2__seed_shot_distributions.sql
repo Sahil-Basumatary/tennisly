@@ -34,8 +34,7 @@ surface_modifiers AS (
         VALUES
             ('HARD', 1.00, 1.00, 1.00, 1.00),
             ('CLAY', 0.94, 1.04, 1.14, 1.08),
-            ('GRASS', 1.07, 0.96, 0.88, 0.93),
-            ('CARPET', 1.10, 0.94, 0.82, 0.90)
+            ('GRASS', 1.07, 0.96, 0.88, 0.93)
     ) AS surface(surface, speed_multiplier, depth_multiplier, spin_multiplier, spread_multiplier)
 ),
 tier_modifiers AS (
