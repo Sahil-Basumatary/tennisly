@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Supplier;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +40,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class BallDontLieProvider implements TennisDataProvider {
 
     private static final Logger log = LoggerFactory.getLogger(BallDontLieProvider.class);
-    private static final int DEFAULT_PER_PAGE = 100;
 
     private final RestTemplate restTemplate;
     private final Clock clock;
@@ -47,6 +47,7 @@ public class BallDontLieProvider implements TennisDataProvider {
     private final String apiKey;
     private final int maxPages;
     private final int maxAttempts;
+    private final int perPage;
     private final TokenBucketRateLimiter rateLimiter;
     private final SimpleCircuitBreaker circuitBreaker;
 
@@ -57,6 +58,7 @@ public class BallDontLieProvider implements TennisDataProvider {
             @Value("${tennis.data.balldontlie.api-key:}") String apiKey,
             @Value("${tennis.data.balldontlie.max-pages:5}") int maxPages,
             @Value("${tennis.data.balldontlie.max-attempts:3}") int maxAttempts,
+            @Value("${tennis.data.balldontlie.per-page:100}") int perPage,
             @Value("${tennis.data.balldontlie.requests-per-minute:5}") int requestsPerMinute,
             @Value("${tennis.data.balldontlie.circuit-breaker.failure-threshold:5}")
                     int failureThreshold,
@@ -72,8 +74,14 @@ public class BallDontLieProvider implements TennisDataProvider {
         this.apiKey = apiKey;
         this.maxPages = maxPages;
         this.maxAttempts = maxAttempts;
+        this.perPage = Math.max(1, perPage);
         this.rateLimiter = new TokenBucketRateLimiter(requestsPerMinute, clock);
         this.circuitBreaker = new SimpleCircuitBreaker(failureThreshold, openDuration, clock);
+    }
+
+    @PostConstruct
+    void validateApiKey() {
+        requireApiKey();
     }
 
     @Override
@@ -143,7 +151,7 @@ public class BallDontLieProvider implements TennisDataProvider {
         for (int page = 0; page < maxPages; page++) {
             UriComponentsBuilder builder =
                     UriComponentsBuilder.fromHttpUrl(baseUrl + path)
-                            .queryParam("per_page", DEFAULT_PER_PAGE);
+                            .queryParam("per_page", perPage);
             if (cursor != null) {
                 builder.queryParam("cursor", cursor);
             }
@@ -305,7 +313,6 @@ public class BallDontLieProvider implements TennisDataProvider {
         return switch (surface.trim().toUpperCase(Locale.ROOT)) {
             case "CLAY" -> Surface.CLAY;
             case "GRASS" -> Surface.GRASS;
-            case "CARPET" -> Surface.CARPET;
             default -> Surface.HARD;
         };
     }

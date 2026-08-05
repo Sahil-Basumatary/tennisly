@@ -28,16 +28,25 @@ spring:
       retries: 3
 tennis:
   data:
-    provider: ${TENNIS_DATA_PROVIDER:mock}
+    provider: ${TENNIS_DATA_PROVIDER:balldontlie}
     balldontlie:
       base-url: ${TENNIS_BALLDONTLIE_BASE_URL:https://api.balldontlie.io}
       api-key: ${TENNIS_BALLDONTLIE_API_KEY:}
       max-pages: ${TENNIS_BALLDONTLIE_MAX_PAGES:5}
       max-attempts: ${TENNIS_BALLDONTLIE_MAX_ATTEMPTS:3}
+      per-page: ${TENNIS_BALLDONTLIE_PER_PAGE:100}
       requests-per-minute: ${TENNIS_BALLDONTLIE_REQUESTS_PER_MINUTE:5}
       circuit-breaker:
         failure-threshold: ${TENNIS_BALLDONTLIE_FAILURE_THRESHOLD:5}
         open-duration: ${TENNIS_BALLDONTLIE_OPEN_DURATION:PT2M}
+    livetennis:
+      base-url: ${TENNIS_LIVETENNIS_BASE_URL:https://api.livetennisapi.com/api/public/v1}
+      api-key: ${TENNIS_LIVETENNIS_API_KEY:}
+      max-attempts: ${TENNIS_LIVETENNIS_MAX_ATTEMPTS:3}
+      requests-per-minute: ${TENNIS_LIVETENNIS_REQUESTS_PER_MINUTE:60}
+      circuit-breaker:
+        failure-threshold: ${TENNIS_LIVETENNIS_FAILURE_THRESHOLD:5}
+        open-duration: ${TENNIS_LIVETENNIS_OPEN_DURATION:PT2M}
     sync:
       enabled: ${TENNIS_DATA_SYNC_ENABLED:true}
       players-cron: ${TENNIS_DATA_SYNC_PLAYERS_CRON:0 0 2 * * *}

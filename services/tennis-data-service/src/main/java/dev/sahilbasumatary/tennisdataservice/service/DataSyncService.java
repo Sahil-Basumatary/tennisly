@@ -41,7 +41,7 @@ public class DataSyncService {
             TournamentRepository tournamentRepository,
             RankingRepository rankingRepository,
             EventPublisher eventPublisher,
-            @Value("${tennis.data.provider:mock}") String providerName) {
+            @Value("${tennis.data.provider:balldontlie}") String providerName) {
         this.provider = provider;
         this.playerRepository = playerRepository;
         this.tournamentRepository = tournamentRepository;
