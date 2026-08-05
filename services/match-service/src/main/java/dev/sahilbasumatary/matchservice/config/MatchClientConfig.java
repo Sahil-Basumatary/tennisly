@@ -14,8 +14,8 @@ public class MatchClientConfig {
     @Bean
     RestClient tennisDataServiceRestClient(MatchClientProperties properties) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(2));
-        factory.setReadTimeout(Duration.ofSeconds(3));
+        factory.setConnectTimeout(Duration.ofSeconds(3));
+        factory.setReadTimeout(Duration.ofSeconds(20));
         return RestClient.builder()
                 .baseUrl(properties.getTennisDataServiceUri().replaceAll("/$", ""))
                 .requestFactory(factory)
