@@ -16,6 +16,11 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: replay-service-group
+      auto-offset-reset: earliest
 eureka:
   client:
     service-url:

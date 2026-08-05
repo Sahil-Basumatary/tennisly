@@ -50,6 +50,15 @@ public class ReplayArtifactService {
 
     @Transactional
     public ReplayArtifactResponse materialize(UUID matchId) {
+        ReplayArtifact existing = artifactRepository.findByMatchId(matchId).orElse(null);
+        if (existing != null && existing.getStatus() == ReplayStatus.READY) {
+            log.info(
+                    "Replay already READY matchId={} key={} — skipping rematerialize",
+                    matchId,
+                    existing.getStorageKey());
+            return ReplayArtifactResponse.from(existing);
+        }
+
         MatchReplayResponse replay = replayGenerationService.generateMatchReplay(matchId);
         CompressedPayload payload = payloadCodec.compress(serialize(replay));
 
@@ -57,8 +66,7 @@ public class ReplayArtifactService {
         String key = objectStore.buildKey(matchId, objectId);
         objectStore.put(key, payload.data(), payload.checksumSha256());
 
-        ReplayArtifact artifact =
-                artifactRepository.findByMatchId(matchId).orElseGet(ReplayArtifact::new);
+        ReplayArtifact artifact = existing != null ? existing : new ReplayArtifact();
         String previousKey = artifact.getStorageKey();
         applyMetadata(artifact, matchId, replay, key, payload);
 

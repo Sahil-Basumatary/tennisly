@@ -16,14 +16,12 @@ public record BounceProfile(
     private static final BounceProfile HARD = new BounceProfile(0.80, 0.60, 0.20);
     private static final BounceProfile CLAY = new BounceProfile(0.85, 0.72, 0.30);
     private static final BounceProfile GRASS = new BounceProfile(0.74, 0.52, 0.12);
-    private static final BounceProfile CARPET = new BounceProfile(0.78, 0.50, 0.14);
 
     public static BounceProfile forSurface(Surface surface) {
         return switch (surface) {
             case HARD -> HARD;
             case CLAY -> CLAY;
             case GRASS -> GRASS;
-            case CARPET -> CARPET;
         };
     }
 }
