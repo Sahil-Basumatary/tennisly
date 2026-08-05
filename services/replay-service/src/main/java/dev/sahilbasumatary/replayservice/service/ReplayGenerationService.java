@@ -23,6 +23,7 @@ import dev.sahilbasumatary.replayservice.trajectory.ShotDistributionIndex;
 import dev.sahilbasumatary.replayservice.trajectory.TrajectoryEngine;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -138,10 +139,14 @@ public class ReplayGenerationService {
         PlayerTier serverTier = tierOf(match.playerOn(serverSide));
         PlayerTier receiverTier = tierOf(match.playerOn(receiverSide));
         long seed = pointSeed(matchId, point.sequenceNumber());
+        int rallyLength =
+                point.rallyLength() == null || point.rallyLength() <= 0
+                        ? synthesizedRallyLength(seed, outcome)
+                        : point.rallyLength();
 
         List<ShotType> shotTypes =
                 rallySynthesizer.synthesize(
-                        point.rallyLength(),
+                        rallyLength,
                         outcome,
                         engineProperties.maxRallyLength(),
                         new SplittableRandom(seed));
@@ -164,9 +169,20 @@ public class ReplayGenerationService {
                 point.serverId(),
                 point.winnerId(),
                 PointOutcome.fromExternal(point.outcome()),
-                point.rallyLength(),
+                point.rallyLength() == null ? trajectory.shots().size() : point.rallyLength(),
                 trajectory.shots().size(),
-                round(trajectory.durationSeconds()));
+                round(trajectory.durationSeconds()),
+                point.scoreSnapshot() == null ? Map.of() : point.scoreSnapshot());
+    }
+
+    private static int synthesizedRallyLength(long seed, PointOutcome outcome) {
+        if (outcome == PointOutcome.ACE) {
+            return 1;
+        }
+        if (outcome == PointOutcome.DOUBLE_FAULT) {
+            return 0;
+        }
+        return 4 + (int) Math.floorMod(seed, 5L);
     }
 
     private PlayerSide sideOf(MatchSummary match, UUID playerId) {

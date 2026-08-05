@@ -29,11 +29,13 @@ spring:
 tennisly:
   websocket:
     allowed-origins: ${MATCH_SERVICE_WS_ALLOWED_ORIGINS:http://localhost:3000}
-  seed:
-    # Multi-tournament ESPN/UEFA-style day board + replay point ledgers (idempotent).
-    broadcast-catalogue: ${SEED_BROADCAST_CATALOGUE:true}
   clients:
     tennis-data-service-uri: ${TENNIS_DATA_SERVICE_URI:http://localhost:8083}
+  ingest:
+    enabled: ${MATCH_INGEST_ENABLED:true}
+    live-fixed-delay-ms: ${MATCH_INGEST_LIVE_DELAY_MS:60000}
+    completed-fixed-delay-ms: ${MATCH_INGEST_COMPLETED_DELAY_MS:21600000}
+    page-size: ${MATCH_INGEST_PAGE_SIZE:50}
 eureka:
   client:
     service-url:

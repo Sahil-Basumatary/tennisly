@@ -10,6 +10,6 @@ public record RecordPointRequest(
         @NotNull UUID serverId,
         @NotNull UUID winnerId,
         @NotNull PointOutcome outcome,
-        @Min(0) int rallyLength,
+        @Min(0) Integer rallyLength,
         @NotNull Map<String, Object> scoreSnapshot,
         Map<String, Object> shotSummary) {}

@@ -49,8 +49,8 @@ public class MatchPoint {
     @Column(nullable = false, length = 32)
     private PointOutcome outcome;
 
-    @Column(name = "rally_length", nullable = false)
-    private int rallyLength;
+    @Column(name = "rally_length")
+    private Integer rallyLength;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "score_snapshot", nullable = false, columnDefinition = "jsonb")
@@ -112,11 +112,11 @@ public class MatchPoint {
         this.outcome = outcome;
     }
 
-    public int getRallyLength() {
+    public Integer getRallyLength() {
         return rallyLength;
     }
 
-    public void setRallyLength(int rallyLength) {
+    public void setRallyLength(Integer rallyLength) {
         this.rallyLength = rallyLength;
     }
 

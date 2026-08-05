@@ -12,7 +12,7 @@ public record MatchPointResponse(
         UUID serverId,
         UUID winnerId,
         PointOutcome outcome,
-        int rallyLength,
+        Integer rallyLength,
         Map<String, Object> scoreSnapshot,
         Map<String, Object> shotSummary,
         Instant recordedAt) {

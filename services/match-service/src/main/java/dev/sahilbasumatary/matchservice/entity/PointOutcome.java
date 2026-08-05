@@ -5,5 +5,6 @@ public enum PointOutcome {
     FORCED_ERROR,
     UNFORCED_ERROR,
     ACE,
-    DOUBLE_FAULT
+    DOUBLE_FAULT,
+    UNKNOWN
 }

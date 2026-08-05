@@ -10,4 +10,6 @@ public interface MatchPointRepository extends JpaRepository<MatchPoint, UUID> {
     int countByMatchId(UUID matchId);
 
     List<MatchPoint> findByMatchIdOrderBySequenceNumberAsc(UUID matchId);
+
+    void deleteByMatchId(UUID matchId);
 }

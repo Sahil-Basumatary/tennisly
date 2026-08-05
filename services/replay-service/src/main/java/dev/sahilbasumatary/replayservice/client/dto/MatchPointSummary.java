@@ -11,6 +11,6 @@ public record MatchPointSummary(
         UUID serverId,
         UUID winnerId,
         String outcome,
-        int rallyLength,
+        Integer rallyLength,
         Map<String, Object> scoreSnapshot,
         Map<String, Object> shotSummary) {}
