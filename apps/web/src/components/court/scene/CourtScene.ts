@@ -1,4 +1,5 @@
 import type { ReplayFrame, Surface } from "@/types/replay";
+import { indexPointStartTimes, indexShotStartTimes } from "@/lib/replay-index";
 import { interpolateAtTime } from "@/lib/replay-space";
 import { getMatchReplay } from "@/services/replay";
 import { usePlayback } from "@/stores/playback";
@@ -33,7 +34,10 @@ export type CourtSceneOptions = {
   cameraPreset?: CameraPresetId;
   homeGender?: PlayerGender;
   awayGender?: PlayerGender;
+  /** When a UUID, loads live replay-service via BFF. */
+  matchId?: string;
   onReady?: () => void;
+  onReplayUnavailable?: () => void;
 };
 
 export class CourtScene {
@@ -92,31 +96,34 @@ export class CourtScene {
       shadows: this.lighting.shadows,
     });
 
-    void getMatchReplay().then((replay) => {
+    void getMatchReplay(options.matchId).then((replay) => {
       if (this.disposed) return;
+      if (!replay) {
+        usePlayback.getState().setDuration(0);
+        useReplaySession.getState().reset();
+        options.onReplayUnavailable?.();
+        return;
+      }
       this.frames = replay.frames;
       usePlayback.getState().setDuration(replay.durationSeconds);
-      useReplaySession.getState().setShots(replay.shots);
+      const session = useReplaySession.getState();
+      session.setShots(replay.shots);
+      session.setPoints(replay.points);
+      session.setShotStartTimes(indexShotStartTimes(replay.frames));
+      session.setPointStartTimes(indexPointStartTimes(replay.frames, replay.points));
       this.overlays?.dispose();
       this.overlays = new ShotOverlays(this.scene, replay.shots);
       this.heatmaps?.dispose();
       this.heatmaps = new PositioningHeatmaps(this.scene, replay.frames);
-      this.heatmaps.setVisibility(useReplaySession.getState().overlays);
+      this.heatmaps.setVisibility(session.overlays);
       this.actors?.setSwingCues(buildSwingCues(replay.frames, replay.shots));
-      useReplaySession.getState().setPoints(replay.points);
-      const starts: number[] = [];
-      for (const frame of replay.frames) {
-        if (starts[frame.shotIndex] === undefined) {
-          starts[frame.shotIndex] = frame.timeSeconds;
-        }
-      }
-      useReplaySession.getState().setShotStartTimes(starts);
       const first = interpolateAtTime(this.frames, 0);
       if (first) {
         this.actors?.apply(first);
         this.overlays.setActiveShot(first.shotIndex);
         this.lastShotIndex = first.shotIndex;
       }
+      options.onReady?.();
     });
 
     if (hasStadiumModel(surface)) {

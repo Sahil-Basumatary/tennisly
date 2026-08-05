@@ -22,7 +22,8 @@ export type PointOutcome =
   | "FORCED_ERROR"
   | "UNFORCED_ERROR"
   | "ACE"
-  | "DOUBLE_FAULT";
+  | "DOUBLE_FAULT"
+  | "UNKNOWN";
 
 /** Court frame: x lateral, y depth (net→baseline), z height — metres. */
 export type Vector3 = {
@@ -59,9 +60,10 @@ export type PointSummary = {
   serverId: string;
   winnerId: string;
   outcome: PointOutcome;
-  rallyLength: number;
+  rallyLength: number | null;
   shotCount: number;
   durationSeconds: number;
+  scoreSnapshot?: Record<string, unknown>;
 };
 
 export type MatchReplay = {

@@ -14,11 +14,14 @@ type ReplaySessionState = {
   points: PointSummary[];
   /** First-frame clock time for each shotIndex, for transport stepping. */
   shotStartTimes: number[];
+  /** First-frame clock time per point (aligned to `points` order). */
+  pointStartTimes: number[];
   activeShotIndex: number;
   overlays: OverlayFlags;
   setShots: (shots: ShotSummary[]) => void;
   setPoints: (points: PointSummary[]) => void;
   setShotStartTimes: (times: number[]) => void;
+  setPointStartTimes: (times: number[]) => void;
   setActiveShotIndex: (index: number) => void;
   setOverlay: (key: keyof OverlayFlags, enabled: boolean) => void;
   toggleOverlay: (key: keyof OverlayFlags) => void;
@@ -37,11 +40,13 @@ export const useReplaySession = create<ReplaySessionState>((set, get) => ({
   shots: [],
   points: [],
   shotStartTimes: [],
+  pointStartTimes: [],
   activeShotIndex: 0,
   overlays: { ...DEFAULT_OVERLAYS },
   setShots: (shots) => set({ shots, activeShotIndex: 0 }),
   setPoints: (points) => set({ points }),
   setShotStartTimes: (shotStartTimes) => set({ shotStartTimes }),
+  setPointStartTimes: (pointStartTimes) => set({ pointStartTimes }),
   setActiveShotIndex: (index) => {
     if (get().activeShotIndex === index) return;
     set({ activeShotIndex: index });
@@ -55,6 +60,7 @@ export const useReplaySession = create<ReplaySessionState>((set, get) => ({
       shots: [],
       points: [],
       shotStartTimes: [],
+      pointStartTimes: [],
       activeShotIndex: 0,
       overlays: { ...DEFAULT_OVERLAYS },
     }),
