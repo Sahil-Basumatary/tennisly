@@ -27,7 +27,6 @@ public class MatchPoint {
 
     @Id
     @GeneratedValue
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -38,11 +37,9 @@ public class MatchPoint {
     private int sequenceNumber;
 
     @Column(name = "server_id", nullable = false)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID serverId;
 
     @Column(name = "winner_id", nullable = false)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID winnerId;
 
     @Enumerated(EnumType.STRING)

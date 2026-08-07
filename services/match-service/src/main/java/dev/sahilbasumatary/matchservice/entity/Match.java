@@ -30,14 +30,12 @@ public class Match {
 
     @Id
     @GeneratedValue
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID id;
 
     @Column(name = "external_id", unique = true, length = 255)
     private String externalId;
 
     @Column(name = "tournament_id")
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID tournamentId;
 
     @Enumerated(EnumType.STRING)

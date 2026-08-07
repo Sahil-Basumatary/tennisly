@@ -26,7 +26,6 @@ public class UserPreference {
 
     @Id
     @GeneratedValue
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
