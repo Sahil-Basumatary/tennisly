@@ -11,11 +11,15 @@ import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PlayerIdentityService {
+
+    private static final Logger log = LoggerFactory.getLogger(PlayerIdentityService.class);
 
     public static final String PROVIDER_LTA = "livetennis";
     public static final String PROVIDER_BDL = "balldontlie";
@@ -131,16 +135,26 @@ public class PlayerIdentityService {
     }
 
     private void link(Player player, String provider, String providerRef) {
-        providerRefRepository
-                .findByProviderAndProviderRef(provider, providerRef)
-                .orElseGet(
-                        () -> {
-                            PlayerProviderRef row = new PlayerProviderRef();
-                            row.setPlayer(player);
-                            row.setProvider(provider);
-                            row.setProviderRef(providerRef);
-                            return providerRefRepository.save(row);
-                        });
+        if (providerRefRepository.findByProviderAndProviderRef(provider, providerRef).isPresent()) {
+            return;
+        }
+        // One provider mapping per player — a second LTA id name-matching the same BallDontLie
+        // row must not invent a conflicting link.
+        Optional<PlayerProviderRef> byPlayer =
+                providerRefRepository.findByPlayerIdAndProvider(player.getId(), provider);
+        if (byPlayer.isPresent()) {
+            String existingRef = byPlayer.get().getProviderRef();
+            if (!existingRef.equals(providerRef)) {
+                log.warn(
+                        "Refusing to overwrite {} link for playerId={} existingRef={} newRef={}",
+                        provider,
+                        player.getId(),
+                        existingRef,
+                        providerRef);
+            }
+            return;
+        }
+        providerRefRepository.insertIgnoreConflict(player.getId(), provider, providerRef);
     }
 
     private static String normalize(String value) {
