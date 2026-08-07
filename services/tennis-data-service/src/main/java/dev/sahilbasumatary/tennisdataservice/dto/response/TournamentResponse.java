@@ -15,7 +15,7 @@ public record TournamentResponse(
         Surface surface,
         Gender gender,
         String city,
-        String countryCode,
+        String country,
         String venueName,
         Instant createdAt,
         Instant updatedAt) {
@@ -29,7 +29,7 @@ public record TournamentResponse(
                 tournament.getSurface(),
                 tournament.getGender(),
                 tournament.getCity(),
-                tournament.getCountryCode(),
+                tournament.getCountry(),
                 tournament.getVenueName(),
                 tournament.getCreatedAt(),
                 tournament.getUpdatedAt());

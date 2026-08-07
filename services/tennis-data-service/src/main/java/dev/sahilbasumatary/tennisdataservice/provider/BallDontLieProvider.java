@@ -271,7 +271,7 @@ public class BallDontLieProvider implements TennisDataProvider {
                 mapSurface(tournament.surface()),
                 gender,
                 location.city(),
-                location.countryCode(),
+                location.country(),
                 null);
     }
 
@@ -395,7 +395,7 @@ public class BallDontLieProvider implements TennisDataProvider {
     private record ApiTournament(
             Integer id, String name, String location, String surface, String category) {}
 
-    private record Location(String city, String countryCode) {
+    private record Location(String city, String country) {
 
         static Location from(String raw) {
             if (!hasText(raw)) {

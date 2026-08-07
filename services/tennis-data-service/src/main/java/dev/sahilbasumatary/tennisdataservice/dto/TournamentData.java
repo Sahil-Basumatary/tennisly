@@ -11,5 +11,5 @@ public record TournamentData(
         Surface surface,
         Gender gender,
         String city,
-        String countryCode,
+        String country,
         String venueName) {}

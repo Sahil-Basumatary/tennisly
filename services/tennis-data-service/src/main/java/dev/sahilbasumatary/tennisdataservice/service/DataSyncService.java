@@ -159,7 +159,7 @@ public class DataSyncService {
         tournament.setSurface(data.surface());
         tournament.setGender(data.gender());
         tournament.setCity(data.city());
-        tournament.setCountryCode(data.countryCode());
+        tournament.setCountry(data.country());
         tournament.setVenueName(data.venueName());
         tournament.setActive(true);
     }

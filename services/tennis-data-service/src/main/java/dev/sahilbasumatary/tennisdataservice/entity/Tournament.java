@@ -44,8 +44,8 @@ public class Tournament {
     @Column(length = 255)
     private String city;
 
-    @Column(name = "country_code", length = 3)
-    private String countryCode;
+    @Column(length = 100)
+    private String country;
 
     @Column(name = "venue_name", length = 255)
     private String venueName;
@@ -117,12 +117,12 @@ public class Tournament {
         this.city = city;
     }
 
-    public String getCountryCode() {
-        return countryCode;
+    public String getCountry() {
+        return country;
     }
 
-    public void setCountryCode(String countryCode) {
-        this.countryCode = countryCode;
+    public void setCountry(String country) {
+        this.country = country;
     }
 
     public String getVenueName() {
