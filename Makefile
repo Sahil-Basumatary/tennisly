@@ -72,30 +72,7 @@ tools-up: ports ## Start pgadmin, redis-commander and kafka-ui
 
 .PHONY: up
 up: check-env ports ## Start infra + every app service in the background
-	@mkdir -p $(PID_DIR) $(LOG_DIR)
-	$(COMPOSE) --profile infra up -d postgres redis kafka minio
-	@echo "waiting for postgres/redis/kafka"
-	@$(COMPOSE) up -d --wait postgres redis kafka 2>/dev/null || true
-	@$(LOAD_ENV) \
-		$(MAKE) --no-print-directory _start-bg NAME=eureka \
-			CMD='SERVER_PORT=$$EUREKA_SERVER_PORT $(MVNW) -pl services/eureka-server spring-boot:run'; \
-		$(MAKE) --no-print-directory _wait-http PORT=$$EUREKA_SERVER_PORT LABEL=eureka; \
-		$(MAKE) --no-print-directory _start-bg NAME=tennis-data \
-			CMD='SERVER_PORT=$$TENNIS_DATA_SERVER_PORT $(MVNW) -pl services/tennis-data-service spring-boot:run'; \
-		$(MAKE) --no-print-directory _wait-http PORT=$$TENNIS_DATA_SERVER_PORT LABEL=tennis-data; \
-		$(MAKE) --no-print-directory _start-bg NAME=match \
-			CMD='SERVER_PORT=$$MATCH_SERVER_PORT $(MVNW) -pl services/match-service spring-boot:run'; \
-		$(MAKE) --no-print-directory _start-bg NAME=replay \
-			CMD='SERVER_PORT=$$REPLAY_SERVER_PORT $(MVNW) -pl services/replay-service spring-boot:run'; \
-		$(MAKE) --no-print-directory _start-bg NAME=web \
-			CMD='pnpm --filter @tennisly/web dev'
-	@echo ""
-	@echo "stack starting — first JVM boot is slow (~1–2 min)"
-	@$(MAKE) --no-print-directory ports-print
-	@echo "  make status   # who's up"
-	@echo "  make logs     # follow all app logs"
-	@echo "  make health   # probe health endpoints"
-	@echo "  make down     # stop everything"
+	@./scripts/dev-up.sh
 
 .PHONY: ports-print
 ports-print: ## Print the currently allocated app URLs
@@ -112,17 +89,7 @@ ports-print: ## Print the currently allocated app URLs
 
 .PHONY: down
 down: ## Stop app services and infrastructure
-	@for name in web replay match tennis-data eureka; do \
-		pid_file="$(PID_DIR)/$$name.pid"; \
-		if [ -f "$$pid_file" ]; then \
-			pid=$$(cat "$$pid_file"); \
-			echo "stopping $$name (pid $$pid)"; \
-			kill -- -$$pid 2>/dev/null || kill $$pid 2>/dev/null || true; \
-			rm -f "$$pid_file"; \
-		fi; \
-	done
-	@$(MAKE) --no-print-directory infra-down
-	@echo "down"
+	@./scripts/dev-down.sh
 
 .PHONY: status
 status: ## Show which app processes are still running
@@ -180,31 +147,3 @@ health: ## Probe every local service health endpoint using allocated ports
 			|| echo down); \
 		printf "  %-14s :%s  %s\n" "$$name" "$$port" "$$code"; \
 	done
-
-# --- internals --------------------------------------------------------------
-
-.PHONY: _start-bg
-_start-bg:
-	@mkdir -p $(PID_DIR) $(LOG_DIR)
-	@if [ -f "$(PID_DIR)/$(NAME).pid" ] && kill -0 $$(cat "$(PID_DIR)/$(NAME).pid") 2>/dev/null; then \
-		echo "$(NAME) already running (pid $$(cat $(PID_DIR)/$(NAME).pid))"; \
-	else \
-		echo "starting $(NAME) → $(LOG_DIR)/$(NAME).log"; \
-		$(LOAD_ENV) \
-		setsid bash -lc '$(CMD)' > "$(LOG_DIR)/$(NAME).log" 2>&1 & \
-		echo $$! > "$(PID_DIR)/$(NAME).pid"; \
-	fi
-
-.PHONY: _wait-http
-_wait-http:
-	@echo "waiting for $(LABEL) on :$(PORT)"
-	@for i in $$(seq 1 90); do \
-		if curl -sf http://localhost:$(PORT)/actuator/health >/dev/null 2>&1 \
-			|| curl -sf http://localhost:$(PORT)/ >/dev/null 2>&1; then \
-			echo "$(LABEL) is up"; \
-			exit 0; \
-		fi; \
-		sleep 2; \
-	done; \
-	echo "$(LABEL) did not become healthy in time — check $(LOG_DIR)/$(LABEL).log"; \
-	exit 1
