@@ -19,7 +19,7 @@ kill_tree() {
   kill "$pid" 2>/dev/null || true
 }
 
-for name in web replay match tennis-data eureka; do
+for name in web analytics replay match tennis-data eureka; do
   pid_file="$PID_DIR/$name.pid"
   [[ -f "$pid_file" ]] || continue
   pid="$(cat "$pid_file")"
