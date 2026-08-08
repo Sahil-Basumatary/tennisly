@@ -4,9 +4,14 @@ import dev.sahilbasumatary.analyticsservice.domain.TapeSideMetrics;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 public class MatchAnalyticsDocument {
 
+    @Id
     private String id;
     private UUID matchId;
     private String externalId;
@@ -17,8 +22,11 @@ public class MatchAnalyticsDocument {
     private String surface;
     private String status;
     private int bestOfSets;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant scheduledAt;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant startedAt;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant endedAt;
     private UUID homePlayerId;
     private String homeDisplayName;
@@ -29,6 +37,7 @@ public class MatchAnalyticsDocument {
     private TapeSideMetrics awayMetrics;
     private int pointsPlayed;
     private Map<String, Object> scoreSnapshot;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant indexedAt;
 
     public String getId() {

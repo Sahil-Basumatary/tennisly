@@ -3,9 +3,14 @@ package dev.sahilbasumatary.analyticsservice.index;
 import dev.sahilbasumatary.analyticsservice.domain.TapeSideMetrics;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 public class PlayerMatchDocument {
 
+    @Id
     private String id;
     private UUID playerId;
     private UUID matchId;
@@ -18,9 +23,12 @@ public class PlayerMatchDocument {
     private String tournamentName;
     private Integer season;
     private String status;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant endedAt;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant scheduledAt;
     private TapeSideMetrics metrics;
+    @Field(type = FieldType.Date, format = DateFormat.epoch_millis)
     private Instant indexedAt;
 
     public String getId() {
