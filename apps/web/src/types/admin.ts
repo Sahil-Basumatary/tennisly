@@ -181,3 +181,32 @@ export type AdminCreateWebhookResponse = {
   endpoint: AdminWebhookEndpoint;
   plaintextSecret: string;
 };
+
+export type AdminWebhookDeliveryStatus = "PENDING" | "SUCCESS" | "FAILED" | "DEAD";
+
+export type AdminWebhookDelivery = {
+  id: string;
+  endpointId: string;
+  organizationId: string;
+  eventId: string;
+  eventType: string;
+  status: AdminWebhookDeliveryStatus;
+  attemptCount: number;
+  maxAttempts: number;
+  nextAttemptAt: string | null;
+  lastHttpStatus: number | null;
+  lastError: string | null;
+  responseMs: number | null;
+  createdAt: string;
+  updatedAt: string;
+  deliveredAt: string | null;
+  payload: string | null;
+};
+
+export type AdminWebhookDeliveryPage = {
+  content: AdminWebhookDelivery[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};

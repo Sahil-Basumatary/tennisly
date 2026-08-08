@@ -70,6 +70,22 @@ for rows with status `PENDING` or `FAILED` whose `next_attempt_at <= now()`.
 Each delivery is sent with a connect timeout of 3 seconds and a read timeout of
 10 seconds.
 
+## Admin delivery observability
+
+Platform admins can inspect and requeue deliveries from `/admin/webhooks`
+(Delivery log panel). The web BFF calls notification-service directly:
+
+```
+GET  /api/notifications/admin/deliveries?organizationId=&endpointId=&status=&eventType=&page=&size=
+GET  /api/notifications/admin/deliveries/{id}          # includes raw payload
+POST /api/notifications/admin/deliveries/{id}/retry    # FAILED/DEAD/PENDING → PENDING now
+```
+
+Auth mirrors other admin surfaces: Clerk session in the BFF, then
+`X-User-Id` + `X-User-Roles: ADMIN` to notification-service.
+List responses omit payloads; detail includes them.
+Manual retry of `DEAD` resets the attempt budget; `FAILED` keeps the count.
+
 ## Internal API contract (user-service)
 
 The notification-service depends on these internal endpoints exposed by

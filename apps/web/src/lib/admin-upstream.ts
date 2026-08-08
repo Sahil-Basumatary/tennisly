@@ -17,6 +17,9 @@ import type {
   AdminWebhookEndpoint,
   AdminCreateWebhookPayload,
   AdminCreateWebhookResponse,
+  AdminWebhookDelivery,
+  AdminWebhookDeliveryPage,
+  AdminWebhookDeliveryStatus,
 } from "@/types/admin";
 
 function userServiceBase(): string {
@@ -332,6 +335,73 @@ export async function fetchUpstreamAdminUsage(
     headers: authHeaders(token, userId, roles),
   });
   return readJson<AdminUsageResponse>(response);
+}
+
+function notificationServiceBase(): string {
+  return (process.env.NOTIFICATION_SERVICE_URL ?? "http://localhost:18087").replace(/\/$/, "");
+}
+
+async function notificationFetch(path: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${notificationServiceBase()}${path}`, {
+      cache: "no-store",
+      ...init,
+    });
+  } catch {
+    throw new AdminUpstreamError("notification-service unreachable", 502);
+  }
+}
+
+export async function fetchUpstreamAdminWebhookDeliveries(
+  token: string | null,
+  userId: string,
+  roles: string,
+  query?: {
+    organizationId?: string;
+    endpointId?: string;
+    status?: AdminWebhookDeliveryStatus | "ALL";
+    eventType?: string;
+    page?: number;
+    size?: number;
+  },
+): Promise<AdminWebhookDeliveryPage> {
+  const qs = queryString({
+    organizationId: query?.organizationId,
+    endpointId: query?.endpointId,
+    status: query?.status && query.status !== "ALL" ? query.status : undefined,
+    eventType: query?.eventType,
+    page: query?.page,
+    size: query?.size,
+  });
+  const response = await notificationFetch(`/api/notifications/admin/deliveries${qs}`, {
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminWebhookDeliveryPage>(response);
+}
+
+export async function fetchUpstreamAdminWebhookDelivery(
+  token: string | null,
+  userId: string,
+  roles: string,
+  id: string,
+): Promise<AdminWebhookDelivery> {
+  const response = await notificationFetch(`/api/notifications/admin/deliveries/${id}`, {
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminWebhookDelivery>(response);
+}
+
+export async function retryUpstreamAdminWebhookDelivery(
+  token: string | null,
+  userId: string,
+  roles: string,
+  id: string,
+): Promise<AdminWebhookDelivery> {
+  const response = await notificationFetch(`/api/notifications/admin/deliveries/${id}/retry`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminWebhookDelivery>(response);
 }
 
 type HealthTarget = {
