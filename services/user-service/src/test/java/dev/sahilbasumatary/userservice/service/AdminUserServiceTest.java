@@ -34,6 +34,7 @@ class AdminUserServiceTest {
     private static final UUID USER_ID = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     @Mock private UserProfileRepository profileRepository;
+    @Mock private AuditLogService auditLogService;
     @InjectMocks private AdminUserService service;
 
     @BeforeEach

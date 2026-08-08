@@ -36,6 +36,8 @@ class AdminOrganizationServiceTest {
     private static final UUID ORG_ID = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
     @Mock private OrganizationRepository organizationRepository;
+    @Mock private AuditLogService auditLogService;
+    @Mock private UsageMeter usageMeter;
     @InjectMocks private AdminOrganizationService service;
 
     @BeforeEach

@@ -7,6 +7,8 @@ import dev.sahilbasumatary.userservice.entity.Organization;
 import dev.sahilbasumatary.userservice.exception.ResourceNotFoundException;
 import dev.sahilbasumatary.userservice.repository.OrganizationRepository;
 import dev.sahilbasumatary.userservice.security.AdminAccess;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +23,16 @@ public class AdminOrganizationService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminOrganizationService.class);
     private final OrganizationRepository organizationRepository;
+    private final AuditLogService auditLogService;
+    private final UsageMeter usageMeter;
 
-    public AdminOrganizationService(OrganizationRepository organizationRepository) {
+    public AdminOrganizationService(
+            OrganizationRepository organizationRepository,
+            AuditLogService auditLogService,
+            UsageMeter usageMeter) {
         this.organizationRepository = organizationRepository;
+        this.auditLogService = auditLogService;
+        this.usageMeter = usageMeter;
     }
 
     @Transactional(readOnly = true)
@@ -62,6 +71,13 @@ public class AdminOrganizationService {
         if (request.maxMembers() != null) org.setMaxMembers(request.maxMembers());
         if (request.active() != null) org.setActive(request.active());
         organizationRepository.save(org);
+        Map<String, Object> metadata = new HashMap<>();
+        if (request.name() != null) metadata.put("name", request.name());
+        if (request.planTier() != null) metadata.put("planTier", request.planTier().name());
+        if (request.maxMembers() != null) metadata.put("maxMembers", request.maxMembers());
+        if (request.active() != null) metadata.put("active", request.active());
+        auditLogService.record("ORG_UPDATE", "ORGANIZATION", id.toString(), id, metadata);
+        usageMeter.increment(id, "admin_actions", 1);
         log.info("Admin updated organization orgId={}", id);
         return AdminOrganizationResponse.from(org);
     }
