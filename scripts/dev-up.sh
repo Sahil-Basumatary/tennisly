@@ -79,18 +79,20 @@ wait_http "$TENNIS_DATA_SERVER_PORT" tennis-data
 start_service match "SERVER_PORT=$MATCH_SERVER_PORT ./mvnw -q -pl services/match-service spring-boot:run"
 start_service replay "SERVER_PORT=$REPLAY_SERVER_PORT ./mvnw -q -pl services/replay-service spring-boot:run"
 start_service analytics "SERVER_PORT=$ANALYTICS_SERVER_PORT ./mvnw -q -pl services/analytics-service spring-boot:run"
+start_service notification "SERVER_PORT=$NOTIFICATION_SERVER_PORT ./mvnw -q -pl services/notification-service spring-boot:run"
 start_service web "pnpm --filter @tennisly/web dev"
 
 cat <<EOF
 
-stack starting — match/replay/analytics/web still booting
-  web          http://localhost:$WEB_PORT
-  eureka       http://localhost:$EUREKA_SERVER_PORT
-  tennis-data  http://localhost:$TENNIS_DATA_SERVER_PORT
-  match        http://localhost:$MATCH_SERVER_PORT
-  replay       http://localhost:$REPLAY_SERVER_PORT
-  analytics    http://localhost:$ANALYTICS_SERVER_PORT
-  elasticsearch http://localhost:$ELASTICSEARCH_PORT
+stack starting — match/replay/analytics/notification/web still booting
+  web            http://localhost:$WEB_PORT
+  eureka         http://localhost:$EUREKA_SERVER_PORT
+  tennis-data    http://localhost:$TENNIS_DATA_SERVER_PORT
+  match          http://localhost:$MATCH_SERVER_PORT
+  replay         http://localhost:$REPLAY_SERVER_PORT
+  analytics      http://localhost:$ANALYTICS_SERVER_PORT
+  notification   http://localhost:$NOTIFICATION_SERVER_PORT
+  elasticsearch  http://localhost:$ELASTICSEARCH_PORT
 
   make status   # who's up
   make logs     # follow all app logs

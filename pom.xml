@@ -35,6 +35,7 @@
     <module>services/match-service</module>
     <module>services/replay-service</module>
     <module>services/analytics-service</module>
+    <module>services/notification-service</module>
   </modules>
   <dependencyManagement>
     <dependencies>

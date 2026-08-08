@@ -41,7 +41,7 @@ check-env: ## Verify the API keys are present before booting anything
 ports: ## Allocate free host ports into .run/ports.env
 	@./scripts/allocate-ports.sh
 	@echo "active ports:"
-	@grep -E '^(POSTGRES_PORT|REDIS_PORT|KAFKA_EXTERNAL_PORT|MINIO_API_PORT|ELASTICSEARCH_PORT|EUREKA_SERVER_PORT|TENNIS_DATA_SERVER_PORT|MATCH_SERVER_PORT|REPLAY_SERVER_PORT|ANALYTICS_SERVER_PORT|WEB_PORT)=' $(PORTS_FILE)
+	@grep -E '^(POSTGRES_PORT|REDIS_PORT|KAFKA_EXTERNAL_PORT|MINIO_API_PORT|ELASTICSEARCH_PORT|EUREKA_SERVER_PORT|TENNIS_DATA_SERVER_PORT|MATCH_SERVER_PORT|REPLAY_SERVER_PORT|ANALYTICS_SERVER_PORT|NOTIFICATION_SERVER_PORT|WEB_PORT)=' $(PORTS_FILE)
 
 .PHONY: infra-up
 infra-up: ports ## Start postgres, redis, kafka, minio and elasticsearch on allocated ports
@@ -83,6 +83,7 @@ ports-print: ## Print the currently allocated app URLs
 		echo "  match        http://localhost:$$MATCH_SERVER_PORT"; \
 		echo "  replay       http://localhost:$$REPLAY_SERVER_PORT"; \
 		echo "  analytics    http://localhost:$$ANALYTICS_SERVER_PORT"; \
+		echo "  notification  http://localhost:$$NOTIFICATION_SERVER_PORT"; \
 		echo "  elasticsearch http://localhost:$$ELASTICSEARCH_PORT"; \
 		echo "  postgres     localhost:$$POSTGRES_PORT"; \
 		echo "  redis        localhost:$$REDIS_PORT"; \
@@ -96,7 +97,7 @@ down: ## Stop app services and infrastructure
 .PHONY: status
 status: ## Show which app processes are still running
 	@mkdir -p $(PID_DIR)
-	@for name in eureka tennis-data match replay analytics web; do \
+	@for name in eureka tennis-data match replay analytics notification web; do \
 		pid_file="$(PID_DIR)/$$name.pid"; \
 		if [ -f "$$pid_file" ] && kill -0 $$(cat "$$pid_file") 2>/dev/null; then \
 			printf "  %-14s running  pid=%s\n" "$$name" "$$(cat $$pid_file)"; \
@@ -110,8 +111,8 @@ status: ## Show which app processes are still running
 .PHONY: logs
 logs: ## Tail app service logs (Ctrl-C to stop)
 	@mkdir -p $(LOG_DIR)
-	@touch $(LOG_DIR)/eureka.log $(LOG_DIR)/tennis-data.log $(LOG_DIR)/match.log $(LOG_DIR)/replay.log $(LOG_DIR)/analytics.log $(LOG_DIR)/web.log
-	@tail -F $(LOG_DIR)/eureka.log $(LOG_DIR)/tennis-data.log $(LOG_DIR)/match.log $(LOG_DIR)/replay.log $(LOG_DIR)/analytics.log $(LOG_DIR)/web.log
+	@touch $(LOG_DIR)/eureka.log $(LOG_DIR)/tennis-data.log $(LOG_DIR)/match.log $(LOG_DIR)/replay.log $(LOG_DIR)/analytics.log $(LOG_DIR)/notification.log $(LOG_DIR)/web.log
+	@tail -F $(LOG_DIR)/eureka.log $(LOG_DIR)/tennis-data.log $(LOG_DIR)/match.log $(LOG_DIR)/replay.log $(LOG_DIR)/analytics.log $(LOG_DIR)/notification.log $(LOG_DIR)/web.log
 
 # --- single-service foreground (debug) --------------------------------------
 
@@ -135,18 +136,22 @@ replay: ports ## Run replay-service in the foreground
 analytics: ports ## Run analytics-service in the foreground
 	@$(LOAD_ENV) SERVER_PORT=$$ANALYTICS_SERVER_PORT $(MVNW) -pl services/analytics-service spring-boot:run
 
+.PHONY: notification
+notification: ports ## Run notification-service in the foreground
+	@$(LOAD_ENV) SERVER_PORT=$$NOTIFICATION_SERVER_PORT $(MVNW) -pl services/notification-service spring-boot:run
+
 .PHONY: web
 web: ports ## Run the Next.js app in the foreground
 	@$(LOAD_ENV) pnpm --filter @tennisly/web dev
 
 .PHONY: test
 test: ## Run the JVM test suites
-	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service,services/match-service,services/replay-service,services/analytics-service -am test
+	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service,services/match-service,services/replay-service,services/analytics-service,services/notification-service -am test
 
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports
 	@$(LOAD_ENV) \
-	for pair in "$$EUREKA_SERVER_PORT:eureka" "$$TENNIS_DATA_SERVER_PORT:tennis-data" "$$MATCH_SERVER_PORT:match" "$$REPLAY_SERVER_PORT:replay" "$$ANALYTICS_SERVER_PORT:analytics" "$$ELASTICSEARCH_PORT:elasticsearch" "$$WEB_PORT:web"; do \
+	for pair in "$$EUREKA_SERVER_PORT:eureka" "$$TENNIS_DATA_SERVER_PORT:tennis-data" "$$MATCH_SERVER_PORT:match" "$$REPLAY_SERVER_PORT:replay" "$$ANALYTICS_SERVER_PORT:analytics" "$$NOTIFICATION_SERVER_PORT:notification" "$$ELASTICSEARCH_PORT:elasticsearch" "$$WEB_PORT:web"; do \
 		port=$${pair%%:*}; name=$${pair##*:}; \
 		if [ "$$name" = "elasticsearch" ]; then \
 			code=$$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$$port/_cluster/health 2>/dev/null || echo down); \

@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:18087}
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_NOTIFICATIONS:tennisly_notifications}
+    username: ${POSTGRES_USER:tennisly}
+    password: ${POSTGRES_PASSWORD:tennisly_dev}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19094}
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:18761/eureka}
+  instance:
+    prefer-ip-address: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+notification:
+  clients:
+    user-service-uri: ${NOTIFICATION_USER_SERVICE_URI:http://user-service}
+    connect-timeout: ${NOTIFICATION_CLIENT_CONNECT_TIMEOUT:PT3S}
+    read-timeout: ${NOTIFICATION_CLIENT_READ_TIMEOUT:PT10S}
+  delivery:
+    worker-delay-ms: ${NOTIFICATION_WORKER_DELAY_MS:2000}
+    batch-size: ${NOTIFICATION_WORKER_BATCH_SIZE:50}
