@@ -11,7 +11,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
 @Configuration
-@EnableConfigurationProperties(ApiKeyAuthProperties.class)
+@EnableConfigurationProperties({ApiKeyAuthProperties.class, PlanTierRateLimitProperties.class})
 public class UserServiceClientConfig {
 
     @Bean

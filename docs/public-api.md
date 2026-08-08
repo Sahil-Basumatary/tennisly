@@ -56,13 +56,44 @@ The response includes `plaintextKey` once. Store it securely; it cannot be retri
 
 List and revoke keys via `/api/users/admin/api-keys` and `/api/users/admin/api-keys/{id}/revoke`.
 
+## Rate limits
+
+Public API traffic is limited **per organization** using a fixed one-minute window keyed in Redis (`apikey-rl:{orgId}:{yyyyMMddHHmm}` UTC). Limits depend on the organization plan tier returned during API key validation:
+
+| Plan tier | Requests per minute |
+|-----------|---------------------|
+| FREE | 30 |
+| BASIC | 120 |
+| PRO | 600 |
+| ENTERPRISE | 3,000 |
+
+Unknown or missing tiers are treated as FREE. A separate IP-based gateway limiter (`10/s replenish, burst 20`) still applies to all routes as a coarse safety net.
+
+Successful responses include:
+
+- `X-RateLimit-Limit` — tier limit for the current window
+- `X-RateLimit-Remaining` — requests left in the current window
+
+When the org limit is exceeded:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: <seconds until next minute boundary>
+X-RateLimit-Limit: 30
+X-RateLimit-Remaining: 0
+Content-Type: application/json
+
+{"error":"rate_limit_exceeded","planTier":"FREE"}
+```
+
 ## Errors
 
 | HTTP | Body | Meaning |
 |------|------|---------|
 | 401 | `{"error":"missing_api_key"}` | No `X-Api-Key` header |
 | 401 | `{"error":"invalid_api_key"}` | Unknown, revoked, expired, or inactive key |
-| 429 | (gateway rate limit) | IP-based default limiter on all gateway routes |
+| 429 | `{"error":"rate_limit_exceeded","planTier":"<tier>"}` | Organization tier limit exceeded for the current minute |
+| 429 | (gateway IP limiter) | IP-based default limiter on all gateway routes |
 
 Downstream services may return their own 4xx/5xx responses after the gateway accepts the key.
 
@@ -73,11 +104,11 @@ After validation the gateway sets (and strips client spoof attempts for):
 - `X-Org-Id`
 - `X-Api-Key-Id`
 - `X-Api-Key-Scopes` (comma-separated)
+- `X-Plan-Tier` (normalized uppercase tier used for rate limiting)
 
 The raw `X-Api-Key` is not forwarded downstream.
 
 ## Not in v1 slice 1
 
-- Tier-specific rate limits per plan
 - Usage webhooks / billing events
 - Write endpoints or scoped authorization beyond gateway validation

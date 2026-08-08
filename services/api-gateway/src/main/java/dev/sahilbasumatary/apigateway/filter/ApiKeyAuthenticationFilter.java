@@ -49,7 +49,7 @@ public class ApiKeyAuthenticationFilter implements WebFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return Ordered.LOWEST_PRECEDENCE;
+        return Ordered.LOWEST_PRECEDENCE - 20;
     }
 
     private Mono<ApiKeyValidationResponse> validateApiKey(String apiKey) {

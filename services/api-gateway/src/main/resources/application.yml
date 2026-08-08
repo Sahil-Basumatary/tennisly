@@ -104,4 +104,9 @@ tennisly:
     user-service-uri: ${USER_SERVICE_URI:http://user-service}
     connect-timeout: 2s
     read-timeout: 5s
+    rate-limits:
+      free: 30
+      basic: 120
+      pro: 600
+      enterprise: 3000
 
