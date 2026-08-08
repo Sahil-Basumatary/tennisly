@@ -8,6 +8,7 @@ import dev.sahilbasumatary.matchservice.dto.request.CreateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.RecordPointRequest;
 import dev.sahilbasumatary.matchservice.dto.request.UpdateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.UpdateMatchStatusRequest;
+import dev.sahilbasumatary.matchservice.dto.response.CompletedMatchFeedResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchEventLogResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchPointResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
@@ -32,6 +33,8 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -207,6 +210,18 @@ public class MatchService {
         return eventLogRepository.findByMatchIdOrderByCreatedAtAsc(matchId).stream()
                 .map(MatchEventLogResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CompletedMatchFeedResponse listCompletedMatchIds(UUID cursor, int limit) {
+        int clamped = Math.max(1, Math.min(limit, 100));
+        Pageable pageable = PageRequest.of(0, clamped + 1);
+        List<Match> matches =
+                matchRepository.findByStatusAfterCursor(MatchStatus.COMPLETED, cursor, pageable);
+        boolean hasMore = matches.size() > clamped;
+        List<UUID> matchIds = matches.stream().limit(clamped).map(Match::getId).toList();
+        UUID nextCursor = matchIds.isEmpty() ? cursor : matchIds.get(matchIds.size() - 1);
+        return new CompletedMatchFeedResponse(matchIds, nextCursor, hasMore);
     }
 
     private Match findMatch(UUID matchId) {
