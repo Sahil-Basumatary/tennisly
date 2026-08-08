@@ -22,6 +22,10 @@ spring:
       group-id: user-service-group
       auto-offset-reset: earliest
       enable-auto-commit: false
+tennisly:
+  webhooks:
+    encryption-key: ${WEBHOOK_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+    allow-private-targets: ${WEBHOOK_ALLOW_PRIVATE_TARGETS:true}
 eureka:
   client:
     service-url:

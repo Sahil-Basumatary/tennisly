@@ -3,6 +3,7 @@ package dev.sahilbasumatary.userservice.config;
 import dev.sahilbasumatary.common.event.BaseEvent;
 import dev.sahilbasumatary.common.event.OrganizationEvent;
 import dev.sahilbasumatary.common.event.UserEvent;
+import dev.sahilbasumatary.common.kafka.EventPublisher;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -95,5 +96,10 @@ public class KafkaConsumerConfig {
         factory.getContainerProperties().setAckMode(
                 org.springframework.kafka.listener.ContainerProperties.AckMode.RECORD);
         return factory;
+    }
+
+    @Bean
+    public EventPublisher eventPublisher() {
+        return new EventPublisher(dlqKafkaTemplate());
     }
 }

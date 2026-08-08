@@ -18,6 +18,10 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+tennisly:
+  webhooks:
+    encryption-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    allow-private-targets: true
 eureka:
   client:
     enabled: false

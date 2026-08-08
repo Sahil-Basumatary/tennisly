@@ -35,6 +35,9 @@ public class AuditLogService {
             UUID organizationId,
             Map<String, Object> metadata) {
         String actorClerkId = RequestContext.getUserId();
+        if (actorClerkId == null || actorClerkId.isBlank()) {
+            actorClerkId = "system";
+        }
         String actorEmail =
                 userProfileRepository
                         .findByClerkId(actorClerkId)
