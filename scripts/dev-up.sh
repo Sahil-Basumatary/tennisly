@@ -67,6 +67,7 @@ wait_http() {
 echo "infrastructure"
 compose --profile infra up -d postgres redis kafka minio elasticsearch
 compose up -d --wait postgres redis kafka elasticsearch >/dev/null 2>&1 || true
+./scripts/ensure-databases.sh
 
 echo "services"
 start_service eureka "SERVER_PORT=$EUREKA_SERVER_PORT ./mvnw -q -pl services/eureka-server spring-boot:run"
