@@ -13,4 +13,6 @@ public final class TopicNames {
     public static final String ORGANIZATION_EVENTS_DLQ = "tennisly.organization.events.dlq";
     public static final String TENNIS_DATA_EVENTS_DLQ = "tennisly.tennis-data.events.dlq";
     public static final String MATCH_EVENTS_DLQ = "tennisly.match.events.dlq";
+    public static final String WEBHOOK_EVENTS = "tennisly.webhook.events";
+    public static final String WEBHOOK_EVENTS_DLQ = "tennisly.webhook.events.dlq";
 }

@@ -22,6 +22,9 @@ import java.util.UUID;
     }),
     @JsonSubTypes.Type(value = MatchEvent.class, names = {
             "MATCH_CREATED", "MATCH_UPDATED", "MATCH_STATUS_CHANGED", "MATCH_POINT_RECORDED"
+    }),
+    @JsonSubTypes.Type(value = WebhookDomainEvent.class, names = {
+            "WEBHOOK_DISPATCH"
     })
 })
 public abstract class BaseEvent {

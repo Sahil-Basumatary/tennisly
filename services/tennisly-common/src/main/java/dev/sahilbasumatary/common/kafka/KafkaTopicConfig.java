@@ -79,4 +79,21 @@ public class KafkaTopicConfig {
                 .replicas(DEFAULT_REPLICAS)
                 .build();
     }
+
+    @Bean
+    public NewTopic webhookEventsTopic() {
+        return TopicBuilder.name(TopicNames.WEBHOOK_EVENTS)
+                .partitions(DEFAULT_PARTITIONS)
+                .replicas(DEFAULT_REPLICAS)
+                .config("retention.ms", RETENTION_MS)
+                .build();
+    }
+
+    @Bean
+    public NewTopic webhookEventsDlqTopic() {
+        return TopicBuilder.name(TopicNames.WEBHOOK_EVENTS_DLQ)
+                .partitions(1)
+                .replicas(DEFAULT_REPLICAS)
+                .build();
+    }
 }
