@@ -216,8 +216,13 @@ public class MatchService {
     public CompletedMatchFeedResponse listCompletedMatchIds(UUID cursor, int limit) {
         int clamped = Math.max(1, Math.min(limit, 100));
         Pageable pageable = PageRequest.of(0, clamped + 1);
+        // Postgres cannot infer a bind type for a null UUID compared with IS NULL, so the
+        // unseeded first page uses its own query rather than a nullable cursor predicate.
         List<Match> matches =
-                matchRepository.findByStatusAfterCursor(MatchStatus.COMPLETED, cursor, pageable);
+                cursor == null
+                        ? matchRepository.findByStatusOrderByIdAsc(MatchStatus.COMPLETED, pageable)
+                        : matchRepository.findByStatusAndIdGreaterThanOrderByIdAsc(
+                                MatchStatus.COMPLETED, cursor, pageable);
         boolean hasMore = matches.size() > clamped;
         List<UUID> matchIds = matches.stream().limit(clamped).map(Match::getId).toList();
         UUID nextCursor = matchIds.isEmpty() ? cursor : matchIds.get(matchIds.size() - 1);

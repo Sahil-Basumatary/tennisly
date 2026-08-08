@@ -7,21 +7,13 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 public interface MatchRepository extends JpaRepository<Match, UUID> {
 
-    @Query("""
-        SELECT m FROM Match m
-        WHERE m.status = :status
-          AND (:cursor IS NULL OR m.id > :cursor)
-        ORDER BY m.id ASC
-        """)
-    List<Match> findByStatusAfterCursor(
-            @Param("status") MatchStatus status,
-            @Param("cursor") UUID cursor,
-            Pageable pageable);
+    List<Match> findByStatusOrderByIdAsc(MatchStatus status, Pageable pageable);
+
+    List<Match> findByStatusAndIdGreaterThanOrderByIdAsc(
+            MatchStatus status, UUID cursor, Pageable pageable);
 
     Optional<Match> findByExternalId(String externalId);
 
