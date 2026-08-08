@@ -28,6 +28,10 @@ Shot-level tracking (Hawkeye / Tennis Data Innovations) is separately licensed. 
 
 The court UI labels this with a **Synthesized trajectory** badge. Match stats only show tape-provable metrics (points won, service points, breaks) — not aces / winners / unforced errors invented from thin air.
 
+### Analytics
+
+Phase 5 indexes that same tape into Elasticsearch (`tennisly-match-analytics` / `tennisly-player-match` aliases) via `analytics-service`. Public reads power `/analytics` in the web app; saved views require Clerk. Operations, rebuild, and API notes: [docs/analytics.md](docs/analytics.md).
+
 ## Local configuration
 
 See `apps/web/.env.local.example` and service `application.yml` files. Required secrets:
