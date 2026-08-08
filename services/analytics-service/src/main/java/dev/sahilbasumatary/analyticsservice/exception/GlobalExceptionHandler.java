@@ -57,6 +57,19 @@ public class GlobalExceptionHandler {
                                 request.getRequestURI()));
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflict(
+            ConflictException ex, HttpServletRequest request) {
+        log.warn("Conflict: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(
+                        ApiErrorResponse.of(
+                                HttpStatus.CONFLICT.value(),
+                                "Conflict",
+                                ex.getMessage(),
+                                request.getRequestURI()));
+    }
+
     @ExceptionHandler(DownstreamServiceException.class)
     public ResponseEntity<ApiErrorResponse> handleDownstreamFailure(
             DownstreamServiceException ex, HttpServletRequest request) {
