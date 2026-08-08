@@ -83,3 +83,72 @@ export type AdminServiceHealth = {
 export type AdminHealthResponse = {
   services: AdminServiceHealth[];
 };
+
+export type AdminApiKey = {
+  id: string;
+  organizationId: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string[];
+  active: boolean;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  createdByClerkId: string;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminCreateApiKeyPayload = {
+  organizationId: string;
+  name: string;
+  scopes?: string[];
+  expiresAt?: string | null;
+};
+
+export type AdminCreateApiKeyResponse = {
+  key: AdminApiKey;
+  plaintextKey: string;
+};
+
+export type AdminAuditLog = {
+  id: string;
+  actorClerkId: string;
+  actorEmail: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  organizationId: string | null;
+  metadata: Record<string, unknown>;
+  ipAddress: string | null;
+  createdAt: string;
+};
+
+export type AdminAuditLogQuery = {
+  q?: string;
+  action?: string;
+  organizationId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+};
+
+export type AdminUsageDaily = {
+  organizationId: string;
+  metric: string;
+  day: string;
+  count: number;
+};
+
+export type AdminUsageResponse = {
+  daily: AdminUsageDaily[];
+  totalsByMetric: Record<string, number>;
+};
+
+export type AdminApiKeyQuery = {
+  organizationId?: string;
+  active?: AdminActiveFilter;
+  page?: number;
+  size?: number;
+};

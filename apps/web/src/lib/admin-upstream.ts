@@ -1,4 +1,10 @@
 import type {
+  AdminApiKey,
+  AdminApiKeyQuery,
+  AdminAuditLog,
+  AdminAuditLogQuery,
+  AdminCreateApiKeyPayload,
+  AdminCreateApiKeyResponse,
   AdminHealthResponse,
   AdminListQuery,
   AdminOrganization,
@@ -6,6 +12,7 @@ import type {
   AdminPage,
   AdminUpdateOrganizationPayload,
   AdminUpdateUserPayload,
+  AdminUsageResponse,
   AdminUser,
 } from "@/types/admin";
 
@@ -167,6 +174,87 @@ export async function fetchUpstreamOrgMembers(
     headers: authHeaders(token, userId, roles),
   });
   return readJson<AdminOrgMember[]>(response);
+}
+
+export async function fetchUpstreamAdminApiKeys(
+  token: string | null,
+  userId: string,
+  roles: string,
+  query?: AdminApiKeyQuery,
+): Promise<AdminPage<AdminApiKey>> {
+  const qs = queryString({
+    organizationId: query?.organizationId,
+    active: activeParam(query?.active),
+    page: query?.page,
+    size: query?.size,
+  });
+  const response = await upstreamFetch(`/api/users/admin/api-keys${qs}`, {
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminPage<AdminApiKey>>(response);
+}
+
+export async function createUpstreamAdminApiKey(
+  token: string | null,
+  userId: string,
+  roles: string,
+  payload: AdminCreateApiKeyPayload,
+): Promise<AdminCreateApiKeyResponse> {
+  const response = await upstreamFetch(`/api/users/admin/api-keys`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+    body: JSON.stringify(payload),
+  });
+  return readJson<AdminCreateApiKeyResponse>(response);
+}
+
+export async function revokeUpstreamAdminApiKey(
+  token: string | null,
+  userId: string,
+  roles: string,
+  id: string,
+): Promise<AdminApiKey> {
+  const response = await upstreamFetch(`/api/users/admin/api-keys/${id}/revoke`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminApiKey>(response);
+}
+
+export async function fetchUpstreamAdminAuditLogs(
+  token: string | null,
+  userId: string,
+  roles: string,
+  query?: AdminAuditLogQuery,
+): Promise<AdminPage<AdminAuditLog>> {
+  const qs = queryString({
+    q: query?.q,
+    action: query?.action,
+    organizationId: query?.organizationId,
+    from: query?.from,
+    to: query?.to,
+    page: query?.page,
+    size: query?.size,
+  });
+  const response = await upstreamFetch(`/api/users/admin/audit-logs${qs}`, {
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminPage<AdminAuditLog>>(response);
+}
+
+export async function fetchUpstreamAdminUsage(
+  token: string | null,
+  userId: string,
+  roles: string,
+  organizationId: string,
+  from?: string,
+  to?: string,
+): Promise<AdminUsageResponse> {
+  const qs = queryString({ organizationId, from, to });
+  const response = await upstreamFetch(`/api/users/admin/usage${qs}`, {
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminUsageResponse>(response);
 }
 
 type HealthTarget = {
