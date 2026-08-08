@@ -39,6 +39,7 @@ public class SecurityConfig {
                                 "/info",
                                 "/api/auth/webhooks/**"
                         ).permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/analytics/**").permitAll()
                         .pathMatchers("/api/**").authenticated()
                         .anyExchange().authenticated()
                 )
