@@ -36,6 +36,30 @@ class ApiKeyAuthHeadersTest {
         assertEquals(KEY_ID.toString(), mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_API_KEY_ID));
         assertEquals(
                 "read,players", mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_API_KEY_SCOPES));
+        assertEquals("PRO", mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_PLAN_TIER));
+    }
+
+    @Test
+    void applyTrustedHeadersDefaultsNullPlanTierToFree() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/api/v1/players").build();
+        var validation =
+                new ApiKeyValidationResponse(
+                        ORG_ID, KEY_ID, List.of("read"), null, "Baseline Club");
+        var mutated = ApiKeyAuthHeaders.applyTrustedHeaders(request, validation);
+        assertEquals("FREE", mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_PLAN_TIER));
+    }
+
+    @Test
+    void applyTrustedHeadersStripsSpoofedPlanTier() {
+        MockServerHttpRequest request =
+                MockServerHttpRequest.get("/api/v1/players")
+                        .header(ApiKeyAuthHeaders.X_PLAN_TIER, "ENTERPRISE")
+                        .build();
+        var validation =
+                new ApiKeyValidationResponse(
+                        ORG_ID, KEY_ID, List.of("read"), "BASIC", "Baseline Club");
+        var mutated = ApiKeyAuthHeaders.applyTrustedHeaders(request, validation);
+        assertEquals("BASIC", mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_PLAN_TIER));
     }
 
     @Test
