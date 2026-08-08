@@ -15,6 +15,7 @@ spring:
       default-filters:
         - name: RequestRateLimiter
           args:
+            key-resolver: "#{@ipKeyResolver}"
             redis-rate-limiter.replenishRate: 10
             redis-rate-limiter.burstCapacity: 20
             redis-rate-limiter.requestedTokens: 1
@@ -63,6 +64,18 @@ spring:
           uri: lb://analytics-service
           predicates:
             - Path=/api/analytics/**
+        - id: public-api-v1-tennis
+          uri: lb://tennis-data-service
+          predicates:
+            - Path=/api/v1/players/**,/api/v1/rankings/**,/api/v1/tournaments/**
+          filters:
+            - RewritePath=/api/v1/(?<segment>.*), /api/tennis/${segment}
+        - id: public-api-v1-matches
+          uri: lb://match-service
+          predicates:
+            - Path=/api/v1/matches/**
+          filters:
+            - RewritePath=/api/v1/matches(?<segment>/?.*), /api/matches${segment}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -86,4 +99,9 @@ management:
 logging:
   level:
     org.springframework.cloud.gateway: INFO
+tennisly:
+  api-key-auth:
+    user-service-uri: ${USER_SERVICE_URI:http://user-service}
+    connect-timeout: 2s
+    read-timeout: 5s
 
