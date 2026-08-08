@@ -7,6 +7,7 @@ import dev.sahilbasumatary.userservice.entity.Organization;
 import dev.sahilbasumatary.userservice.entity.UserProfile;
 import dev.sahilbasumatary.userservice.repository.OrganizationRepository;
 import dev.sahilbasumatary.userservice.repository.UserProfileRepository;
+import dev.sahilbasumatary.userservice.service.UserPreferenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -19,11 +20,15 @@ public class AuthEventListener {
     private static final Logger log = LoggerFactory.getLogger(AuthEventListener.class);
     private final UserProfileRepository profileRepository;
     private final OrganizationRepository organizationRepository;
+    private final UserPreferenceService preferenceService;
 
-    public AuthEventListener(UserProfileRepository profileRepository,
-            OrganizationRepository organizationRepository) {
+    public AuthEventListener(
+            UserProfileRepository profileRepository,
+            OrganizationRepository organizationRepository,
+            UserPreferenceService preferenceService) {
         this.profileRepository = profileRepository;
         this.organizationRepository = organizationRepository;
+        this.preferenceService = preferenceService;
     }
 
     @Transactional
@@ -65,6 +70,7 @@ public class AuthEventListener {
         profile.setAvatarUrl(event.getImageUrl());
         profile.setActive(true);
         profileRepository.save(profile);
+        preferenceService.ensureDefaults(profile);
         log.info("Created user profile from event for clerkId={}", event.getClerkId());
     }
 

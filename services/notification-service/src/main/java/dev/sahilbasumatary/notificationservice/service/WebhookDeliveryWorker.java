@@ -1,8 +1,11 @@
 package dev.sahilbasumatary.notificationservice.service;
 
+import dev.sahilbasumatary.common.notification.EmailCategories;
 import dev.sahilbasumatary.common.webhook.WebhookSignature;
 import dev.sahilbasumatary.notificationservice.client.UserServiceWebhookClient;
 import dev.sahilbasumatary.notificationservice.client.dto.WebhookSubscription;
+import dev.sahilbasumatary.notificationservice.email.EmailDispatchService;
+import dev.sahilbasumatary.notificationservice.email.EmailTemplateService;
 import dev.sahilbasumatary.notificationservice.entity.DeliveryStatus;
 import dev.sahilbasumatary.notificationservice.entity.WebhookDelivery;
 import dev.sahilbasumatary.notificationservice.entity.WebhookDeliveryRepository;
@@ -28,6 +31,8 @@ public class WebhookDeliveryWorker {
 
     private final WebhookDeliveryRepository deliveryRepository;
     private final UserServiceWebhookClient webhookClient;
+    private final EmailDispatchService emailDispatchService;
+    private final EmailTemplateService emailTemplateService;
     private final HttpClient httpClient;
 
     @Value("${notification.delivery.batch-size:50}")
@@ -35,12 +40,14 @@ public class WebhookDeliveryWorker {
 
     public WebhookDeliveryWorker(
             WebhookDeliveryRepository deliveryRepository,
-            UserServiceWebhookClient webhookClient) {
+            UserServiceWebhookClient webhookClient,
+            EmailDispatchService emailDispatchService,
+            EmailTemplateService emailTemplateService) {
         this.deliveryRepository = deliveryRepository;
         this.webhookClient = webhookClient;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(CONNECT_TIMEOUT)
-                .build();
+        this.emailDispatchService = emailDispatchService;
+        this.emailTemplateService = emailTemplateService;
+        this.httpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
     }
 
     @Scheduled(fixedDelayString = "${notification.delivery.worker-delay-ms:2000}")
@@ -128,10 +135,32 @@ public class WebhookDeliveryWorker {
         if (nextAttempt >= delivery.getMaxAttempts()) {
             delivery.setStatus(DeliveryStatus.DEAD);
             log.warn("Delivery {} exhausted retries, marking DEAD", delivery.getId());
-        } else {
-            delivery.setStatus(DeliveryStatus.FAILED);
-            delivery.setNextAttemptAt(BackoffCalculator.nextAttemptAt(nextAttempt));
+            deliveryRepository.save(delivery);
+            notifyWebhookFailed(delivery);
+            return;
         }
+        delivery.setStatus(DeliveryStatus.FAILED);
+        delivery.setNextAttemptAt(BackoffCalculator.nextAttemptAt(nextAttempt));
         deliveryRepository.save(delivery);
+    }
+
+    private void notifyWebhookFailed(WebhookDelivery delivery) {
+        try {
+            emailDispatchService.dispatchForOrganization(
+                    EmailCategories.WEBHOOK_FAILED,
+                    delivery.getId().toString(),
+                    delivery.getOrganizationId(),
+                    recipient ->
+                            emailTemplateService.webhookFailed(
+                                    recipient.email(),
+                                    recipient.displayName(),
+                                    delivery.getEventType(),
+                                    delivery.getLastError()));
+        } catch (Exception ex) {
+            log.warn(
+                    "Failed to dispatch webhook-failed email for delivery={}: {}",
+                    delivery.getId(),
+                    ex.getMessage());
+        }
     }
 }

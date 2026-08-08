@@ -56,7 +56,8 @@ public class KafkaConsumerConfig {
         props.put(
                 JsonDeserializer.TYPE_MAPPINGS,
                 "matchEvent:dev.sahilbasumatary.common.event.MatchEvent,"
-                        + "webhookDomainEvent:dev.sahilbasumatary.common.event.WebhookDomainEvent");
+                        + "webhookDomainEvent:dev.sahilbasumatary.common.event.WebhookDomainEvent,"
+                        + "userEvent:dev.sahilbasumatary.common.event.UserEvent");
         props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, BaseEvent.class.getName());
         return new DefaultKafkaConsumerFactory<>(props);
     }

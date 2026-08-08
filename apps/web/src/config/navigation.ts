@@ -59,5 +59,6 @@ export const primaryNav: NavItem[] = [
 
 export const utilityNav: NavItem[] = [
   { id: "dashboard", label: "Dashboard", href: "/dashboard" },
+  { id: "settings", label: "Settings", href: "/settings/notifications" },
   { id: "admin", label: "Admin", href: "/admin" },
 ];

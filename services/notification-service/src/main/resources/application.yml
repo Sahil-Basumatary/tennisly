@@ -43,3 +43,8 @@ notification:
   delivery:
     worker-delay-ms: ${NOTIFICATION_WORKER_DELAY_MS:2000}
     batch-size: ${NOTIFICATION_WORKER_BATCH_SIZE:50}
+  email:
+    enabled: ${NOTIFICATION_EMAIL_ENABLED:true}
+    provider: ${NOTIFICATION_EMAIL_PROVIDER:logging}
+    from: ${NOTIFICATION_EMAIL_FROM:Tennisly <onboarding@resend.dev>}
+    resend-api-key: ${RESEND_API_KEY:}
