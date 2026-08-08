@@ -152,3 +152,32 @@ export type AdminApiKeyQuery = {
   page?: number;
   size?: number;
 };
+
+export type AdminWebhookEndpoint = {
+  id: string;
+  organizationId: string;
+  name: string;
+  targetUrl: string;
+  secretPrefix: string;
+  eventTypes: string[];
+  active: boolean;
+  description: string | null;
+  createdByClerkId: string;
+  revokedAt: string | null;
+  lastDeliveryAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminCreateWebhookPayload = {
+  organizationId: string;
+  name: string;
+  targetUrl: string;
+  eventTypes: string[];
+  description?: string | null;
+};
+
+export type AdminCreateWebhookResponse = {
+  endpoint: AdminWebhookEndpoint;
+  plaintextSecret: string;
+};

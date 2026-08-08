@@ -76,6 +76,12 @@ spring:
             - Path=/api/v1/matches/**
           filters:
             - RewritePath=/api/v1/matches(?<segment>/?.*), /api/matches${segment}
+        - id: public-api-v1-webhooks
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/webhooks/**
+          filters:
+            - RewritePath=/api/v1/webhooks(?<segment>/?.*), /api/users/public/webhooks${segment}
   data:
     redis:
       host: ${REDIS_HOST:localhost}

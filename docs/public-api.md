@@ -108,7 +108,58 @@ After validation the gateway sets (and strips client spoof attempts for):
 
 The raw `X-Api-Key` is not forwarded downstream.
 
+## Webhooks
+
+Organizations can register webhook endpoints to receive real-time notifications for platform events. Secrets are shown once at creation and used for HMAC-SHA256 signature verification.
+
+### Event types
+
+| Event type | Scope | Description |
+|------------|-------|-------------|
+| `match.completed` | Platform (fan-out to all subscribed orgs) | A match reached completed status |
+| `match.point_recorded` | Platform (fan-out to all subscribed orgs) | A point was recorded in a live match |
+| `api_key.revoked` | Org-scoped | An API key belonging to this org was revoked |
+| `webhook.test` | Org-scoped | Manual test ping from the dashboard |
+
+### Webhook endpoints
+
+| Public path | Method | Description |
+|-------------|--------|-------------|
+| `/api/v1/webhooks` | GET | List webhook endpoints for the org |
+| `/api/v1/webhooks` | POST | Create a new webhook endpoint |
+| `/api/v1/webhooks/{id}/revoke` | POST | Revoke an endpoint |
+| `/api/v1/webhooks/{id}/rotate-secret` | POST | Rotate the signing secret |
+| `/api/v1/webhooks/{id}/test` | POST | Send a test event |
+
+All webhook endpoints require `X-Api-Key` (or JWT with `X-Org-Id` header).
+
+### Signature verification
+
+Every delivery includes a `Tennisly-Webhook-Signature` header:
+
+```text
+t=1700000000,v1=5257a869e7ecebeda32affa62cdca3fa51cad7e77a0e56ff536d0ce8e108d8f9
+```
+
+Verify by computing HMAC-SHA256 of `"{timestamp}.{rawBody}"` using your endpoint secret. Reject if the timestamp is more than 5 minutes old.
+
+### Create webhook request
+
+```http
+POST /api/v1/webhooks
+X-Api-Key: tly_live_<secret>
+Content-Type: application/json
+
+{
+  "name": "Match events",
+  "targetUrl": "https://your-server.com/webhooks/tennisly",
+  "eventTypes": ["match.completed", "match.point_recorded"],
+  "description": "Receive match completion events"
+}
+```
+
+The response includes `plaintextSecret` once. Store it securely; it cannot be retrieved again.
+
 ## Not in v1 slice 1
 
-- Usage webhooks / billing events
 - Write endpoints or scoped authorization beyond gateway validation

@@ -29,7 +29,9 @@ class ApiKeyAuthHeadersTest {
                 new ApiKeyValidationResponse(
                         ORG_ID, KEY_ID, List.of("read", "players"), "PRO", "Baseline Club");
         var mutated = ApiKeyAuthHeaders.applyTrustedHeaders(request, validation);
-        assertNull(mutated.getHeaders().getFirst(JwtClaimsForwardingFilter.X_USER_ID));
+        assertEquals(
+                "apikey:" + KEY_ID,
+                mutated.getHeaders().getFirst(JwtClaimsForwardingFilter.X_USER_ID));
         assertNull(mutated.getHeaders().getFirst(JwtClaimsForwardingFilter.X_USER_ROLES));
         assertNull(mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_API_KEY));
         assertEquals(ORG_ID.toString(), mutated.getHeaders().getFirst(ApiKeyAuthHeaders.X_ORG_ID));

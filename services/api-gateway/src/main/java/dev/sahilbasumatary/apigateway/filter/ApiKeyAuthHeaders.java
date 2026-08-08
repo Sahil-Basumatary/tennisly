@@ -36,6 +36,10 @@ public final class ApiKeyAuthHeaders {
                 .headers(
                         headers -> {
                             stripSpoofableHeaders(headers);
+                            // Synthetic actor so downstream tenant interceptors and audit stay consistent.
+                            headers.set(
+                                    JwtClaimsForwardingFilter.X_USER_ID,
+                                    "apikey:" + validation.apiKeyId());
                             headers.set(X_ORG_ID, validation.organizationId().toString());
                             headers.set(X_API_KEY_ID, validation.apiKeyId().toString());
                             headers.set(X_API_KEY_SCOPES, String.join(",", validation.scopes()));

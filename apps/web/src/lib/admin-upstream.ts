@@ -14,6 +14,9 @@ import type {
   AdminUpdateUserPayload,
   AdminUsageResponse,
   AdminUser,
+  AdminWebhookEndpoint,
+  AdminCreateWebhookPayload,
+  AdminCreateWebhookResponse,
 } from "@/types/admin";
 
 function userServiceBase(): string {
@@ -221,6 +224,80 @@ export async function revokeUpstreamAdminApiKey(
   return readJson<AdminApiKey>(response);
 }
 
+export async function fetchUpstreamAdminWebhooks(
+  token: string | null,
+  userId: string,
+  roles: string,
+  organizationId: string,
+): Promise<AdminWebhookEndpoint[]> {
+  const qs = queryString({ organizationId });
+  const response = await upstreamFetch(`/api/users/admin/webhooks${qs}`, {
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminWebhookEndpoint[]>(response);
+}
+
+export async function createUpstreamAdminWebhook(
+  token: string | null,
+  userId: string,
+  roles: string,
+  payload: AdminCreateWebhookPayload,
+): Promise<AdminCreateWebhookResponse> {
+  const response = await upstreamFetch(`/api/users/admin/webhooks`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+    body: JSON.stringify(payload),
+  });
+  return readJson<AdminCreateWebhookResponse>(response);
+}
+
+export async function revokeUpstreamAdminWebhook(
+  token: string | null,
+  userId: string,
+  roles: string,
+  id: string,
+  organizationId: string,
+): Promise<AdminWebhookEndpoint> {
+  const qs = queryString({ organizationId });
+  const response = await upstreamFetch(`/api/users/admin/webhooks/${id}/revoke${qs}`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminWebhookEndpoint>(response);
+}
+
+export async function rotateUpstreamAdminWebhookSecret(
+  token: string | null,
+  userId: string,
+  roles: string,
+  id: string,
+  organizationId: string,
+): Promise<AdminCreateWebhookResponse> {
+  const qs = queryString({ organizationId });
+  const response = await upstreamFetch(`/api/users/admin/webhooks/${id}/rotate-secret${qs}`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+  });
+  return readJson<AdminCreateWebhookResponse>(response);
+}
+
+export async function testUpstreamAdminWebhook(
+  token: string | null,
+  userId: string,
+  roles: string,
+  id: string,
+  organizationId: string,
+): Promise<void> {
+  const qs = queryString({ organizationId });
+  const response = await upstreamFetch(`/api/users/admin/webhooks/${id}/test${qs}`, {
+    method: "POST",
+    headers: authHeaders(token, userId, roles),
+  });
+  if (!response.ok) {
+    throw new AdminUpstreamError(`user-service ${response.status}`, response.status);
+  }
+}
+
 export async function fetchUpstreamAdminAuditLogs(
   token: string | null,
   userId: string,
@@ -283,6 +360,10 @@ function healthTargets(): HealthTarget[] {
     {
       name: "analytics",
       url: `${process.env.ANALYTICS_SERVICE_URL ?? "http://localhost:18086"}/actuator/health`,
+    },
+    {
+      name: "notification",
+      url: `${process.env.NOTIFICATION_SERVICE_URL ?? "http://localhost:18087"}/actuator/health`,
     },
     {
       name: "user",
