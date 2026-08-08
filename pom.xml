@@ -34,6 +34,7 @@
     <module>services/tennis-data-service</module>
     <module>services/match-service</module>
     <module>services/replay-service</module>
+    <module>services/analytics-service</module>
   </modules>
   <dependencyManagement>
     <dependencies>

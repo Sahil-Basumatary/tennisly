@@ -1,0 +1,51 @@
+server:
+  port: ${SERVER_PORT:18086}
+spring:
+  application:
+    name: analytics-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_ANALYTICS:tennisly_analytics}
+    username: ${POSTGRES_USER:tennisly}
+    password: ${POSTGRES_PASSWORD:tennisly_dev}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19094}
+    consumer:
+      group-id: analytics-service-group
+      auto-offset-reset: earliest
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URI:http://localhost:19200}
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:18761/eureka}
+  instance:
+    prefer-ip-address: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+analytics:
+  clients:
+    match-service-uri: ${ANALYTICS_MATCH_SERVICE_URI:http://match-service}
+    connect-timeout: ${ANALYTICS_CLIENT_CONNECT_TIMEOUT:PT5S}
+    read-timeout: ${ANALYTICS_CLIENT_READ_TIMEOUT:PT10S}
+  elasticsearch:
+    match-index: tennisly-match-analytics-v1
+    player-match-index: tennisly-player-match-v1
+    match-alias: tennisly-match-analytics
+    player-match-alias: tennisly-player-match
+  reindex:
+    page-size: ${ANALYTICS_REINDEX_PAGE_SIZE:50}
