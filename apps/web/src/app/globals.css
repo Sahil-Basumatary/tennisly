@@ -172,3 +172,17 @@
 .call-stamp-pop {
   animation: call-stamp-pop 1.4s ease-out forwards;
 }
+
+@media print {
+  .analytics-print-hide {
+    display: none !important;
+  }
+  .analytics-print-root {
+    break-inside: avoid;
+  }
+  nav[aria-label="Section"],
+  header,
+  footer {
+    display: none !important;
+  }
+}

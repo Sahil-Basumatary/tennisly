@@ -44,6 +44,17 @@ export const primaryNav: NavItem[] = [
       { id: "matches-replays", label: "Replays", href: "/matches?view=replays" },
     ],
   },
+  {
+    id: "analytics",
+    label: "Analytics",
+    href: "/analytics",
+    children: [
+      { id: "analytics-overview", label: "Overview", href: "/analytics" },
+      { id: "analytics-players", label: "Player", href: "/analytics/players" },
+      { id: "analytics-compare", label: "Compare", href: "/analytics/compare" },
+      { id: "analytics-tournaments", label: "Tournaments", href: "/analytics/tournaments" },
+    ],
+  },
 ];
 
 export const utilityNav: NavItem[] = [
