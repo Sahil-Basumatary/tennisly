@@ -8,6 +8,7 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 |---|---|---|
 | Unit | JUnit 5 + Mockito | `mvn test` / CI backend job |
 | Coverage | Jacoco reports on every module; **≥70% line on webhook + notification packages in `tennisly-common`** | CI `jacoco:report` + `verify -Djacoco.skip.check=false` for common |
+| Integration | Testcontainers Postgres (`PublicWebhookApiIT`) | Local + CI (Docker required); skips cleanly if Docker is unavailable |
 | Frontend | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | Load smoke | k6 | Local / staging: `k6 run tests/load/public-api-smoke.js` |
 | E2E / Pact / mutation | Planned | Not gated in CI yet |
@@ -17,6 +18,9 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 ```bash
 # Core JVM suites used in day-to-day make
 make test
+
+# User-service webhook IT only (needs Docker Desktop running)
+make test-it
 
 # Broader suite (includes gateway + common + users)
 ./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service,services/match-service,services/tennis-data-service,services/analytics-service -am test
@@ -28,6 +32,13 @@ make test
 ./mvnw -pl services/tennisly-common verify -Djacoco.skip.check=false
 ```
 
+## Integration tests (Testcontainers)
+
+- First slice: `PublicWebhookApiIT` — Postgres 16 + Flyway + MockMvc for public webhook create/list, SSRF loopback reject, and tenant header contracts.
+- Profile: `it` (`application-it.yml`, `bootstrap-it.yml`) with `allow-private-targets: false`.
+- Docker Engine 29+ needs API ≥ 1.44 — shipped as `services/user-service/src/test/resources/docker-java.properties`.
+- `@Testcontainers(disabledWithoutDocker = true)` so machines without Docker stay green (tests skipped, not failed).
+
 ## Coverage policy (honest)
 
 - Parent property `jacoco.skip.check=true` so greenfield services do not fail CI overnight.
@@ -37,6 +48,6 @@ make test
 ## Next slices
 
 1. Playwright smoke for `/`, login-gated `/dashboard`, admin health.
-2. Testcontainers integration for user-service webhooks + notification delivery worker.
+2. Notification-service delivery worker Testcontainers (Postgres + Kafka).
 3. Pact contracts for `/api/v1/**` between gateway consumers and tennis-data/match producers.
 4. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).

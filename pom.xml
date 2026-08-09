@@ -25,6 +25,7 @@
     <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
     <jacoco.version>0.8.12</jacoco.version>
     <jacoco.skip.check>true</jacoco.skip.check>
+    <testcontainers.version>1.20.6</testcontainers.version>
   </properties>
   <modules>
     <module>services/tennisly-common</module>
@@ -45,6 +46,13 @@
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>
         <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
