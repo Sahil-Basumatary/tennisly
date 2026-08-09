@@ -1,9 +1,11 @@
 package dev.sahilbasumatary.apigateway.config;
 
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -14,6 +16,8 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter;
+import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -29,6 +33,30 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .headers(
+                        headers ->
+                                headers
+                                        .contentTypeOptions(Customizer.withDefaults())
+                                        .frameOptions(
+                                                frame ->
+                                                        frame.mode(
+                                                                XFrameOptionsServerHttpHeadersWriter
+                                                                        .Mode.DENY))
+                                        .hsts(
+                                                hsts ->
+                                                        hsts.includeSubdomains(true)
+                                                                .maxAge(Duration.ofDays(365)))
+                                        .referrerPolicy(
+                                                referrer ->
+                                                        referrer.policy(
+                                                                ReferrerPolicyServerHttpHeadersWriter
+                                                                        .ReferrerPolicy
+                                                                        .NO_REFERRER))
+                                        .permissionsPolicy(
+                                                permissions ->
+                                                        permissions.policy(
+                                                                "camera=(), microphone=(),"
+                                                                        + " geolocation=()")))
                 .authorizeExchange(exchanges -> exchanges
                         // CORS preflight must pass without a token
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()

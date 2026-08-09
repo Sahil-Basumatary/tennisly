@@ -1,5 +1,6 @@
 package dev.sahilbasumatary.apigateway.filter;
 
+import dev.sahilbasumatary.apigateway.config.ApiKeyAuthProperties;
 import dev.sahilbasumatary.apigateway.config.PlanTierRateLimitProperties;
 import dev.sahilbasumatary.apigateway.ratelimit.PlanTierRateLimits;
 import dev.sahilbasumatary.apigateway.ratelimit.RateLimitDecision;
@@ -28,12 +29,15 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
 
     private final ReactiveStringRedisTemplate redisTemplate;
     private final PlanTierRateLimitProperties rateLimits;
+    private final ApiKeyAuthProperties authProperties;
 
     public TieredApiKeyRateLimitFilter(
             ReactiveStringRedisTemplate redisTemplate,
-            PlanTierRateLimitProperties rateLimits) {
+            PlanTierRateLimitProperties rateLimits,
+            ApiKeyAuthProperties authProperties) {
         this.redisTemplate = redisTemplate;
         this.rateLimits = rateLimits;
+        this.authProperties = authProperties;
     }
 
     @Override
@@ -84,7 +88,10 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
                                     "Redis rate limit check failed for org {}: {}",
                                     orgId,
                                     ex.getMessage());
-                            return chain.filter(exchange);
+                            if (authProperties.isRateLimitFailOpen()) {
+                                return chain.filter(exchange);
+                            }
+                            return rateLimitUnavailable(exchange);
                         });
     }
 
@@ -105,6 +112,16 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
                         + planTier
                         + "\"}";
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
+        return exchange.getResponse().writeWith(Mono.just(buffer));
+    }
+
+    private Mono<Void> rateLimitUnavailable(ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        exchange.getResponse().getHeaders().set("Retry-After", "5");
+        byte[] bytes =
+                "{\"error\":\"rate_limit_unavailable\"}".getBytes(StandardCharsets.UTF_8);
         DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(bytes);
         return exchange.getResponse().writeWith(Mono.just(buffer));
     }
