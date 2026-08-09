@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  flyway:
+    enabled: true
+  task:
+    scheduling:
+      enabled: false
+  kafka:
+    bootstrap-servers: localhost:9094
+    consumer:
+      group-id: notification-service-it
+      auto-offset-reset: earliest
+    listener:
+      auto-startup: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+eureka:
+  client:
+    enabled: false
+notification:
+  clients:
+    user-service-uri: http://localhost:9
+  delivery:
+    worker-delay-ms: 60000
+    batch-size: 50
+  email:
+    enabled: false
+    provider: logging
+  push:
+    enabled: false
+    provider: logging
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

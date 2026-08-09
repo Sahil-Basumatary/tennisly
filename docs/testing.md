@@ -34,10 +34,11 @@ make test-it
 
 ## Integration tests (Testcontainers)
 
-- First slice: `PublicWebhookApiIT` — Postgres 16 + Flyway + MockMvc for public webhook create/list, SSRF loopback reject, and tenant header contracts.
-- Profile: `it` (`application-it.yml`, `bootstrap-it.yml`) with `allow-private-targets: false`.
-- Docker Engine 29+ needs API ≥ 1.44 — shipped as `services/user-service/src/test/resources/docker-java.properties`.
+- `PublicWebhookApiIT` (user-service) — Postgres 16 + Flyway + MockMvc for public webhook create/list, SSRF loopback reject, tenant headers.
+- `WebhookDeliveryWorkerIT` (notification-service) — Postgres outbox + real HTTP receiver: enqueue → SUCCESS + HMAC verify, FAILED retry scheduling. Kafka listeners disabled under `it` profile.
+- Profile: `it` with Docker Engine 29+ needing `docker-java.properties` (`api.version=1.44`).
 - `@Testcontainers(disabledWithoutDocker = true)` so machines without Docker stay green (tests skipped, not failed).
+- Run: `make test-it`
 
 ## Coverage policy (honest)
 
@@ -48,6 +49,6 @@ make test-it
 ## Next slices
 
 1. Playwright smoke for `/`, login-gated `/dashboard`, admin health.
-2. Notification-service delivery worker Testcontainers (Postgres + Kafka).
-3. Pact contracts for `/api/v1/**` between gateway consumers and tennis-data/match producers.
-4. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).
+2. Pact contracts for `/api/v1/**` between gateway consumers and tennis-data/match producers.
+3. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).
+4. OWASP/CORS/actuator prod lockdown.

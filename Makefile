@@ -149,8 +149,8 @@ test: ## Run the JVM test suites
 	@$(LOAD_ENV) $(MVNW) -pl services/tennisly-common,services/api-gateway,services/user-service,services/tennis-data-service,services/match-service,services/replay-service,services/analytics-service,services/notification-service -am test
 
 .PHONY: test-it
-test-it: ## Run user-service Testcontainers ITs (Docker required)
-	@$(LOAD_ENV) $(MVNW) -pl services/user-service -am test -Dtest=PublicWebhookApiIT -Dsurefire.failIfNoSpecifiedTests=false
+test-it: ## Run Testcontainers ITs (Docker required)
+	@$(LOAD_ENV) $(MVNW) -pl services/user-service,services/notification-service -am test -Dtest=PublicWebhookApiIT,WebhookDeliveryWorkerIT -Dsurefire.failIfNoSpecifiedTests=false
 
 .PHONY: test-coverage
 test-coverage: ## Run tests and write Jacoco HTML reports

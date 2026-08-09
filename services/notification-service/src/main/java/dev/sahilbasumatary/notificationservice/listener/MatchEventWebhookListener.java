@@ -7,10 +7,12 @@ import dev.sahilbasumatary.common.kafka.TopicNames;
 import dev.sahilbasumatary.notificationservice.service.EnqueueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!it")
 public class MatchEventWebhookListener {
 
     private static final Logger log = LoggerFactory.getLogger(MatchEventWebhookListener.class);
