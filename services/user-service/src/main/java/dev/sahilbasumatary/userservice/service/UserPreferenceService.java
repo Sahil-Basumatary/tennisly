@@ -4,6 +4,8 @@ import dev.sahilbasumatary.userservice.context.RequestContext;
 import dev.sahilbasumatary.userservice.dto.request.UpdatePreferencesRequest;
 import dev.sahilbasumatary.userservice.dto.response.EmailPreferenceResponse;
 import dev.sahilbasumatary.userservice.dto.response.EmailRecipientResponse;
+import dev.sahilbasumatary.userservice.dto.response.PushPreferenceResponse;
+import dev.sahilbasumatary.userservice.dto.response.PushRecipientResponse;
 import dev.sahilbasumatary.userservice.dto.response.UserPreferenceResponse;
 import dev.sahilbasumatary.userservice.entity.OrganizationMembership;
 import dev.sahilbasumatary.userservice.entity.UserPreference;
@@ -115,6 +117,45 @@ public class UserPreferenceService {
         return recipients;
     }
 
+    @Transactional(readOnly = true)
+    public PushPreferenceResponse resolvePushPreference(String clerkId, String category) {
+        UserProfile profile =
+                profileRepository
+                        .findByClerkId(clerkId)
+                        .orElseThrow(() -> new ResourceNotFoundException("UserProfile", clerkId));
+        if (!profile.isActive()) {
+            return new PushPreferenceResponse(profile.getClerkId(), displayName(profile), false);
+        }
+        UserPreference preference =
+                preferenceRepository.findByUserProfileId(profile.getId()).orElse(null);
+        boolean enabled =
+                preference == null
+                        || EmailPreferenceEvaluator.isPushCategoryEnabled(preference, category);
+        return new PushPreferenceResponse(profile.getClerkId(), displayName(profile), enabled);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PushRecipientResponse> listOrgPushRecipients(UUID organizationId, String category) {
+        List<PushRecipientResponse> recipients = new ArrayList<>();
+        for (OrganizationMembership membership :
+                membershipRepository.findByOrganizationIdAndActiveTrue(organizationId)) {
+            UserProfile profile = membership.getUserProfile();
+            if (profile == null || !profile.isActive()) {
+                continue;
+            }
+            UserPreference preference =
+                    preferenceRepository.findByUserProfileId(profile.getId()).orElse(null);
+            boolean enabled =
+                    preference == null
+                            || EmailPreferenceEvaluator.isPushCategoryEnabled(preference, category);
+            if (!enabled) {
+                continue;
+            }
+            recipients.add(new PushRecipientResponse(profile.getClerkId(), displayName(profile)));
+        }
+        return recipients;
+    }
+
     private UserPreference createDefaults(UserProfile profile) {
         UserPreference preference = new UserPreference();
         preference.setUserProfile(profile);
@@ -131,6 +172,9 @@ public class UserPreferenceService {
         }
         if (request.emailNotifications() != null) {
             preference.setEmailNotifications(request.emailNotifications());
+        }
+        if (request.pushNotifications() != null) {
+            preference.setPushNotifications(request.pushNotifications());
         }
         if (request.favoriteSurface() != null) {
             preference.setFavoriteSurface(request.favoriteSurface());

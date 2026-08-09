@@ -43,10 +43,16 @@ export type UserPreferences = {
   theme: string;
   notificationsEnabled: boolean;
   emailNotifications: boolean;
+  pushNotifications: boolean;
   favoriteSurface: string | null;
   locale: string;
   extraSettings: {
     emailCategories?: {
+      welcome?: boolean;
+      apiKeyRevoked?: boolean;
+      webhookFailed?: boolean;
+    };
+    pushCategories?: {
       welcome?: boolean;
       apiKeyRevoked?: boolean;
       webhookFailed?: boolean;
@@ -79,6 +85,7 @@ export async function updateUpstreamPreferences(
   payload: Partial<{
     notificationsEnabled: boolean;
     emailNotifications: boolean;
+    pushNotifications: boolean;
     extraSettings: UserPreferences["extraSettings"];
   }>,
 ): Promise<UserPreferences> {

@@ -41,6 +41,9 @@ public class UserPreference {
     @Column(name = "email_notifications", nullable = false)
     private boolean emailNotifications = true;
 
+    @Column(name = "push_notifications", nullable = false)
+    private boolean pushNotifications = true;
+
     @Column(name = "favorite_surface", length = 64)
     private String favoriteSurface;
 
@@ -97,6 +100,14 @@ public class UserPreference {
 
     public void setEmailNotifications(boolean emailNotifications) {
         this.emailNotifications = emailNotifications;
+    }
+
+    public boolean isPushNotifications() {
+        return pushNotifications;
+    }
+
+    public void setPushNotifications(boolean pushNotifications) {
+        this.pushNotifications = pushNotifications;
     }
 
     public String getFavoriteSurface() {

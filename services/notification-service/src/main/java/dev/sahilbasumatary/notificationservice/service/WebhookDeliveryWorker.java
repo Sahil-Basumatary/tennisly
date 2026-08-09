@@ -1,6 +1,6 @@
 package dev.sahilbasumatary.notificationservice.service;
 
-import dev.sahilbasumatary.common.notification.EmailCategories;
+import dev.sahilbasumatary.common.notification.NotificationCategories;
 import dev.sahilbasumatary.common.webhook.WebhookSignature;
 import dev.sahilbasumatary.notificationservice.client.UserServiceWebhookClient;
 import dev.sahilbasumatary.notificationservice.client.dto.WebhookSubscription;
@@ -9,6 +9,8 @@ import dev.sahilbasumatary.notificationservice.email.EmailTemplateService;
 import dev.sahilbasumatary.notificationservice.entity.DeliveryStatus;
 import dev.sahilbasumatary.notificationservice.entity.WebhookDelivery;
 import dev.sahilbasumatary.notificationservice.entity.WebhookDeliveryRepository;
+import dev.sahilbasumatary.notificationservice.push.PushContentFactory;
+import dev.sahilbasumatary.notificationservice.push.PushDispatchService;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -33,6 +35,8 @@ public class WebhookDeliveryWorker {
     private final UserServiceWebhookClient webhookClient;
     private final EmailDispatchService emailDispatchService;
     private final EmailTemplateService emailTemplateService;
+    private final PushDispatchService pushDispatchService;
+    private final PushContentFactory pushContentFactory;
     private final HttpClient httpClient;
 
     @Value("${notification.delivery.batch-size:50}")
@@ -42,11 +46,15 @@ public class WebhookDeliveryWorker {
             WebhookDeliveryRepository deliveryRepository,
             UserServiceWebhookClient webhookClient,
             EmailDispatchService emailDispatchService,
-            EmailTemplateService emailTemplateService) {
+            EmailTemplateService emailTemplateService,
+            PushDispatchService pushDispatchService,
+            PushContentFactory pushContentFactory) {
         this.deliveryRepository = deliveryRepository;
         this.webhookClient = webhookClient;
         this.emailDispatchService = emailDispatchService;
         this.emailTemplateService = emailTemplateService;
+        this.pushDispatchService = pushDispatchService;
+        this.pushContentFactory = pushContentFactory;
         this.httpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
     }
 
@@ -147,7 +155,7 @@ public class WebhookDeliveryWorker {
     private void notifyWebhookFailed(WebhookDelivery delivery) {
         try {
             emailDispatchService.dispatchForOrganization(
-                    EmailCategories.WEBHOOK_FAILED,
+                    NotificationCategories.WEBHOOK_FAILED,
                     delivery.getId().toString(),
                     delivery.getOrganizationId(),
                     recipient ->
@@ -156,9 +164,14 @@ public class WebhookDeliveryWorker {
                                     recipient.displayName(),
                                     delivery.getEventType(),
                                     delivery.getLastError()));
+            pushDispatchService.dispatchForOrganization(
+                    NotificationCategories.WEBHOOK_FAILED,
+                    delivery.getId().toString(),
+                    delivery.getOrganizationId(),
+                    recipient -> pushContentFactory.webhookFailed(delivery.getEventType()));
         } catch (Exception ex) {
             log.warn(
-                    "Failed to dispatch webhook-failed email for delivery={}: {}",
+                    "Failed to dispatch webhook-failed alerts for delivery={}: {}",
                     delivery.getId(),
                     ex.getMessage());
         }

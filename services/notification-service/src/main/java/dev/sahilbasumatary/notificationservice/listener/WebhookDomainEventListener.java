@@ -4,9 +4,11 @@ import dev.sahilbasumatary.common.event.BaseEvent;
 import dev.sahilbasumatary.common.event.WebhookDomainEvent;
 import dev.sahilbasumatary.common.event.WebhookEventTypes;
 import dev.sahilbasumatary.common.kafka.TopicNames;
-import dev.sahilbasumatary.common.notification.EmailCategories;
+import dev.sahilbasumatary.common.notification.NotificationCategories;
 import dev.sahilbasumatary.notificationservice.email.EmailDispatchService;
 import dev.sahilbasumatary.notificationservice.email.EmailTemplateService;
+import dev.sahilbasumatary.notificationservice.push.PushContentFactory;
+import dev.sahilbasumatary.notificationservice.push.PushDispatchService;
 import dev.sahilbasumatary.notificationservice.service.EnqueueService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,14 +23,20 @@ public class WebhookDomainEventListener {
     private final EnqueueService enqueueService;
     private final EmailDispatchService emailDispatchService;
     private final EmailTemplateService emailTemplateService;
+    private final PushDispatchService pushDispatchService;
+    private final PushContentFactory pushContentFactory;
 
     public WebhookDomainEventListener(
             EnqueueService enqueueService,
             EmailDispatchService emailDispatchService,
-            EmailTemplateService emailTemplateService) {
+            EmailTemplateService emailTemplateService,
+            PushDispatchService pushDispatchService,
+            PushContentFactory pushContentFactory) {
         this.enqueueService = enqueueService;
         this.emailDispatchService = emailDispatchService;
         this.emailTemplateService = emailTemplateService;
+        this.pushDispatchService = pushDispatchService;
+        this.pushContentFactory = pushContentFactory;
     }
 
     @KafkaListener(
@@ -56,12 +64,17 @@ public class WebhookDomainEventListener {
             Object keyPrefix = event.getData() == null ? null : event.getData().get("keyPrefix");
             String prefix = keyPrefix == null ? "tly_live_" : String.valueOf(keyPrefix);
             emailDispatchService.dispatchForOrganization(
-                    EmailCategories.API_KEY_REVOKED,
+                    NotificationCategories.API_KEY_REVOKED,
                     event.getEventId(),
                     event.getOrganizationId(),
                     recipient ->
                             emailTemplateService.apiKeyRevoked(
                                     recipient.email(), recipient.displayName(), prefix));
+            pushDispatchService.dispatchForOrganization(
+                    NotificationCategories.API_KEY_REVOKED,
+                    event.getEventId(),
+                    event.getOrganizationId(),
+                    recipient -> pushContentFactory.apiKeyRevoked(prefix));
         }
     }
 }

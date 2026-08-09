@@ -9,6 +9,7 @@ public record UserPreferenceResponse(
         String theme,
         boolean notificationsEnabled,
         boolean emailNotifications,
+        boolean pushNotifications,
         String favoriteSurface,
         String locale,
         Map<String, Object> extraSettings) {
@@ -19,6 +20,7 @@ public record UserPreferenceResponse(
                 pref.getTheme(),
                 pref.isNotificationsEnabled(),
                 pref.isEmailNotifications(),
+                pref.isPushNotifications(),
                 pref.getFavoriteSurface(),
                 pref.getLocale(),
                 pref.getExtraSettings());

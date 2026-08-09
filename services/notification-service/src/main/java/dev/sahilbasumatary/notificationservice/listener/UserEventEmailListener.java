@@ -3,9 +3,11 @@ package dev.sahilbasumatary.notificationservice.listener;
 import dev.sahilbasumatary.common.event.BaseEvent;
 import dev.sahilbasumatary.common.event.UserEvent;
 import dev.sahilbasumatary.common.kafka.TopicNames;
-import dev.sahilbasumatary.common.notification.EmailCategories;
+import dev.sahilbasumatary.common.notification.NotificationCategories;
 import dev.sahilbasumatary.notificationservice.email.EmailDispatchService;
 import dev.sahilbasumatary.notificationservice.email.EmailTemplateService;
+import dev.sahilbasumatary.notificationservice.push.PushContentFactory;
+import dev.sahilbasumatary.notificationservice.push.PushDispatchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -18,11 +20,18 @@ public class UserEventEmailListener {
 
     private final EmailDispatchService emailDispatchService;
     private final EmailTemplateService emailTemplateService;
+    private final PushDispatchService pushDispatchService;
+    private final PushContentFactory pushContentFactory;
 
     public UserEventEmailListener(
-            EmailDispatchService emailDispatchService, EmailTemplateService emailTemplateService) {
+            EmailDispatchService emailDispatchService,
+            EmailTemplateService emailTemplateService,
+            PushDispatchService pushDispatchService,
+            PushContentFactory pushContentFactory) {
         this.emailDispatchService = emailDispatchService;
         this.emailTemplateService = emailTemplateService;
+        this.pushDispatchService = pushDispatchService;
+        this.pushContentFactory = pushContentFactory;
     }
 
     @KafkaListener(
@@ -39,28 +48,32 @@ public class UserEventEmailListener {
         if (event.getClerkId() == null || event.getClerkId().isBlank()) {
             return;
         }
-        if (event.getEmail() == null || event.getEmail().isBlank()) {
-            log.info(
-                    "Skipping welcome email — no email on USER_CREATED clerkId={}",
-                    event.getClerkId());
-            return;
-        }
         String displayName = buildDisplayName(event);
-        log.info(
-                "Dispatching welcome email clerkId={} eventId={}",
-                event.getClerkId(),
-                event.getEventId());
-        emailDispatchService.dispatchForClerk(
-                EmailCategories.WELCOME,
+        if (event.getEmail() != null && !event.getEmail().isBlank()) {
+            log.info(
+                    "Dispatching welcome email clerkId={} eventId={}",
+                    event.getClerkId(),
+                    event.getEventId());
+            emailDispatchService.dispatchForClerk(
+                    NotificationCategories.WELCOME,
+                    event.getEventId(),
+                    event.getClerkId(),
+                    () -> emailTemplateService.welcome(event.getEmail(), displayName));
+        }
+        pushDispatchService.dispatchForClerk(
+                NotificationCategories.WELCOME,
                 event.getEventId(),
                 event.getClerkId(),
-                () -> emailTemplateService.welcome(event.getEmail(), displayName));
+                () -> pushContentFactory.welcome(displayName));
     }
 
     private static String buildDisplayName(UserEvent event) {
         String first = event.getFirstName() == null ? "" : event.getFirstName().trim();
         String last = event.getLastName() == null ? "" : event.getLastName().trim();
         String combined = (first + " " + last).trim();
-        return combined.isEmpty() ? event.getEmail() : combined;
+        if (!combined.isEmpty()) {
+            return combined;
+        }
+        return event.getEmail() == null ? "there" : event.getEmail();
     }
 }

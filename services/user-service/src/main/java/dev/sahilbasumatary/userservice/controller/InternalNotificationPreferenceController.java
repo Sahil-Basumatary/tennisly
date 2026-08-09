@@ -1,8 +1,10 @@
 package dev.sahilbasumatary.userservice.controller;
 
-import dev.sahilbasumatary.common.notification.EmailCategories;
+import dev.sahilbasumatary.common.notification.NotificationCategories;
 import dev.sahilbasumatary.userservice.dto.response.EmailPreferenceResponse;
 import dev.sahilbasumatary.userservice.dto.response.EmailRecipientResponse;
+import dev.sahilbasumatary.userservice.dto.response.PushPreferenceResponse;
+import dev.sahilbasumatary.userservice.dto.response.PushRecipientResponse;
 import dev.sahilbasumatary.userservice.service.UserPreferenceService;
 import java.util.List;
 import java.util.UUID;
@@ -31,16 +33,33 @@ public class InternalNotificationPreferenceController {
     }
 
     @GetMapping("/organizations/{organizationId}/email-recipients")
-    public ResponseEntity<List<EmailRecipientResponse>> orgRecipients(
+    public ResponseEntity<List<EmailRecipientResponse>> orgEmailRecipients(
             @PathVariable UUID organizationId, @RequestParam String category) {
         requireValidCategory(category);
         return ResponseEntity.ok(preferenceService.listOrgEmailRecipients(organizationId, category));
     }
 
+    @GetMapping("/users/by-clerk/{clerkId}/push-preference")
+    public ResponseEntity<PushPreferenceResponse> pushPreference(
+            @PathVariable String clerkId, @RequestParam String category) {
+        requireValidCategory(category);
+        return ResponseEntity.ok(preferenceService.resolvePushPreference(clerkId, category));
+    }
+
+    @GetMapping("/organizations/{organizationId}/push-recipients")
+    public ResponseEntity<List<PushRecipientResponse>> orgPushRecipients(
+            @PathVariable UUID organizationId, @RequestParam String category) {
+        requireValidCategory(category);
+        return ResponseEntity.ok(preferenceService.listOrgPushRecipients(organizationId, category));
+    }
+
     private static void requireValidCategory(String category) {
-        if (!EmailCategories.isValid(category)) {
+        if (!NotificationCategories.isValid(category)) {
             throw new IllegalArgumentException(
-                    "Invalid email category: " + category + ". Valid: " + EmailCategories.all());
+                    "Invalid notification category: "
+                            + category
+                            + ". Valid: "
+                            + NotificationCategories.all());
         }
     }
 }

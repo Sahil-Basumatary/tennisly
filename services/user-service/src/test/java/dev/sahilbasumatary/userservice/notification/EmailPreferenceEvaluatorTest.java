@@ -40,6 +40,15 @@ class EmailPreferenceEvaluatorTest {
                         preference, EmailCategories.API_KEY_REVOKED));
     }
 
+    @Test
+    void pushMasterFlagGatesCategories() {
+        UserPreference preference = seeded();
+        preference.setPushNotifications(false);
+        assertFalse(
+                EmailPreferenceEvaluator.isPushCategoryEnabled(
+                        preference, EmailCategories.WELCOME));
+    }
+
     private static UserPreference seeded() {
         UserPreference preference = new UserPreference();
         preference.setNotificationsEnabled(true);

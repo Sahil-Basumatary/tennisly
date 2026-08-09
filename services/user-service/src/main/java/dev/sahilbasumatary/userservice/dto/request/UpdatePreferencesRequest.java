@@ -7,6 +7,7 @@ public record UpdatePreferencesRequest(
         @Size(max = 32) String theme,
         Boolean notificationsEnabled,
         Boolean emailNotifications,
+        Boolean pushNotifications,
         @Size(max = 64) String favoriteSurface,
         @Size(max = 16) String locale,
         Map<String, Object> extraSettings) {}

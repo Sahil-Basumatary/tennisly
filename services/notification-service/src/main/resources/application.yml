@@ -48,3 +48,8 @@ notification:
     provider: ${NOTIFICATION_EMAIL_PROVIDER:logging}
     from: ${NOTIFICATION_EMAIL_FROM:Tennisly <onboarding@resend.dev>}
     resend-api-key: ${RESEND_API_KEY:}
+  push:
+    enabled: ${NOTIFICATION_PUSH_ENABLED:true}
+    provider: ${NOTIFICATION_PUSH_PROVIDER:logging}
+    fcm-project-id: ${FCM_PROJECT_ID:}
+    fcm-access-token: ${FCM_ACCESS_TOKEN:}
