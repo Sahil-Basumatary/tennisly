@@ -64,7 +64,6 @@ jobs:
         run: pnpm lint
       - name: Type check
         run: pnpm turbo run type-check --filter='./apps/*' --filter='./packages/*'
-        continue-on-error: true
       - name: Test
         run: pnpm test
       - name: Build
@@ -86,22 +85,46 @@ jobs:
           cache: 'maven'
       - name: Validate code style
         run: mvn checkstyle:check -B
-      - name: Run tests
-        run: mvn test -B
+      - name: Run tests with coverage
+        run: mvn test jacoco:report -B
+      - name: Coverage floor (shared library)
+        run: mvn -pl services/tennisly-common verify -Djacoco.skip.check=false -B
+      - name: Upload Jacoco reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: '**/target/site/jacoco/**'
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Build
         run: mvn package -DskipTests -B
 
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
   ci-success:
     name: CI Success
-    needs: [frontend, backend]
+    needs: [frontend, backend, dependency-review]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
         run: |
-          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]]; then
+          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi
           echo "All jobs passed or were skipped"
-

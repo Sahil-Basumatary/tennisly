@@ -146,7 +146,16 @@ web: ports ## Run the Next.js app in the foreground
 
 .PHONY: test
 test: ## Run the JVM test suites
-	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service,services/match-service,services/replay-service,services/analytics-service,services/notification-service -am test
+	@$(LOAD_ENV) $(MVNW) -pl services/tennisly-common,services/api-gateway,services/user-service,services/tennis-data-service,services/match-service,services/replay-service,services/analytics-service,services/notification-service -am test
+
+.PHONY: test-coverage
+test-coverage: ## Run tests and write Jacoco HTML reports
+	@$(LOAD_ENV) $(MVNW) test jacoco:report -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service -am
+
+.PHONY: load-smoke
+load-smoke: ## k6 smoke against public API (needs BASE_URL + API_KEY)
+	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_..."; exit 1; }
+	k6 run -e BASE_URL=$${BASE_URL:-http://localhost:8080} -e API_KEY=$$API_KEY tests/load/public-api-smoke.js
 
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports
