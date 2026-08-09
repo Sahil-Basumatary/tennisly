@@ -153,8 +153,7 @@ test-it: ## Run Testcontainers ITs (Docker required)
 	@$(LOAD_ENV) $(MVNW) -pl services/user-service,services/notification-service -am test -Dtest=PublicWebhookApiIT,WebhookDeliveryWorkerIT -Dsurefire.failIfNoSpecifiedTests=false
 
 .PHONY: e2e
-e2e: ## Playwright smoke against apps/web (Clerk env in apps/web/.env.local)
-	pnpm --filter @tennisly/web build
+e2e: ## Playwright smoke (production next start; never turbopack/dev)
 	pnpm --filter @tennisly/web test:e2e
 
 .PHONY: test-coverage

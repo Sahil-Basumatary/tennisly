@@ -100,7 +100,7 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @tennisly/web exec playwright install --with-deps chromium
       - name: Run smoke
-        run: pnpm --filter @tennisly/web test:e2e
+        run: pnpm --filter @tennisly/web test:e2e:only
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

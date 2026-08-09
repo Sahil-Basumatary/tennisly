@@ -47,9 +47,11 @@ make e2e
 ## Playwright smoke
 
 - Specs in `apps/web/e2e/smoke.spec.ts`: `/api/health` + security headers, home/about brand, unauthenticated redirects for `/dashboard`, `/settings/notifications`, `/admin`.
-- Uses `@clerk/testing` tokens + `next start` on port `3110` (set `PLAYWRIGHT_BASE_URL` to point at an already-running app).
+- Always runs against **`next start`** (production build). Turbopack/`next dev` is intentionally unsupported — it panics and causes Clerk proxy loops.
+- `@clerk/testing` tokens required; Clerk keys from `apps/web/.env.local`.
+- Port `3110` by default. Override with `PLAYWRIGHT_BASE_URL` / `PLAYWRIGHT_PORT`.
 - First-time browser install: `pnpm --filter @tennisly/web exec playwright install chromium`.
-- Run: `make e2e` (builds web, then Playwright).
+- Run: `make e2e` or `pnpm --filter @tennisly/web test:e2e` (both build first). Use `test:e2e:only` only when `.next` already exists.
 
 ## Coverage policy (honest)
 
