@@ -69,6 +69,47 @@ jobs:
       - name: Build
         run: pnpm build
 
+  e2e:
+    name: Playwright Smoke
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' && vars.RUN_PLAYWRIGHT == 'true'
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+      NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: /
+      NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: /
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build web
+        run: pnpm --filter @tennisly/web build
+      - name: Install Playwright Chromium
+        run: pnpm --filter @tennisly/web exec playwright install --with-deps chromium
+      - name: Run smoke
+        run: pnpm --filter @tennisly/web test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
   backend:
     name: Backend
     needs: changes
@@ -117,13 +158,13 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [frontend, backend, dependency-review]
+    needs: [frontend, backend, dependency-review, e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
         run: |
-          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]]; then
+          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi

@@ -152,6 +152,11 @@ test: ## Run the JVM test suites
 test-it: ## Run Testcontainers ITs (Docker required)
 	@$(LOAD_ENV) $(MVNW) -pl services/user-service,services/notification-service -am test -Dtest=PublicWebhookApiIT,WebhookDeliveryWorkerIT -Dsurefire.failIfNoSpecifiedTests=false
 
+.PHONY: e2e
+e2e: ## Playwright smoke against apps/web (Clerk env in apps/web/.env.local)
+	pnpm --filter @tennisly/web build
+	pnpm --filter @tennisly/web test:e2e
+
 .PHONY: test-coverage
 test-coverage: ## Run tests and write Jacoco HTML reports
 	@$(LOAD_ENV) $(MVNW) test jacoco:report -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service -am

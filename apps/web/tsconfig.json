@@ -35,6 +35,11 @@
     "node_modules.nosync",
     ".next",
     ".next.nosync",
-    "storybook-static"
+    "storybook-static",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "src/stories",
+    "e2e",
+    "playwright.config.ts"
   ]
 }
