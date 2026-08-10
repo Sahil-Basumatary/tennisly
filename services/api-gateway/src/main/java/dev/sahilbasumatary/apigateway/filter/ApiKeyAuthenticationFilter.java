@@ -41,10 +41,17 @@ public class ApiKeyAuthenticationFilter implements WebFilter, Ordered {
                             var mutatedRequest =
                                     ApiKeyAuthHeaders.applyTrustedHeaders(
                                             exchange.getRequest(), validation);
-                            return chain.filter(
-                                    exchange.mutate().request(mutatedRequest).build());
+                            // thenReturn keeps switchIfEmpty from treating a normal empty
+                            // WebFilterChain completion as "invalid api key".
+                            return chain.filter(exchange.mutate().request(mutatedRequest).build())
+                                    .thenReturn(Boolean.TRUE);
                         })
-                .switchIfEmpty(unauthorized(exchange, "invalid_api_key"));
+                .switchIfEmpty(
+                        Mono.defer(
+                                () ->
+                                        unauthorized(exchange, "invalid_api_key")
+                                                .thenReturn(Boolean.FALSE)))
+                .then();
     }
 
     @Override
@@ -58,13 +65,8 @@ public class ApiKeyAuthenticationFilter implements WebFilter, Ordered {
                 .uri("/internal/api-keys/validate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new ApiKeyValidationRequest(apiKey))
-                .exchangeToMono(
-                        response -> {
-                            if (response.statusCode().is2xxSuccessful()) {
-                                return response.bodyToMono(ApiKeyValidationResponse.class);
-                            }
-                            return Mono.empty();
-                        })
+                .retrieve()
+                .bodyToMono(ApiKeyValidationResponse.class)
                 .onErrorResume(ex -> Mono.empty());
     }
 
