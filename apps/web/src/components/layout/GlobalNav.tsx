@@ -165,11 +165,15 @@ export function GlobalNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [navigatedFrom, setNavigatedFrom] = useState(pathname);
 
-  useEffect(() => {
+  // Adjusting during render rather than in an effect avoids a frame where the
+  // menu is still open on the newly navigated page.
+  if (pathname !== navigatedFrom) {
+    setNavigatedFrom(pathname);
     setOpenDropdownId(null);
     setMenuOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!openDropdownId) return;
