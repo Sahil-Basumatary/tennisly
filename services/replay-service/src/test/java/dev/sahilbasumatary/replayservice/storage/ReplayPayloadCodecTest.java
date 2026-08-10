@@ -47,8 +47,10 @@ class ReplayPayloadCodecTest {
         CompressedPayload payload =
                 codec.compress("payload".getBytes(StandardCharsets.UTF_8));
 
+        String wrongChecksum = "0".repeat(64);
+
         assertThrows(
                 ReplayStorageException.class,
-                () -> codec.decompress(payload.data(), "0000000000000000000000000000000000000000000000000000000000000000"));
+                () -> codec.decompress(payload.data(), wrongChecksum));
     }
 }

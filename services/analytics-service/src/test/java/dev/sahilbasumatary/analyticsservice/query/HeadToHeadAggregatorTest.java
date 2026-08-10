@@ -23,8 +23,20 @@ class HeadToHeadAggregatorTest {
         PlayerMatchDocument win = meeting(playerA, playerB, matchOne, true, new TapeSideMetrics(30, 20, 4));
         PlayerMatchDocument loss = meeting(playerA, playerB, matchTwo, false, new TapeSideMetrics(22, 14, 2));
         PlayerMatchDocument unknown = meeting(playerA, playerB, UUID.randomUUID(), null, new TapeSideMetrics(10, 6, 1));
-        MatchAnalyticsDocument matchOneDoc = matchDoc(matchOne, playerA, playerB, new TapeSideMetrics(30, 20, 4), new TapeSideMetrics(25, 15, 1));
-        MatchAnalyticsDocument matchTwoDoc = matchDoc(matchTwo, playerA, playerB, new TapeSideMetrics(22, 14, 2), new TapeSideMetrics(28, 18, 3));
+        MatchAnalyticsDocument matchOneDoc =
+                matchDoc(
+                        matchOne,
+                        playerA,
+                        playerB,
+                        new TapeSideMetrics(30, 20, 4),
+                        new TapeSideMetrics(25, 15, 1));
+        MatchAnalyticsDocument matchTwoDoc =
+                matchDoc(
+                        matchTwo,
+                        playerA,
+                        playerB,
+                        new TapeSideMetrics(22, 14, 2),
+                        new TapeSideMetrics(28, 18, 3));
         CompareResponse response =
                 HeadToHeadAggregator.aggregate(
                         playerA,

@@ -53,7 +53,7 @@ class WebhookDeliveryAdminServiceTest {
         when(deliveryRepository.findById(id)).thenReturn(Optional.of(delivery));
         when(deliveryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = service.retry(id);
+        final var response = service.retry(id);
 
         ArgumentCaptor<WebhookDelivery> captor = ArgumentCaptor.forClass(WebhookDelivery.class);
         verify(deliveryRepository).save(captor.capture());

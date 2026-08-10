@@ -69,11 +69,6 @@ class ApiKeyAuthenticationFilterTest {
                                                             mapper, MediaType.APPLICATION_JSON));
                                 })
                         .build();
-        WebClient client =
-                WebClient.builder()
-                        .baseUrl("http://127.0.0.1:" + userService.getPort())
-                        .exchangeStrategies(strategies)
-                        .build();
         @SuppressWarnings("unchecked")
         ReactiveValueOperations<String, String> valueOps = mock(ReactiveValueOperations.class);
         ReactiveStringRedisTemplate redis = mock(ReactiveStringRedisTemplate.class);
@@ -81,6 +76,11 @@ class ApiKeyAuthenticationFilterTest {
         when(valueOps.get(anyString())).thenReturn(Mono.empty());
         when(valueOps.set(anyString(), anyString(), any(Duration.class)))
                 .thenReturn(Mono.just(true));
+        WebClient client =
+                WebClient.builder()
+                        .baseUrl("http://127.0.0.1:" + userService.getPort())
+                        .exchangeStrategies(strategies)
+                        .build();
         return new ApiKeyAuthenticationFilter(client, redis, mapper, 30);
     }
 
@@ -125,7 +125,8 @@ class ApiKeyAuthenticationFilterTest {
                         + ORG_ID
                         + "\",\"apiKeyId\":\""
                         + KEY_ID
-                        + "\",\"scopes\":[\"read\",\"players\"],\"planTier\":\"PRO\",\"organizationName\":\"Baseline Club\"}";
+                        + "\",\"scopes\":[\"read\",\"players\"],\"planTier\":\"PRO\""
+                        + ",\"organizationName\":\"Baseline Club\"}";
         userService.enqueue(
                 new MockResponse()
                         .setResponseCode(200)

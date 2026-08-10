@@ -159,7 +159,7 @@ class WebhookDeliveryWorkerIT {
         stubEndpoint();
         MatchEvent event = MatchEvent.statusChanged(UUID.randomUUID(), "COMPLETED");
         enqueueService.enqueue(WebhookEventTypes.MATCH_COMPLETED, event);
-        Instant before = Instant.now();
+        final Instant before = Instant.now();
         deliveryWorker.poll();
         WebhookDelivery row = deliveryRepository.findAll().get(0);
         assertEquals(DeliveryStatus.FAILED, row.getStatus());
