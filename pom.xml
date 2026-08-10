@@ -22,7 +22,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <checkstyle.version>10.12.7</checkstyle.version>
     <checkstyle-maven-plugin.version>3.3.1</checkstyle-maven-plugin.version>
-    <spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
+    <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
     <jacoco.version>0.8.12</jacoco.version>
     <jacoco.skip.check>true</jacoco.skip.check>
     <testcontainers.version>1.20.6</testcontainers.version>
