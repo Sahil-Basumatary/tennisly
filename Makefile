@@ -186,6 +186,16 @@ zap-stub: ## Header-faithful /api/v1 stub for local ZAP when gateway is down (AP
 	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_... (disposable key)"; exit 1; }
 	@python3 ./scripts/zap-gateway-stub.py
 
+.PHONY: verify-deploy
+verify-deploy: ## Assert gateway catalogue serves rows (GATEWAY_URL) and backends stay token-locked
+	@./scripts/verify-deployment.sh
+
+.PHONY: render-images
+render-images: ## Build the Render deploy images locally to catch Dockerfile drift before pushing
+	@docker build -f services/api-gateway/Dockerfile -t tennisly/gateway:render-test .
+	@docker build -f services/tennis-data-service/Dockerfile -t tennisly/tennis-data:render-test .
+	@docker build -f services/match-service/Dockerfile -t tennisly/match:render-test .
+
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports
 	@$(LOAD_ENV) \

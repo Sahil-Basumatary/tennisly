@@ -1,99 +1,180 @@
 # Phase 8 deploy — Vercel (web) + Render (API)
 
 Replaces the plan’s EKS/Helm path with a portfolio-honest cloud cut:
-**Next.js on Vercel**, **Spring services on Render**.
+**Next.js on Vercel** (`tennisly.tv`), **Spring services on Render**.
 
 ## Topology (Phase 8a — first public demo)
 
 ```
 Browser
-  → Vercel (@tennisly/web)  — Clerk + Next BFF /api/*
-       → Render tennis-data-service (HTTPS)
-       → Render match-service (HTTPS)
-Render Postgres (multi-DB) + Redis
+  → Vercel @tennisly/web  (https://tennisly.tv)
+       → Render api-gateway   (https://api-gateway-….onrender.com → api.tennisly.tv)
+            → tennis-data-service  (token-locked)
+            → match-service        (token-locked)
+Neon Postgres (multi-DB) + Render Redis
 ```
 
 | In 8a | Out of 8a (documented, not abandoned) |
 |---|---|
-| Web, tennis-data, match, Postgres, Redis | Eureka, config-server |
-| Absolute service URLs (no discovery) | api-gateway public `/api/v1` mesh |
-| Catalogue + ingest HTTP paths | Kafka consumers (replay auto, analytics, notifications) |
-| | Elasticsearch / analytics-service |
-| | MinIO/R2 replay storage pipeline |
+| Web, api-gateway, tennis-data, match, Neon, Redis | Eureka, config-server |
+| Shared-secret backends on free web plans | Paid Render private services |
+| Catalogue GETs through gateway (no JWT) | Metered `/api/v1` + user-service API keys |
+| Match ingest via tennis-data (same secret) | Kafka consumers, analytics, replay storage |
 
-**Why:** Vercel cannot join Render’s private network. Each BFF upstream must be a public HTTPS service (or one public gateway — 8b). Eureka on ephemeral Render hosts is busywork; env URLs are the FAANG-honest move.
+**Why gateway + shared secret (not private services):** Render private services start at ~$7/mo each. Free web services stay publicly routable, so `GATEWAY_INTERNAL_TOKEN` (`X-Gateway-Token`) is the lock. The gateway stamps every proxied request; match-service presents the same header when calling tennis-data for ingest. Blank token = filter off (local `make up` unchanged).
+
+**Why `/api/v1` waits for 8b:** API-key validation calls user-service. Without it, every public API key request would 401. Catalogue for the web app uses service-native paths (`/api/tennis/**`, `/api/matches/**`) through the gateway with GET permitAll.
+
+## Domain — `tennisly.tv` (Namecheap → Vercel)
+
+You already own the domain. Replace the Namecheap parking records before go-live.
+
+### 1. Add the domain in Vercel
+
+Project → Settings → Domains → add `tennisly.tv` and `www.tennisly.tv`. Vercel shows the exact records; they are usually:
+
+| Type | Host | Value |
+|---|---|---|
+| A | `@` | `76.76.21.21` |
+| CNAME | `www` | `cname.vercel-dns.com` |
+
+### 2. Namecheap Advanced DNS
+
+On [Advanced DNS for tennisly.tv](https://ap.www.namecheap.com/Domains/DomainControlPanel/tennisly.tv/advancedns):
+
+1. **Delete** the parking `CNAME` (`www` → `parkingpage.namecheap.com`).
+2. **Delete** the `URL Redirect Record` (`@` → `http://www.tennisly.tv/`).
+3. **Add** the A + CNAME rows from the table above (TTL Automatic / 30 min is fine).
+
+Propagation is usually minutes, sometimes up to an hour. `dig tennisly.tv +short` should show `76.76.21.21`.
+
+### 3. Optional API subdomain
+
+After the gateway is live on Render:
+
+| Type | Host | Value |
+|---|---|---|
+| CNAME | `api` | `api-gateway-xxxx.onrender.com` |
+
+Then set Vercel `MATCH_SERVICE_URL` / `TENNIS_DATA_SERVICE_URL` to `https://api.tennisly.tv`.
+
+### 4. Clerk dashboard (live keys)
+
+Allowed origins / redirect URLs:
+
+- `https://tennisly.tv`
+- `https://www.tennisly.tv`
+- (keep `*.vercel.app` for preview deploys if you use them)
 
 ## Vercel
 
-1. Import the GitHub repo in Vercel.
-2. Framework: Next.js. **Root Directory:** leave repo root (pnpm workspace).
-3. Install: `pnpm install --frozen-lockfile`
-4. Build: `pnpm --filter @tennisly/web build`
-5. Output: Next default (no `standalone` required).
-6. Node: **22** (see root `packageManager` / `engines`).
-7. Copy env from `apps/web/.env.production.example`.
-
-`vercel.json` at repo root pins install/build for monorepo.
-
-### Clerk
-
-- Use **live** keys only on the production Vercel project (or a dedicated staging project with test keys).
-- Dashboard → allowed origins / redirect URLs = your `*.vercel.app` (and custom domain later).
-- CSP in `next.config.ts` allows Clerk + optional `CSP_CONNECT_SRC_EXTRA` for Render WS later.
+1. Import the GitHub repo.
+2. Framework: Next.js. **Root Directory:** repo root (pnpm workspace).
+3. Install / build come from `vercel.json`.
+4. Node **22**.
+5. Env from `apps/web/.env.production.example` — both upstream URLs point at **api-gateway**, not the backends.
 
 ## Render
 
-Use Blueprint: `render.yaml` (repo root).
+Blueprint: `render.yaml`.
 
-### Services
-
-| Service | Health | Notes |
+| Service | Role | Notes |
 |---|---|---|
-| `tennis-data-service` | `GET /actuator/health` | Requires `TENNIS_BALLDONTLIE_API_KEY` + `TENNIS_LIVETENNIS_API_KEY` (fail-fast) |
-| `match-service` | `GET /actuator/health` | `TENNIS_DATA_SERVICE_URI` = public tennis-data URL; Redis for live snapshots |
+| `api-gateway` | Only advertised public API | Stamps `X-Gateway-Token`; Redis rate limits; Clerk JWT for non-catalogue `/api/**` |
+| `tennis-data-service` | Catalogue + provider sync | Rejects requests without the token (except `/actuator/health`) |
+| `match-service` | Matches + ingest | Same token; calls tennis-data with the token |
+| `tennisly-redis` | Free Key Value | Rate limit + live snapshots — not a system of record |
+
+Generate the shared secret once:
+
+```bash
+openssl rand -hex 32
+```
+
+Paste the **same** value into `GATEWAY_INTERNAL_TOKEN` on all three services when Render prompts (`sync: false`).
+
+After first deploy, set:
+
+- Gateway `TENNIS_DATA_SERVICE_URI` / `MATCH_SERVICE_URI` / `MATCH_SERVICE_WS_URI` = the backend `*.onrender.com` URLs
+- Match `TENNIS_DATA_SERVICE_URI` = tennis-data URL
+- Gateway `CLERK_JWKS_URI` + `CLERK_ISSUER_URI` from your Clerk instance
 
 ### Data stores
 
-- **Postgres** — one instance; create DBs `tennisly_tennis_data`, `tennisly_matches` (same as local init).
-- **Redis** — rate-limit/live snapshot cache.
+**Postgres — Neon** (not Render free DB — that expires after 30 days).
 
-### Eureka / Kafka (8a)
+```bash
+psql "postgresql://USER:PASSWORD@HOST/neondb?sslmode=require" \
+  -f infrastructure/neon/init-databases.sql
+```
+
+| Env var | Value | Why |
+|---|---|---|
+| `POSTGRES_URL_PARAMS` | `?sslmode=require` | Neon requires TLS |
+| `POSTGRES_POOL_MAX` | `5` | Serverless connection caps |
+| `POSTGRES_HOST` | Neon **pooler** host | Survives scale-to-zero |
+
+### Eureka / config-server / Kafka (8a)
 
 ```bash
 EUREKA_CLIENT_ENABLED=false
+CONFIG_SERVER_ENABLED=false
+GATEWAY_DISCOVERY_LOCATOR_ENABLED=false
 MANAGEMENT_HEALTH_KAFKA_ENABLED=false
 ```
 
-Producers log and continue if the broker is absent; **do not claim** event-driven features work until 8b (managed Kafka or Redpanda).
-
 ### Build
 
-Dockerfiles are **multi-stage** (Maven → JRE). Render `dockerfilePath` + repo-root context.
+```bash
+make render-images
+```
+
+Multi-stage Dockerfiles from repo root; `.dockerignore` is deny-by-default so context stays ~100KB.
+
+## Verify the deploy
+
+Prefer the gateway (what users and Vercel hit):
+
+```bash
+export GATEWAY_URL=https://api-gateway-xxxx.onrender.com
+make verify-deploy
+```
+
+Catalogue checks go through the gateway. `SEED=true` still hits tennis-data **directly** with `GATEWAY_INTERNAL_TOKEN` (sync stays JWT-protected on the gateway):
+
+```bash
+export TENNIS_DATA_URL=https://tennis-data-service-xxxx.onrender.com
+export GATEWAY_INTERNAL_TOKEN=...   # same as Render
+SEED=true make verify-deploy
+```
 
 ## Secrets checklist
 
 | Where | Secrets |
 |---|---|
-| Vercel | Clerk publishable + secret; `MATCH_SERVICE_URL`; `TENNIS_DATA_SERVICE_URL`; optional user/replay/analytics URLs |
-| Render tennis-data | BallDontLie + LiveTennis keys; `POSTGRES_*`; `REDIS_*` |
-| Render match | `POSTGRES_*`; `REDIS_*`; `TENNIS_DATA_SERVICE_URI`; `MATCH_SERVICE_WS_ALLOWED_ORIGINS` (include Vercel origin) |
+| Vercel | Clerk live keys; `MATCH_SERVICE_URL` + `TENNIS_DATA_SERVICE_URL` = gateway; optional `CSP_CONNECT_SRC_EXTRA` |
+| Neon | Split into `POSTGRES_HOST/USER/PASSWORD` on tennis-data + match |
+| Render (all three) | Same `GATEWAY_INTERNAL_TOKEN` |
+| Render tennis-data | BallDontLie + LiveTennis keys; `POSTGRES_*` |
+| Render match | `POSTGRES_*`; `TENNIS_DATA_SERVICE_URI` |
+| Render gateway | `TENNIS_DATA_SERVICE_URI`; `MATCH_SERVICE_URI`; `MATCH_SERVICE_WS_URI`; `CLERK_*`; `CORS_ALLOWED_ORIGINS` |
 
 Never commit live keys. Rotate after any paste into chat/logs.
 
 ## Phase 8b / 8c (next)
 
-1. **8b:** user-service + auth-service (Clerk webhooks) + optional api-gateway; managed Kafka; notification worker.
-2. **8c:** analytics + Elasticsearch; R2 for replay objects; custom domains + prod CORS allowlist.
+1. **8b:** user-service + auth-service (Clerk webhooks); enable `/api/v1` API keys; managed Kafka; notifications.
+2. **8c:** analytics + Elasticsearch; R2 for replay objects; promote backends to private services if budget allows.
 
 ## Local vs cloud
 
 | Local | Cloud |
 |---|---|
-| `make up` + Eureka + Kafka + ES | No Eureka; Kafka deferred; ES deferred |
-| Host ports from `.run/ports.env` | Render assigns `PORT` — bind `SERVER_PORT=$PORT` |
-| Web → localhost services | Web → `https://*.onrender.com` |
+| `make up` + Eureka + Kafka | No Eureka; Kafka deferred |
+| Token blank → filter off | Token required on backends |
+| Web → localhost services | Web → gateway HTTPS |
 
 ## After Phase 8 — performance achievement (later)
 
-Ultra-low-latency work returns as a **measured** Week 31+ achievement (cache hierarchy, colo, pool tuning, load proof).  
-**Honesty bound:** browser→Vercel→Render RTT cannot be “everything under 1ms” on the public internet. Sub-1ms targets apply to **in-process / same-AZ Redis / JVM hot paths**, with published p50/p99 numbers — not marketing fiction.
+Ultra-low-latency work returns as a **measured** Week 31+ achievement.  
+**Honesty bound:** browser→Vercel→Render RTT cannot be “everything under 1ms” on the public internet. Sub-1ms targets apply to in-process / same-AZ Redis / JVM hot paths with published p50/p99 — not marketing fiction.
