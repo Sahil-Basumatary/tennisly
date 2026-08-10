@@ -116,7 +116,7 @@ echo "reports → ${REPORT_DIR}"
 
 set +e
 docker run --rm \
-  "${DOCKER_NET[@]}" \
+  ${DOCKER_NET[@]+"${DOCKER_NET[@]}"} \
   -v "${REPORT_DIR}:/zap/wrk:rw" \
   -u zap \
   "${IMAGE}" \

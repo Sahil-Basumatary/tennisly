@@ -53,20 +53,25 @@ export API_KEY=tly_live_...
 export TARGET_URL=http://host.docker.internal:8080
 make zap-api
 # reports → .run/zap/zap-api-*.{html,json,md}
+
+# Header-faithful stub when the Spring stack is down (binds 0.0.0.0:18080)
+API_KEY=tly_live_... make zap-stub   # separate terminal
+API_KEY=tly_live_... TARGET_URL=http://host.docker.internal:18080 make zap-api
 ```
 
 - Contract: `tests/security/public-api.openapi.yaml` (gateway `/api/v1/**` paths).
-- Rule overrides: `tests/security/zap-api-rules.conf` (browser CSP noise IGNORE; SQLi/XSS/RCE FAIL).
+- Rule overrides: `tests/security/zap-api-rules.conf` (browser CSP/CORP noise IGNORE; SQLi/XSS/RCE FAIL).
 - Soft local only: `ZAP_IGNORE_WARN=true` (never set in CI).
 - Optional CI: repo var `RUN_ZAP=true` + secrets `ZAP_TARGET_URL`, `ZAP_API_KEY`.
+- First triage (2026-08-10, stub): **FAIL-NEW 0 / WARN-NEW 0 / PASS 118**. Re-run on staging before promoting more rules.
 
 ## Open items (next milestones)
 
 1. Tighten CSP (`unsafe-inline` / `unsafe-eval` still required by Next + Clerk — document residual risk).
 2. SQL injection / XSS spot-check on admin forms (prefer parameterized JPA — already default).
 3. Secrets scan in CI (gitleaks) before open-sourcing.
-4. Expand Pact beyond players list (matches, webhooks) and consider a Pact Broker when multi-repo consumers appear.
-5. Triage first real ZAP report and ratchet rules (WARN → FAIL) as findings clear.
+4. Re-run ZAP against a real staging gateway (stub is header-faithful, not a substitute).
+5. Optional Pact Broker when multi-repo consumers appear.
 
 ## Threat notes worth remembering
 
