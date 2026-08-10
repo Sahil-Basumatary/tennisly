@@ -101,6 +101,9 @@
           <configuration>
             <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/checkstyle.xml</configLocation>
             <suppressionsLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/suppressions.xml</suppressionsLocation>
+            <!-- checkstyle.xml resolves its suppression filters against config_loc, which the
+                 plugin only defines for bundled configs, not absolute paths. -->
+            <propertyExpansion>config_loc=${maven.multiModuleProjectDirectory}/config/checkstyle</propertyExpansion>
             <consoleOutput>true</consoleOutput>
             <failsOnError>true</failsOnError>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
