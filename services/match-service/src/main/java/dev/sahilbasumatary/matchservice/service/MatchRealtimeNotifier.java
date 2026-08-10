@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,11 +35,27 @@ public class MatchRealtimeNotifier {
         messagingTemplate.convertAndSend(topic(response.id()), response);
     }
 
+    public Optional<MatchResponse> findCachedSnapshot(UUID matchId) {
+        try {
+            String json = redisTemplate.opsForValue().get(cacheKey(matchId));
+            if (json == null || json.isBlank()) {
+                return Optional.empty();
+            }
+            return Optional.of(objectMapper.readValue(json, MatchResponse.class));
+        } catch (Exception ex) {
+            log.debug("live snapshot cache miss/decode matchId={}: {}", matchId, ex.getMessage());
+            return Optional.empty();
+        }
+    }
+
     private void cacheSnapshot(MatchResponse response) {
         try {
             redisTemplate
                     .opsForValue()
-                    .set(cacheKey(response.id()), objectMapper.writeValueAsString(response), LIVE_SNAPSHOT_TTL);
+                    .set(
+                            cacheKey(response.id()),
+                            objectMapper.writeValueAsString(response),
+                            LIVE_SNAPSHOT_TTL);
         } catch (JsonProcessingException ex) {
             log.warn("Failed to serialize live match snapshot matchId={}", response.id(), ex);
         }

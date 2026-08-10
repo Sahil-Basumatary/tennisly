@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MatchRepository extends JpaRepository<Match, UUID> {
@@ -17,12 +18,16 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 
     Optional<Match> findByExternalId(String externalId);
 
+    @EntityGraph(attributePaths = "players")
     List<Match> findAllByOrderByScheduledAtAsc();
 
+    @EntityGraph(attributePaths = "players")
     List<Match> findByStatusOrderByScheduledAtAsc(MatchStatus status);
 
+    @EntityGraph(attributePaths = "players")
     List<Match> findByTournamentIdOrderByScheduledAtAsc(UUID tournamentId);
 
+    @EntityGraph(attributePaths = "players")
     List<Match> findByTournamentIdAndStatusOrderByScheduledAtAsc(
             UUID tournamentId, MatchStatus status);
 }

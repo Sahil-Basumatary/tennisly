@@ -102,21 +102,46 @@ public class MatchService {
         } else {
             matches = matchRepository.findAllByOrderByScheduledAtAsc();
         }
-        return matches.stream().map(MatchResponse::from).toList();
+        if (matches.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, Integer> pointCounts = pointCountsFor(matches);
+        return matches.stream()
+                .map(match -> MatchResponse.from(match, pointCounts.getOrDefault(match.getId(), 0)))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public MatchResponse getMatch(UUID matchId) {
-        return MatchResponse.from(findMatch(matchId));
+        return realtimeNotifier
+                .findCachedSnapshot(matchId)
+                .orElseGet(
+                        () -> {
+                            Match match = findMatch(matchId);
+                            return MatchResponse.from(
+                                    match, pointRepository.countByMatchId(match.getId()));
+                        });
     }
 
     @Transactional(readOnly = true)
     public MatchResponse getMatchByExternalId(String externalId) {
-        return MatchResponse.from(
+        Match match =
                 matchRepository
                         .findByExternalId(externalId)
                         .orElseThrow(
-                                () -> new ResourceNotFoundException("Match externalId", externalId)));
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "Match externalId", externalId));
+        return MatchResponse.from(match, pointRepository.countByMatchId(match.getId()));
+    }
+
+    private Map<UUID, Integer> pointCountsFor(List<Match> matches) {
+        List<UUID> ids = matches.stream().map(Match::getId).toList();
+        Map<UUID, Integer> counts = new HashMap<>();
+        for (Object[] row : pointRepository.countGroupedByMatchIds(ids)) {
+            counts.put((UUID) row[0], ((Number) row[1]).intValue());
+        }
+        return counts;
     }
 
     @Transactional

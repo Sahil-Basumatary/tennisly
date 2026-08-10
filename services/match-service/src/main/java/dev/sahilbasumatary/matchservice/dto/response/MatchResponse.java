@@ -26,6 +26,10 @@ public record MatchResponse(
         Instant updatedAt) {
 
     public static MatchResponse from(Match match) {
+        return from(match, match.getPoints().size());
+    }
+
+    public static MatchResponse from(Match match, int pointsPlayed) {
         return new MatchResponse(
                 match.getId(),
                 match.getExternalId(),
@@ -39,7 +43,7 @@ public record MatchResponse(
                 match.getMetadata(),
                 match.getCurrentScore(),
                 match.getPlayers().stream().map(MatchPlayerResponse::from).toList(),
-                match.getPoints().size(),
+                pointsPlayed,
                 match.getCreatedAt(),
                 match.getUpdatedAt());
     }

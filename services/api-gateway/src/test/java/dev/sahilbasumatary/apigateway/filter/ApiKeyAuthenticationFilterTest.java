@@ -2,16 +2,23 @@ package dev.sahilbasumatary.apigateway.filter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.json.Jackson2JsonDecoder;
@@ -67,7 +74,14 @@ class ApiKeyAuthenticationFilterTest {
                         .baseUrl("http://127.0.0.1:" + userService.getPort())
                         .exchangeStrategies(strategies)
                         .build();
-        return new ApiKeyAuthenticationFilter(client);
+        @SuppressWarnings("unchecked")
+        ReactiveValueOperations<String, String> valueOps = mock(ReactiveValueOperations.class);
+        ReactiveStringRedisTemplate redis = mock(ReactiveStringRedisTemplate.class);
+        when(redis.opsForValue()).thenReturn(valueOps);
+        when(valueOps.get(anyString())).thenReturn(Mono.empty());
+        when(valueOps.set(anyString(), anyString(), any(Duration.class)))
+                .thenReturn(Mono.just(true));
+        return new ApiKeyAuthenticationFilter(client, redis, mapper, 30);
     }
 
     @Test

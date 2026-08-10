@@ -102,4 +102,7 @@ tennisly:
       basic: 120
       pro: 600
       enterprise: 3000
+gateway:
+  api-key:
+    cache-ttl-seconds: ${API_KEY_CACHE_TTL_SECONDS:30}
 
