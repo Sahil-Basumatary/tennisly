@@ -68,10 +68,9 @@ API_KEY=tly_live_... TARGET_URL=http://host.docker.internal:18080 make zap-api
 ## Open items (next milestones)
 
 1. Tighten CSP (`unsafe-inline` / `unsafe-eval` still required by Next + Clerk — document residual risk).
-2. SQL injection / XSS spot-check on admin forms (prefer parameterized JPA — already default).
-3. Secrets scan in CI (gitleaks) before open-sourcing.
-4. Re-run ZAP against a real staging gateway (stub is header-faithful, not a substitute).
-5. Optional Pact Broker when multi-repo consumers appear.
+2. Re-run ZAP against a real staging gateway (`RUN_ZAP=true` + `ZAP_TARGET_URL` / `ZAP_API_KEY`).
+3. Optional API-key cache invalidate-on-revoke (today: short TTL only).
+4. Optional Pact Broker when multi-repo consumers appear.
 
 ## Threat notes worth remembering
 

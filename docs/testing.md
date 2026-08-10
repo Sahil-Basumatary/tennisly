@@ -7,7 +7,7 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | Layer | Tooling | Where it runs |
 |---|---|---|
 | Unit | JUnit 5 + Mockito | `mvn test` / CI backend job |
-| Coverage | Jacoco reports on every module; **≥80% line on webhook + notification in `tennisly-common`**; **≥70% on gateway `filter` + `ratelimit`**; **≥70% on user-service `security`** | CI `jacoco:report` + `verify -Djacoco.skip.check=false` for common + gateway + user-service |
+| Coverage | Jacoco reports on every module; **≥80%** common webhook+notification; **≥70%** gateway filters/ratelimit; **≥70%** user-service `security`; **≥70%** notification worker+enqueue+security | CI `verify -Djacoco.skip.check=false` for those modules |
 | Integration | Testcontainers Postgres (`PublicWebhookApiIT`, `WebhookDeliveryWorkerIT`) | Local + CI (Docker required); skips cleanly if Docker is unavailable |
 | Frontend unit | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
@@ -43,8 +43,8 @@ make test-pact
 # Coverage HTML: services/<svc>/target/site/jacoco/index.html
 ./mvnw test jacoco:report -pl services/tennisly-common -am
 
-# Enforce common + gateway + user-service security floors locally
-./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service verify -Djacoco.skip.check=false
+# Enforce common + gateway + user-service + notification worker floors locally
+./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service verify -Djacoco.skip.check=false
 ```
 
 ## Integration tests (Testcontainers)
@@ -85,11 +85,12 @@ make test-pact
 - Shared security-sensitive packages in `tennisly-common` (`webhook`, `notification`) must stay ≥ **80%** line coverage.
 - Gateway auth/rate-limit packages (`filter`, `ratelimit`) must stay ≥ **70%** line coverage.
 - User-service crypto/SSRF/API-key helpers (`security/**`) must stay ≥ **70%** line coverage.
+- Notification worker packages (`WebhookDeliveryWorker`, `BackoffCalculator`, `EnqueueService`, `security/**`) must stay ≥ **70%** line coverage.
 - Portfolio target remains **>80%** on business-critical packages. Do not claim 80% repo-wide until Jacoco shows it.
 
 ## Next slices
 
-1. Re-run ZAP against a real staging gateway (not only the local stub) and keep ratcheting WARN → FAIL.
+1. Re-run ZAP against a real staging gateway (`RUN_ZAP=true` + secrets) — stub triage already green.
 2. Optional Pact Broker when multi-repo consumers appear.
-3. Jacoco next: notification worker packages; optional `context/**` after `TenantInterceptor` tests.
-4. Wire `E2E_CLERK_USER_EMAIL` in CI secrets when `RUN_PLAYWRIGHT=true` for authenticated project.
+3. Optional `context/**` Jacoco after `TenantInterceptor` tests.
+4. Set repo secret `E2E_CLERK_USER_EMAIL` (prefer `+clerk_test`) when enabling authenticated Playwright in CI.

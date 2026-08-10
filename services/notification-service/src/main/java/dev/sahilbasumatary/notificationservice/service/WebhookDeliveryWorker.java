@@ -49,13 +49,31 @@ public class WebhookDeliveryWorker {
             EmailTemplateService emailTemplateService,
             PushDispatchService pushDispatchService,
             PushContentFactory pushContentFactory) {
+        this(
+                deliveryRepository,
+                webhookClient,
+                emailDispatchService,
+                emailTemplateService,
+                pushDispatchService,
+                pushContentFactory,
+                HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build());
+    }
+
+    WebhookDeliveryWorker(
+            WebhookDeliveryRepository deliveryRepository,
+            UserServiceWebhookClient webhookClient,
+            EmailDispatchService emailDispatchService,
+            EmailTemplateService emailTemplateService,
+            PushDispatchService pushDispatchService,
+            PushContentFactory pushContentFactory,
+            HttpClient httpClient) {
         this.deliveryRepository = deliveryRepository;
         this.webhookClient = webhookClient;
         this.emailDispatchService = emailDispatchService;
         this.emailTemplateService = emailTemplateService;
         this.pushDispatchService = pushDispatchService;
         this.pushContentFactory = pushContentFactory;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
+        this.httpClient = httpClient;
     }
 
     @Scheduled(fixedDelayString = "${notification.delivery.worker-delay-ms:2000}")

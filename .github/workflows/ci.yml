@@ -81,10 +81,15 @@ jobs:
       NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
       NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: /
       NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: /
+      # Prefer a +clerk_test user so Clerk suppresses email delivery.
       E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Require Clerk secrets
+        run: |
+          test -n "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" || { echo "missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"; exit 1; }
+          test -n "$CLERK_SECRET_KEY" || { echo "missing CLERK_SECRET_KEY"; exit 1; }
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -100,7 +105,7 @@ jobs:
         run: pnpm --filter @tennisly/web build
       - name: Install Playwright Chromium
         run: pnpm --filter @tennisly/web exec playwright install --with-deps chromium
-      - name: Run smoke
+      - name: Run smoke (+ authenticated project when E2E_CLERK_USER_EMAIL is set)
         run: pnpm --filter @tennisly/web test:e2e:only
       - name: Upload Playwright report
         if: failure()
@@ -110,6 +115,19 @@ jobs:
           path: apps/web/playwright-report/
           if-no-files-found: ignore
           retention-days: 7
+
+  gitleaks:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   zap:
     name: OWASP ZAP API Scan
@@ -154,9 +172,9 @@ jobs:
         run: mvn checkstyle:check -B
       - name: Run tests with coverage
         run: mvn test jacoco:report -B
-      - name: Coverage floor (common + gateway + user-service security)
+      - name: Coverage floor (common + gateway + user + notification workers)
         run: |
-          mvn -pl services/tennisly-common,services/api-gateway,services/user-service verify -Djacoco.skip.check=false -B
+          mvn -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service verify -Djacoco.skip.check=false -B
       - name: Upload Jacoco reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -185,13 +203,13 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [frontend, backend, dependency-review, e2e, zap]
+    needs: [frontend, backend, dependency-review, e2e, zap, gitleaks]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
         run: |
-          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]] || [[ "${{ needs.zap.result }}" == "failure" ]]; then
+          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]] || [[ "${{ needs.zap.result }}" == "failure" ]] || [[ "${{ needs.gitleaks.result }}" == "failure" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi
