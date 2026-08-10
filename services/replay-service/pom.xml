@@ -13,7 +13,7 @@
   <name>Replay Service</name>
   <description>Synthetic trajectory generation engine that turns point-by-point match data into physics-based ball and player frames</description>
   <properties>
-    <aws-sdk.version>2.46.17</aws-sdk.version>
+    <aws-sdk.version>2.51.2</aws-sdk.version>
     <!-- The AWS SDK ships apache5-client, which is built against HttpClient 5.6. Spring Boot 3.2's
          BOM pins 5.2.3, and a parent BOM outranks an imported one, so the S3 client would otherwise
          boot against a jar that predates TlsSocketStrategy. -->
