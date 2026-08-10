@@ -1,19 +1,17 @@
-.git
-.git 2
-.git.nosync
+# Deny-by-default: every Dockerfile in this repo builds a Maven service, so the
+# context is limited to what the reactor needs. Keeps Render builds from shipping
+# the 2.8GB web workspace and node_modules trees over the wire.
+*
+
+!pom.xml
+!mvnw
+!.mvn/
+!config/
+!services/
+!tests/
+
+services/**/target
 **/.DS_Store
-**/node_modules
-**/.next
-**/playwright-report
-**/test-results
-apps/web/playwright
-.run
-**/target
-docs
-*.md
-!README.md
-.npmrc
-.env
-.env.*
-!.env*.example
-infrastructure/docker
+**/*.env
+**/.env.*
+!**/.env*.example

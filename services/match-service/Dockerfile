@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /src
 COPY . .
 RUN chmod +x mvnw \
-  && ./mvnw -pl services/match-service -am package -DskipTests -q
+  && ./mvnw -pl services/match-service -am package -Dmaven.test.skip=true -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
@@ -12,5 +12,6 @@ COPY --from=build /src/services/match-service/target/*.jar app.jar
 RUN chown spring:spring app.jar
 USER spring:spring
 EXPOSE 10000
-ENV JAVA_OPTS="-Xms256m -Xmx512m" SERVER_PORT=10000
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+# Render injects PORT; fall back to the EXPOSEd port for plain docker run.
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-10000} -jar app.jar"]
