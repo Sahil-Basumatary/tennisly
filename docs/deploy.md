@@ -69,10 +69,13 @@ Allowed origins / redirect URLs:
 ## Vercel
 
 1. Import the GitHub repo.
-2. Framework: Next.js. **Root Directory:** repo root (pnpm workspace).
-3. Install / build come from `vercel.json`.
-4. Node **22**.
-5. Env from `apps/web/.env.production.example` — both upstream URLs point at **api-gateway**, not the backends.
+2. Framework: Next.js.
+3. **Root Directory: `apps/web`** (required — Vercel detects `next` from that package.json; the repo root only has workspace tooling).
+4. `apps/web/vercel.json` installs from the monorepo root, then builds `@tennisly/web`.
+5. Node **22**.
+6. Env from `apps/web/.env.production.example` — both upstream URLs point at **api-gateway**, not the backends.
+
+Do **not** leave Root Directory empty: that makes Vercel read the root `package.json` (no `next`) and fail with “No Next.js version detected”.
 
 ## Render
 
