@@ -68,6 +68,18 @@ public class SecurityConfig {
                                 "/api/auth/webhooks/**"
                         ).permitAll()
                         .pathMatchers("/api/v1/**").permitAll()
+                        // Phase 8a: Vercel BFF hits these without a Clerk JWT. Mutations and
+                        // sync stay authenticated so the BallDontLie quota cannot be drained
+                        // through the public gateway.
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/tennis/players/**",
+                                "/api/tennis/rankings/**",
+                                "/api/tennis/tournaments/**",
+                                "/api/tennis/shot-distributions/**",
+                                "/api/matches/**")
+                        .permitAll()
+                        .pathMatchers("/ws/matches/**").permitAll()
                         .pathMatchers("/api/analytics/views/**").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/analytics/**").permitAll()
                         .pathMatchers("/api/**").authenticated()
