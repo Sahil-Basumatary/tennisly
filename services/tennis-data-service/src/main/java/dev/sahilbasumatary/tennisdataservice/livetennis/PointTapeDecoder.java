@@ -59,8 +59,12 @@ final class PointTapeDecoder {
         int b2 = sum(before, 1);
         int a1 = sum(after, 0);
         int a2 = sum(after, 1);
-        if (a1 > b1) return 1;
-        if (a2 > b2) return 2;
+        if (a1 > b1) {
+            return 1;
+        }
+        if (a2 > b2) {
+            return 2;
+        }
         return 0;
     }
 
@@ -69,8 +73,12 @@ final class PointTapeDecoder {
         int b2 = lastOrZero(before, 1);
         int a1 = lastOrZero(after, 0);
         int a2 = lastOrZero(after, 1);
-        if (a1 > b1) return 1;
-        if (a2 > b2) return 2;
+        if (a1 > b1) {
+            return 1;
+        }
+        if (a2 > b2) {
+            return 2;
+        }
         // New set started — previous set games may reset; treat as no in-game winner here.
         if (size(before) < size(after)) {
             return 0;
@@ -83,8 +91,12 @@ final class PointTapeDecoder {
         int b2 = pointValue(at(before, 1));
         int a1 = pointValue(at(after, 0));
         int a2 = pointValue(at(after, 1));
-        if (a1 > b1) return 1;
-        if (a2 > b2) return 2;
+        if (a1 > b1) {
+            return 1;
+        }
+        if (a2 > b2) {
+            return 2;
+        }
         // Game rolled over to 0-0 after a won game — already handled via games diff.
         return null;
     }

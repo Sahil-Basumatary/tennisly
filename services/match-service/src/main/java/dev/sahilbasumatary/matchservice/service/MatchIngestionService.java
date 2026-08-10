@@ -118,13 +118,14 @@ public class MatchIngestionService {
             throw new IllegalStateException("Unable to resolve both players");
         }
 
-        MatchStatus nextStatus = mapStatus(dto.status());
+        final MatchStatus nextStatus = mapStatus(dto.status());
         Match match =
                 matchRepository
                         .findByExternalId(dto.externalId())
                         .orElseGet(Match::new);
-        boolean created = match.getId() == null;
-        MatchStatus previousStatus = match.getStatus();
+        // Both must be captured before the setters below mutate the entity.
+        final boolean created = match.getId() == null;
+        final MatchStatus previousStatus = match.getStatus();
 
         match.setExternalId(dto.externalId());
         match.setSurface(mapSurface(dto.surface()));

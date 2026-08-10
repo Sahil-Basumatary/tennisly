@@ -166,7 +166,9 @@ public class UserPreferenceService {
     }
 
     private void applyUpdates(UserPreference preference, UpdatePreferencesRequest request) {
-        if (request.theme() != null) preference.setTheme(request.theme());
+        if (request.theme() != null) {
+            preference.setTheme(request.theme());
+        }
         if (request.notificationsEnabled() != null) {
             preference.setNotificationsEnabled(request.notificationsEnabled());
         }
@@ -179,7 +181,9 @@ public class UserPreferenceService {
         if (request.favoriteSurface() != null) {
             preference.setFavoriteSurface(request.favoriteSurface());
         }
-        if (request.locale() != null) preference.setLocale(request.locale());
+        if (request.locale() != null) {
+            preference.setLocale(request.locale());
+        }
         if (request.extraSettings() != null) {
             preference.setExtraSettings(request.extraSettings());
         }

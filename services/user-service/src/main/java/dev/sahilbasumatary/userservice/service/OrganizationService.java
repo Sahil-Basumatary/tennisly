@@ -63,10 +63,18 @@ public class OrganizationService {
             UUID orgId, UpdateOrganizationRequest request) {
         Organization org = findActiveOrg(orgId);
         assertOrgAdmin(orgId);
-        if (request.name() != null) org.setName(request.name());
-        if (request.description() != null) org.setDescription(request.description());
-        if (request.logoUrl() != null) org.setLogoUrl(request.logoUrl());
-        if (request.website() != null) org.setWebsite(request.website());
+        if (request.name() != null) {
+            org.setName(request.name());
+        }
+        if (request.description() != null) {
+            org.setDescription(request.description());
+        }
+        if (request.logoUrl() != null) {
+            org.setLogoUrl(request.logoUrl());
+        }
+        if (request.website() != null) {
+            org.setWebsite(request.website());
+        }
         organizationRepository.save(org);
         log.info("Updated organization orgId={}", orgId);
         return OrganizationResponse.from(org);
@@ -202,7 +210,9 @@ public class OrganizationService {
     }
 
     private void assertOrgAdmin(UUID orgId) {
-        if (RequestContext.hasRole("ADMIN")) return;
+        if (RequestContext.hasRole("ADMIN")) {
+            return;
+        }
         UserProfile profile = resolveCurrentProfile();
         OrganizationMembership membership =
                 membershipRepository

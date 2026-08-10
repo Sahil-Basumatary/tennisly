@@ -77,10 +77,18 @@ public class AuthEventListener {
     private void onUserUpdated(UserEvent event) {
         profileRepository.findByClerkId(event.getClerkId()).ifPresentOrElse(
                 profile -> {
-                    if (event.getEmail() != null) profile.setEmail(event.getEmail());
-                    if (event.getFirstName() != null) profile.setFirstName(event.getFirstName());
-                    if (event.getLastName() != null) profile.setLastName(event.getLastName());
-                    if (event.getImageUrl() != null) profile.setAvatarUrl(event.getImageUrl());
+                    if (event.getEmail() != null) {
+                        profile.setEmail(event.getEmail());
+                    }
+                    if (event.getFirstName() != null) {
+                        profile.setFirstName(event.getFirstName());
+                    }
+                    if (event.getLastName() != null) {
+                        profile.setLastName(event.getLastName());
+                    }
+                    if (event.getImageUrl() != null) {
+                        profile.setAvatarUrl(event.getImageUrl());
+                    }
                     profileRepository.save(profile);
                     log.info("Updated profile from event for clerkId={}", event.getClerkId());
                 },
@@ -125,9 +133,15 @@ public class AuthEventListener {
     private void onOrganizationUpdated(OrganizationEvent event) {
         organizationRepository.findByClerkOrgId(event.getClerkOrgId()).ifPresentOrElse(
                 org -> {
-                    if (event.getName() != null) org.setName(event.getName());
-                    if (event.getSlug() != null) org.setSlug(event.getSlug());
-                    if (event.getImageUrl() != null) org.setLogoUrl(event.getImageUrl());
+                    if (event.getName() != null) {
+                        org.setName(event.getName());
+                    }
+                    if (event.getSlug() != null) {
+                        org.setSlug(event.getSlug());
+                    }
+                    if (event.getImageUrl() != null) {
+                        org.setLogoUrl(event.getImageUrl());
+                    }
                     organizationRepository.save(org);
                     log.info("Updated org from event for clerkOrgId={}",
                             event.getClerkOrgId());

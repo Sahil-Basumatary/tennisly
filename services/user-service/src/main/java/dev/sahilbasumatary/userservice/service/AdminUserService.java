@@ -57,12 +57,20 @@ public class AdminUserService {
                 profileRepository
                         .findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("UserProfile", id));
-        if (request.displayName() != null) profile.setDisplayName(request.displayName());
-        if (request.active() != null) profile.setActive(request.active());
+        if (request.displayName() != null) {
+            profile.setDisplayName(request.displayName());
+        }
+        if (request.active() != null) {
+            profile.setActive(request.active());
+        }
         profileRepository.save(profile);
         Map<String, Object> metadata = new HashMap<>();
-        if (request.displayName() != null) metadata.put("displayName", request.displayName());
-        if (request.active() != null) metadata.put("active", request.active());
+        if (request.displayName() != null) {
+            metadata.put("displayName", request.displayName());
+        }
+        if (request.active() != null) {
+            metadata.put("active", request.active());
+        }
         String action =
                 request.active() != null && !request.active() ? "USER_DEACTIVATE" : "USER_UPDATE";
         auditLogService.record(action, "USER", id.toString(), null, metadata);

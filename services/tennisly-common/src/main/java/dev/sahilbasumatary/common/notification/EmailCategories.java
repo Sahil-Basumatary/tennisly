@@ -3,7 +3,12 @@ package dev.sahilbasumatary.common.notification;
 import java.util.Map;
 import java.util.Set;
 
-/** @deprecated Prefer {@link NotificationCategories}; kept for existing email call sites. */
+/**
+ * Email-specific view of the shared notification categories.
+ *
+ * @deprecated Prefer {@link NotificationCategories}; kept for existing email call sites.
+ */
+@Deprecated
 public final class EmailCategories {
 
     public static final String WELCOME = NotificationCategories.WELCOME;

@@ -107,15 +107,35 @@ public class UserProfileService {
     }
 
     private void applyUpdates(UserProfile profile, UpdateProfileRequest request) {
-        if (request.displayName() != null) profile.setDisplayName(request.displayName());
-        if (request.firstName() != null) profile.setFirstName(request.firstName());
-        if (request.lastName() != null) profile.setLastName(request.lastName());
-        if (request.email() != null) profile.setEmail(request.email());
-        if (request.phone() != null) profile.setPhone(request.phone());
-        if (request.country() != null) profile.setCountry(request.country());
-        if (request.timezone() != null) profile.setTimezone(request.timezone());
-        if (request.bio() != null) profile.setBio(request.bio());
-        if (request.avatarUrl() != null) profile.setAvatarUrl(request.avatarUrl());
-        if (request.skillLevel() != null) profile.setSkillLevel(request.skillLevel());
+        if (request.displayName() != null) {
+            profile.setDisplayName(request.displayName());
+        }
+        if (request.firstName() != null) {
+            profile.setFirstName(request.firstName());
+        }
+        if (request.lastName() != null) {
+            profile.setLastName(request.lastName());
+        }
+        if (request.email() != null) {
+            profile.setEmail(request.email());
+        }
+        if (request.phone() != null) {
+            profile.setPhone(request.phone());
+        }
+        if (request.country() != null) {
+            profile.setCountry(request.country());
+        }
+        if (request.timezone() != null) {
+            profile.setTimezone(request.timezone());
+        }
+        if (request.bio() != null) {
+            profile.setBio(request.bio());
+        }
+        if (request.avatarUrl() != null) {
+            profile.setAvatarUrl(request.avatarUrl());
+        }
+        if (request.skillLevel() != null) {
+            profile.setSkillLevel(request.skillLevel());
+        }
     }
 }

@@ -63,19 +63,41 @@ public class AdminOrganizationService {
                 organizationRepository
                         .findById(id)
                         .orElseThrow(() -> new ResourceNotFoundException("Organization", id));
-        if (request.name() != null) org.setName(request.name());
-        if (request.description() != null) org.setDescription(request.description());
-        if (request.logoUrl() != null) org.setLogoUrl(request.logoUrl());
-        if (request.website() != null) org.setWebsite(request.website());
-        if (request.planTier() != null) org.setPlanTier(request.planTier());
-        if (request.maxMembers() != null) org.setMaxMembers(request.maxMembers());
-        if (request.active() != null) org.setActive(request.active());
+        if (request.name() != null) {
+            org.setName(request.name());
+        }
+        if (request.description() != null) {
+            org.setDescription(request.description());
+        }
+        if (request.logoUrl() != null) {
+            org.setLogoUrl(request.logoUrl());
+        }
+        if (request.website() != null) {
+            org.setWebsite(request.website());
+        }
+        if (request.planTier() != null) {
+            org.setPlanTier(request.planTier());
+        }
+        if (request.maxMembers() != null) {
+            org.setMaxMembers(request.maxMembers());
+        }
+        if (request.active() != null) {
+            org.setActive(request.active());
+        }
         organizationRepository.save(org);
         Map<String, Object> metadata = new HashMap<>();
-        if (request.name() != null) metadata.put("name", request.name());
-        if (request.planTier() != null) metadata.put("planTier", request.planTier().name());
-        if (request.maxMembers() != null) metadata.put("maxMembers", request.maxMembers());
-        if (request.active() != null) metadata.put("active", request.active());
+        if (request.name() != null) {
+            metadata.put("name", request.name());
+        }
+        if (request.planTier() != null) {
+            metadata.put("planTier", request.planTier().name());
+        }
+        if (request.maxMembers() != null) {
+            metadata.put("maxMembers", request.maxMembers());
+        }
+        if (request.active() != null) {
+            metadata.put("active", request.active());
+        }
         auditLogService.record("ORG_UPDATE", "ORGANIZATION", id.toString(), id, metadata);
         usageMeter.increment(id, "admin_actions", 1);
         log.info("Admin updated organization orgId={}", id);

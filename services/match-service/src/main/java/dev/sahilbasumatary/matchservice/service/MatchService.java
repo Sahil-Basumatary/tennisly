@@ -149,12 +149,24 @@ public class MatchService {
         Match match = findMatch(matchId);
         assertMutable(match);
         assertExternalIdAvailable(request.externalId(), matchId);
-        if (request.externalId() != null) match.setExternalId(request.externalId());
-        if (request.tournamentId() != null) match.setTournamentId(request.tournamentId());
-        if (request.surface() != null) match.setSurface(request.surface());
-        if (request.bestOfSets() != null) match.setBestOfSets(request.bestOfSets());
-        if (request.scheduledAt() != null) match.setScheduledAt(request.scheduledAt());
-        if (request.metadata() != null) match.setMetadata(request.metadata());
+        if (request.externalId() != null) {
+            match.setExternalId(request.externalId());
+        }
+        if (request.tournamentId() != null) {
+            match.setTournamentId(request.tournamentId());
+        }
+        if (request.surface() != null) {
+            match.setSurface(request.surface());
+        }
+        if (request.bestOfSets() != null) {
+            match.setBestOfSets(request.bestOfSets());
+        }
+        if (request.scheduledAt() != null) {
+            match.setScheduledAt(request.scheduledAt());
+        }
+        if (request.metadata() != null) {
+            match.setMetadata(request.metadata());
+        }
         Match saved = matchRepository.save(match);
         eventLogService.append(saved, MatchEventType.UPDATED, Map.of("status", saved.getStatus()));
         MatchResponse response = MatchResponse.from(saved);
