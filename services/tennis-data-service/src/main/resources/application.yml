@@ -4,10 +4,14 @@ spring:
   application:
     name: tennis-data-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_TENNIS_DATA:tennisly_tennis_data}
+    # POSTGRES_URL_PARAMS carries managed-provider requirements (Neon needs ?sslmode=require).
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_TENNIS_DATA:tennisly_tennis_data}${POSTGRES_URL_PARAMS:}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Serverless Postgres bills and caps connections; local dev keeps the Hikari default.
+      maximum-pool-size: ${POSTGRES_POOL_MAX:10}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -54,6 +58,9 @@ tennis:
       rankings-cron: ${TENNIS_DATA_SYNC_RANKINGS_CRON:0 0 */6 * * *}
     seed:
       on-startup: ${TENNIS_DATA_SEED_ON_STARTUP:true}
+tennisly:
+  # Blank locally; set GATEWAY_INTERNAL_TOKEN on Render so public URLs stay locked.
+  internal-token: ${GATEWAY_INTERNAL_TOKEN:}
 eureka:
   client:
     enabled: ${EUREKA_CLIENT_ENABLED:true}

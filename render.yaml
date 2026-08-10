@@ -1,14 +1,12 @@
 # Tennisly Phase 8a — Render Blueprint (Vercel hosts the web app separately).
 # Docs: docs/deploy.md
 #
-# After first deploy: create DBs tennisly_tennis_data + tennisly_matches on the
-# Postgres instance (Render shell or psql), then restart services.
-
-databases:
-  - name: tennisly-postgres
-    plan: free
-    databaseName: tennisly
-    user: tennisly
+# Postgres is external (Neon). Private Render services are paid, so tennis-data
+# and match stay free "web" services but require GATEWAY_INTERNAL_TOKEN. Only
+# api-gateway is the advertised public origin (api.tennisly.tv later).
+#
+# Create databases tennisly_tennis_data + tennisly_matches in Neon before first
+# deploy — Flyway migrates schemas, it does not create databases.
 
 services:
   - type: redis
@@ -18,6 +16,47 @@ services:
     ipAllowList: []
 
   - type: web
+    name: api-gateway
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/api-gateway/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: CONFIG_SERVER_ENABLED
+        value: "false"
+      - key: GATEWAY_DISCOVERY_LOCATOR_ENABLED
+        value: "false"
+      - key: GATEWAY_INTERNAL_TOKEN
+        sync: false
+      - key: TENNIS_DATA_SERVICE_URI
+        sync: false
+      - key: MATCH_SERVICE_URI
+        sync: false
+      - key: MATCH_SERVICE_WS_URI
+        sync: false
+      - key: REDIS_HOST
+        fromService:
+          name: tennisly-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: tennisly-redis
+          type: redis
+          property: port
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://tennisly.tv,https://www.tennisly.tv
+      - key: CLERK_JWKS_URI
+        sync: false
+      - key: CLERK_ISSUER_URI
+        sync: false
+      - key: RATE_LIMIT_FAIL_OPEN
+        value: "true"
+
+  - type: web
     name: tennis-data-service
     runtime: docker
     plan: free
@@ -25,30 +64,28 @@ services:
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
-      - key: SERVER_PORT
-        value: 10000
       - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: CONFIG_SERVER_ENABLED
         value: "false"
       - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
         value: "false"
+      - key: GATEWAY_INTERNAL_TOKEN
+        sync: false
       - key: POSTGRES_HOST
-        fromDatabase:
-          name: tennisly-postgres
-          property: host
+        sync: false
       - key: POSTGRES_PORT
-        fromDatabase:
-          name: tennisly-postgres
-          property: port
+        value: "5432"
       - key: POSTGRES_USER
-        fromDatabase:
-          name: tennisly-postgres
-          property: user
+        sync: false
       - key: POSTGRES_PASSWORD
-        fromDatabase:
-          name: tennisly-postgres
-          property: password
+        sync: false
       - key: POSTGRES_DB_TENNIS_DATA
         value: tennisly_tennis_data
+      - key: POSTGRES_URL_PARAMS
+        value: "?sslmode=require"
+      - key: POSTGRES_POOL_MAX
+        value: "5"
       - key: REDIS_HOST
         fromService:
           name: tennisly-redis
@@ -74,30 +111,30 @@ services:
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
-      - key: SERVER_PORT
-        value: 10000
       - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: CONFIG_SERVER_ENABLED
         value: "false"
       - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
         value: "false"
+      - key: MATCH_INGEST_ENABLED
+        value: "true"
+      - key: GATEWAY_INTERNAL_TOKEN
+        sync: false
       - key: POSTGRES_HOST
-        fromDatabase:
-          name: tennisly-postgres
-          property: host
+        sync: false
       - key: POSTGRES_PORT
-        fromDatabase:
-          name: tennisly-postgres
-          property: port
+        value: "5432"
       - key: POSTGRES_USER
-        fromDatabase:
-          name: tennisly-postgres
-          property: user
+        sync: false
       - key: POSTGRES_PASSWORD
-        fromDatabase:
-          name: tennisly-postgres
-          property: password
+        sync: false
       - key: POSTGRES_DB_MATCHES
         value: tennisly_matches
+      - key: POSTGRES_URL_PARAMS
+        value: "?sslmode=require"
+      - key: POSTGRES_POOL_MAX
+        value: "5"
       - key: REDIS_HOST
         fromService:
           name: tennisly-redis
@@ -111,6 +148,6 @@ services:
       - key: TENNIS_DATA_SERVICE_URI
         sync: false
       - key: MATCH_SERVICE_WS_ALLOWED_ORIGINS
-        sync: false
+        value: https://tennisly.tv,https://www.tennisly.tv,http://localhost:3000
       - key: KAFKA_BOOTSTRAP_SERVERS
         value: localhost:9092

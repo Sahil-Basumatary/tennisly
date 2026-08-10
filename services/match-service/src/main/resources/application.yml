@@ -4,10 +4,14 @@ spring:
   application:
     name: match-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_MATCHES:tennisly_matches}
+    # POSTGRES_URL_PARAMS carries managed-provider requirements (Neon needs ?sslmode=require).
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_MATCHES:tennisly_matches}${POSTGRES_URL_PARAMS:}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Serverless Postgres bills and caps connections; local dev keeps the Hikari default.
+      maximum-pool-size: ${POSTGRES_POOL_MAX:10}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -36,6 +40,8 @@ tennisly:
     live-fixed-delay-ms: ${MATCH_INGEST_LIVE_DELAY_MS:60000}
     completed-fixed-delay-ms: ${MATCH_INGEST_COMPLETED_DELAY_MS:21600000}
     page-size: ${MATCH_INGEST_PAGE_SIZE:50}
+  # Same secret the gateway presents; blank locally so make up stays open.
+  internal-token: ${GATEWAY_INTERNAL_TOKEN:}
 eureka:
   client:
     enabled: ${EUREKA_CLIENT_ENABLED:true}
