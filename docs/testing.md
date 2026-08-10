@@ -7,13 +7,13 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | Layer | Tooling | Where it runs |
 |---|---|---|
 | Unit | JUnit 5 + Mockito | `mvn test` / CI backend job |
-| Coverage | Jacoco reports on every module; **≥80% line on webhook + notification in `tennisly-common`**; **≥70% on gateway `filter` + `ratelimit`** | CI `jacoco:report` + `verify -Djacoco.skip.check=false` for common + gateway |
+| Coverage | Jacoco reports on every module; **≥80% line on webhook + notification in `tennisly-common`**; **≥70% on gateway `filter` + `ratelimit`**; **≥70% on user-service `security`** | CI `jacoco:report` + `verify -Djacoco.skip.check=false` for common + gateway + user-service |
 | Integration | Testcontainers Postgres (`PublicWebhookApiIT`, `WebhookDeliveryWorkerIT`) | Local + CI (Docker required); skips cleanly if Docker is unavailable |
 | Frontend unit | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
 | Load smoke | k6 | Local / staging: `k6 run tests/load/public-api-smoke.js` |
 | Security scan | OWASP ZAP api-scan | Local `make zap-api`; optional CI when `RUN_ZAP=true` + staging secrets |
-| Contract | Pact JVM (`api-gateway` ↔ `tennis-data-service` players list) | `make test-pact`; committed JSON under `tests/pacts/` |
+| Contract | Pact JVM (`api-gateway` ↔ tennis-data players, match-service matches, user-service webhooks) | `make test-pact`; committed JSON under `tests/pacts/` |
 | Pact / mutation | Mutation still planned | Pact gated via module tests in CI |
 
 ## Local commands
@@ -30,8 +30,11 @@ make e2e
 
 # OWASP ZAP against a live gateway (disposable API_KEY; Docker required)
 # API_KEY=tly_live_... TARGET_URL=http://host.docker.internal:8080 make zap-api
+# Local triage without the Spring stack (header-faithful stub on :18080):
+#   API_KEY=tly_live_... make zap-stub   # separate terminal
+#   API_KEY=tly_live_... TARGET_URL=http://host.docker.internal:18080 make zap-api
 
-# Pact: regenerate consumer contract then verify tennis-data provider
+# Pact: regenerate consumer contracts then verify providers
 make test-pact
 
 # Broader suite (includes gateway + common + users)
@@ -40,8 +43,8 @@ make test-pact
 # Coverage HTML: services/<svc>/target/site/jacoco/index.html
 ./mvnw test jacoco:report -pl services/tennisly-common -am
 
-# Enforce common + gateway floors locally
-./mvnw -pl services/tennisly-common,services/api-gateway verify -Djacoco.skip.check=false
+# Enforce common + gateway + user-service security floors locally
+./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service verify -Djacoco.skip.check=false
 ```
 
 ## Integration tests (Testcontainers)
@@ -65,21 +68,28 @@ make test-pact
 
 ## Pact contracts
 
-- Consumer module: `services/contract-tests` (`ApiGatewayPlayersPactTest`) writes `tests/pacts/api-gateway-tennis-data-service.json`.
-- Provider: `PlayerControllerProviderPactTest` in tennis-data verifies that JSON via standalone MockMvc (no DB/Redis).
-- Contract path is the **service** path `/api/tennis/players` (what the gateway calls after rewrite). Public `/api/v1/players` stays a gateway concern.
-- After changing the consumer DSL, re-run `make test-pact` and **commit** the updated pact JSON.
+- Consumer module: `services/contract-tests` writes:
+  - `tests/pacts/api-gateway-tennis-data-service.json` (`ApiGatewayPlayersPactTest`)
+  - `tests/pacts/api-gateway-match-service.json` (`ApiGatewayMatchesPactTest` — list + by id)
+  - `tests/pacts/api-gateway-user-service.json` (`ApiGatewayWebhooksPactTest` — list)
+- Providers (standalone MockMvc, no DB):
+  - tennis-data `PlayerControllerProviderPactTest`
+  - match-service `MatchControllerProviderPactTest`
+  - user-service `PublicWebhookControllerProviderPactTest` (sets `RequestContext` org for `X-Org-Id`)
+- Contract paths are **service** paths after gateway rewrite (`/api/tennis/...`, `/api/matches`, `/api/users/public/webhooks`).
+- After changing a consumer DSL, re-run `make test-pact` and **commit** the updated pact JSON.
 
 ## Coverage policy (honest)
 
 - Parent property `jacoco.skip.check=true` so greenfield services do not fail CI overnight.
 - Shared security-sensitive packages in `tennisly-common` (`webhook`, `notification`) must stay ≥ **80%** line coverage.
 - Gateway auth/rate-limit packages (`filter`, `ratelimit`) must stay ≥ **70%** line coverage.
+- User-service crypto/SSRF/API-key helpers (`security/**`) must stay ≥ **70%** line coverage.
 - Portfolio target remains **>80%** on business-critical packages. Do not claim 80% repo-wide until Jacoco shows it.
 
 ## Next slices
 
-1. First live ZAP triage + rule ratchet after a staging run.
-2. Expand Pact to matches + webhooks; optional Pact Broker later.
-3. Jacoco next: user-service security packages, then notification worker.
+1. Re-run ZAP against a real staging gateway (not only the local stub) and keep ratcheting WARN → FAIL.
+2. Optional Pact Broker when multi-repo consumers appear.
+3. Jacoco next: notification worker packages; optional `context/**` after `TenantInterceptor` tests.
 4. Wire `E2E_CLERK_USER_EMAIL` in CI secrets when `RUN_PLAYWRIGHT=true` for authenticated project.

@@ -154,9 +154,9 @@ jobs:
         run: mvn checkstyle:check -B
       - name: Run tests with coverage
         run: mvn test jacoco:report -B
-      - name: Coverage floor (shared library + gateway filters)
+      - name: Coverage floor (common + gateway + user-service security)
         run: |
-          mvn -pl services/tennisly-common,services/api-gateway verify -Djacoco.skip.check=false -B
+          mvn -pl services/tennisly-common,services/api-gateway,services/user-service verify -Djacoco.skip.check=false -B
       - name: Upload Jacoco reports
         if: always()
         uses: actions/upload-artifact@v4
