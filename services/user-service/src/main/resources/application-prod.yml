@@ -1,0 +1,12 @@
+# Activate with: SPRING_PROFILES_ACTIVE=prod
+tennisly:
+  webhooks:
+    allow-private-targets: ${WEBHOOK_ALLOW_PRIVATE_TARGETS:false}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

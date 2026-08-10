@@ -60,9 +60,9 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                         // CORS preflight must pass without a token
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .pathMatchers("/actuator/**").denyAll()
                         .pathMatchers(
-                                "/actuator/**",
-                                "/actuator",
                                 "/health",
                                 "/info",
                                 "/api/auth/webhooks/**"

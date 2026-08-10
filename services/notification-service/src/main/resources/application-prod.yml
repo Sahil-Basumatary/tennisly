@@ -1,0 +1,12 @@
+# Activate with: SPRING_PROFILES_ACTIVE=prod
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+logging:
+  level:
+    root: INFO

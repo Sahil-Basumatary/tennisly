@@ -12,6 +12,7 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | Frontend unit | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
 | Load smoke | k6 | Local / staging: `k6 run tests/load/public-api-smoke.js` |
+| Security scan | OWASP ZAP api-scan | Local `make zap-api`; optional CI when `RUN_ZAP=true` + staging secrets |
 | Pact / mutation | Planned | Not gated in CI yet |
 
 ## Local commands
@@ -25,6 +26,9 @@ make test-it
 
 # Playwright smoke (Clerk keys in apps/web/.env.local)
 make e2e
+
+# OWASP ZAP against a live gateway (disposable API_KEY; Docker required)
+# API_KEY=tly_live_... TARGET_URL=http://host.docker.internal:8080 make zap-api
 
 # Broader suite (includes gateway + common + users)
 ./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service,services/match-service,services/tennis-data-service,services/analytics-service -am test
@@ -63,5 +67,5 @@ make e2e
 
 1. Pact contracts for `/api/v1/**` between gateway consumers and tennis-data/match producers.
 2. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).
-3. OWASP/CORS/actuator prod lockdown.
-4. Authenticated Playwright flows (Clerk test user storageState).
+3. Authenticated Playwright flows (Clerk test user storageState).
+4. First live ZAP triage + rule ratchet after a staging run.
