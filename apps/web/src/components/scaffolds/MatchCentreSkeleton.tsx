@@ -1,8 +1,23 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import type { MatchCentrePanel } from "@/types/scaffolds";
-import { MatchCourtPanel } from "@/components/court/MatchCourtPanel";
 import { MatchShotStatCard } from "@/components/match/MatchShotStatCard";
 import { MatchStatsRail } from "@/components/match/MatchStatsRail";
 import { cn } from "@/lib/utils";
+
+const MatchCourtPanel = dynamic(
+  () =>
+    import("@/components/court/MatchCourtPanel").then((mod) => mod.MatchCourtPanel),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[240px] flex-1 items-center justify-center bg-[#0b3d2e]/10 font-sans text-sm text-muted-foreground">
+        Loading court…
+      </div>
+    ),
+  },
+);
 
 export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
   return (

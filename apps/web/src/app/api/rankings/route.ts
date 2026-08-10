@@ -21,7 +21,9 @@ export async function GET(request: Request) {
       fetchUpstreamPlayers({ gender }),
     ]);
     return NextResponse.json(toPlayersBoard(rankings, players, tour), {
-      headers: { "Cache-Control": "no-store" },
+      headers: {
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+      },
     });
   } catch (err) {
     const status = err instanceof TennisDataUpstreamError ? err.status ?? 502 : 502;

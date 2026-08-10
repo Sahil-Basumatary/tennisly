@@ -26,6 +26,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    optimizePackageImports: ["@babylonjs/core", "@visx/shape", "@visx/group", "framer-motion"],
+  },
   images: {
     remotePatterns: [
       {
