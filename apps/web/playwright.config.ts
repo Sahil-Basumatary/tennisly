@@ -1,9 +1,14 @@
 import { existsSync } from "node:fs";
+import { loadEnvConfig } from "@next/env";
 import { defineConfig, devices } from "@playwright/test";
+
+loadEnvConfig(process.cwd());
 
 const port = process.env.PLAYWRIGHT_PORT ?? "3110";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
 const managedServer = !process.env.PLAYWRIGHT_BASE_URL;
+const hasAuthUser = Boolean(process.env.E2E_CLERK_USER_EMAIL);
+const authState = "playwright/.clerk/user.json";
 
 if (managedServer && !existsSync(".next/BUILD_ID")) {
   throw new Error(
@@ -20,7 +25,6 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 20_000 },
   reporter: [["list"], ["html", { open: "never" }]],
-  globalSetup: require.resolve("./e2e/global.setup.ts"),
   use: {
     baseURL,
     trace: "on-first-retry",
@@ -28,13 +32,31 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: "setup",
+      testMatch: /global\.setup\.ts/,
     },
+    {
+      name: "chromium",
+      testMatch: /smoke\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+    },
+    ...(hasAuthUser
+      ? [
+          {
+            name: "authenticated",
+            testMatch: /authenticated\.spec\.ts/,
+            use: {
+              ...devices["Desktop Chrome"],
+              storageState: authState,
+            },
+            dependencies: ["setup"],
+          },
+        ]
+      : []),
   ],
   webServer: managedServer
     ? {
-        // next start only — next/turbopack dev is flaky with Clerk + Playwright
         command: `pnpm exec next start --port ${port} --hostname localhost`,
         url: `${baseURL}/api/health`,
         reuseExistingServer: false,

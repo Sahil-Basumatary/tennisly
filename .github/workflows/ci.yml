@@ -81,6 +81,7 @@ jobs:
       NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
       NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: /
       NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: /
+      E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

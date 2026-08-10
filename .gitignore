@@ -69,6 +69,7 @@ coverage/
 test-results/
 playwright-report/
 playwright/.cache/
+playwright/.clerk/
 .DS_Store
 .DS_Store?
 ._*

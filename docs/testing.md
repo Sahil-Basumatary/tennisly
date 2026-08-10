@@ -55,6 +55,8 @@ make test-pact
 ## Playwright smoke
 
 - Specs in `apps/web/e2e/smoke.spec.ts`: `/api/health` + security headers, home/about brand, unauthenticated redirects for `/dashboard`, `/settings/notifications`, `/admin`.
+- Authenticated specs in `apps/web/e2e/authenticated.spec.ts` (dashboard + settings) when `E2E_CLERK_USER_EMAIL` is set — project `setup` signs in via `@clerk/testing` ticket and writes `playwright/.clerk/user.json` (gitignored).
+- Prefer a `+clerk_test` Clerk user so Clerk suppresses email delivery.
 - Always runs against **`next start`** (production build). Turbopack/`next dev` is intentionally unsupported — it panics and causes Clerk proxy loops.
 - `@clerk/testing` tokens required; Clerk keys from `apps/web/.env.local`.
 - Port `3110` by default. Override with `PLAYWRIGHT_BASE_URL` / `PLAYWRIGHT_PORT`.
@@ -77,7 +79,7 @@ make test-pact
 
 ## Next slices
 
-1. Authenticated Playwright flows (Clerk test user storageState).
-2. First live ZAP triage + rule ratchet after a staging run.
-3. Expand Pact to matches + webhooks; optional Pact Broker later.
-4. Jacoco next: user-service security packages, then notification worker.
+1. First live ZAP triage + rule ratchet after a staging run.
+2. Expand Pact to matches + webhooks; optional Pact Broker later.
+3. Jacoco next: user-service security packages, then notification worker.
+4. Wire `E2E_CLERK_USER_EMAIL` in CI secrets when `RUN_PLAYWRIGHT=true` for authenticated project.
