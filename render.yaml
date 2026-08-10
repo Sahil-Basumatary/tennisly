@@ -1,0 +1,116 @@
+# Tennisly Phase 8a — Render Blueprint (Vercel hosts the web app separately).
+# Docs: docs/deploy.md
+#
+# After first deploy: create DBs tennisly_tennis_data + tennisly_matches on the
+# Postgres instance (Render shell or psql), then restart services.
+
+databases:
+  - name: tennisly-postgres
+    plan: free
+    databaseName: tennisly
+    user: tennisly
+
+services:
+  - type: redis
+    name: tennisly-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+  - type: web
+    name: tennis-data-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/tennis-data-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: 10000
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
+        value: "false"
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: tennisly-postgres
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: tennisly-postgres
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: tennisly-postgres
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: tennisly-postgres
+          property: password
+      - key: POSTGRES_DB_TENNIS_DATA
+        value: tennisly_tennis_data
+      - key: REDIS_HOST
+        fromService:
+          name: tennisly-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: tennisly-redis
+          type: redis
+          property: port
+      - key: TENNIS_BALLDONTLIE_API_KEY
+        sync: false
+      - key: TENNIS_LIVETENNIS_API_KEY
+        sync: false
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092
+
+  - type: web
+    name: match-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/match-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: 10000
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
+        value: "false"
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: tennisly-postgres
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: tennisly-postgres
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: tennisly-postgres
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: tennisly-postgres
+          property: password
+      - key: POSTGRES_DB_MATCHES
+        value: tennisly_matches
+      - key: REDIS_HOST
+        fromService:
+          name: tennisly-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: tennisly-redis
+          type: redis
+          property: port
+      - key: TENNIS_DATA_SERVICE_URI
+        sync: false
+      - key: MATCH_SERVICE_WS_ALLOWED_ORIGINS
+        sync: false
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092

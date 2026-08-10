@@ -1,9 +1,25 @@
 import type { NextConfig } from "next";
 
+const extraConnectSrc = (process.env.CSP_CONNECT_SRC_EXTRA ?? "")
+  .split(/\s+/)
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .join(" ");
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com",
-  "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com wss://*.clerk.accounts.dev http://localhost:* ws://localhost:*",
+  [
+    "connect-src 'self'",
+    "https://*.clerk.accounts.dev",
+    "https://*.clerk.com",
+    "wss://*.clerk.accounts.dev",
+    "http://localhost:*",
+    "ws://localhost:*",
+    extraConnectSrc,
+  ]
+    .filter(Boolean)
+    .join(" "),
   "img-src 'self' data: blob: https://images.unsplash.com https://*.clerk.com https://img.clerk.com",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",

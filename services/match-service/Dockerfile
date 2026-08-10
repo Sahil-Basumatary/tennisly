@@ -3,12 +3,12 @@ FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /src
 COPY . .
 RUN chmod +x mvnw \
-  && ./mvnw -pl services/tennis-data-service -am package -DskipTests -q
+  && ./mvnw -pl services/match-service -am package -DskipTests -q
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
-COPY --from=build /src/services/tennis-data-service/target/*.jar app.jar
+COPY --from=build /src/services/match-service/target/*.jar app.jar
 RUN chown spring:spring app.jar
 USER spring:spring
 EXPOSE 10000

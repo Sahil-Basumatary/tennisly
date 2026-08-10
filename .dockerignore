@@ -1,0 +1,19 @@
+.git
+.git 2
+.git.nosync
+**/.DS_Store
+**/node_modules
+**/.next
+**/playwright-report
+**/test-results
+apps/web/playwright
+.run
+**/target
+docs
+*.md
+!README.md
+.npmrc
+.env
+.env.*
+!.env*.example
+infrastructure/docker

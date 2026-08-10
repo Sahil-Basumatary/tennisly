@@ -51,7 +51,17 @@ Optional ingest toggles on match-service: `MATCH_INGEST_ENABLED`, `MATCH_INGEST_
 
 ## Status
 
-Work in progress
+Work in progress — Phase 8 cloud cut targets **Vercel** (web) + **Render** (API). See [docs/deploy.md](docs/deploy.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Deploy (Phase 8a)
+
+| Layer | Host | Config |
+|---|---|---|
+| Next.js web | Vercel | `vercel.json`, `apps/web/.env.production.example` |
+| tennis-data + match | Render | `render.yaml`, `infrastructure/render/.env.example` |
+| Postgres + Redis | Render | Blueprint-managed |
+
+Day-1 demo is catalogue HTTP (no Eureka, Kafka deferred). Expand per `docs/deploy.md` 8b/8c.
 
 ## Contact
 
