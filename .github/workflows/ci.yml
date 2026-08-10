@@ -110,6 +110,31 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  zap:
+    name: OWASP ZAP API Scan
+    if: vars.RUN_ZAP == 'true'
+    runs-on: ubuntu-latest
+    env:
+      API_KEY: ${{ secrets.ZAP_API_KEY }}
+      TARGET_URL: ${{ secrets.ZAP_TARGET_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Require scan secrets
+        run: |
+          test -n "$API_KEY" || { echo "missing secret ZAP_API_KEY"; exit 1; }
+          test -n "$TARGET_URL" || { echo "missing secret ZAP_TARGET_URL"; exit 1; }
+      - name: Run ZAP api-scan
+        run: ./scripts/zap-api-scan.sh
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-api-reports
+          path: .run/zap/
+          if-no-files-found: ignore
+          retention-days: 14
+
   backend:
     name: Backend
     needs: changes
@@ -158,13 +183,13 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [frontend, backend, dependency-review, e2e]
+    needs: [frontend, backend, dependency-review, e2e, zap]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
         run: |
-          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]]; then
+          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]] || [[ "${{ needs.zap.result }}" == "failure" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi

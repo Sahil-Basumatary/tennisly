@@ -165,6 +165,15 @@ load-smoke: ## k6 smoke against public API (needs BASE_URL + API_KEY)
 	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_..."; exit 1; }
 	k6 run -e BASE_URL=$${BASE_URL:-http://localhost:8080} -e API_KEY=$$API_KEY tests/load/public-api-smoke.js
 
+.PHONY: zap-api
+zap-api: ## OWASP ZAP api-scan of /api/v1 (needs Docker + API_KEY + running gateway)
+	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_... (disposable key)"; exit 1; }
+	@./scripts/zap-api-scan.sh
+
+.PHONY: zap-rules-gen
+zap-rules-gen: ## Write a full ZAP api-scan rules template into .run/zap/
+	@./scripts/zap-api-scan.sh --gen-rules
+
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports
 	@$(LOAD_ENV) \

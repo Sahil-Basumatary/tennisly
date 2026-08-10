@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Tennisly Public API
+  version: "1.0"
+  description: >
+    Gateway-facing contract used by OWASP ZAP api-scan.
+    Paths match api-gateway /api/v1/** rewrites — not internal service prefixes.
+servers:
+  - url: http://host.docker.internal:8080
+paths:
+  /api/v1/players:
+    get:
+      operationId: listPlayers
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 5
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Missing or invalid API key
+  /api/v1/players/{id}:
+    get:
+      operationId: getPlayer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not found
+  /api/v1/rankings:
+    get:
+      operationId: listRankings
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 5
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+  /api/v1/tournaments:
+    get:
+      operationId: listTournaments
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 5
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+  /api/v1/matches:
+    get:
+      operationId: listMatches
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 5
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+  /api/v1/webhooks:
+    get:
+      operationId: listWebhooks
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: OK
+    post:
+      operationId: createWebhook
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, eventTypes]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                eventTypes:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation / SSRF reject
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
