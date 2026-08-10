@@ -175,9 +175,16 @@ zap-rules-gen: ## Write a full ZAP api-scan rules template into .run/zap/
 	@./scripts/zap-api-scan.sh --gen-rules
 
 .PHONY: test-pact
-test-pact: ## Generate consumer pacts then verify tennis-data provider
-	@$(LOAD_ENV) $(MVNW) -pl services/contract-tests -am test -Dtest=ApiGatewayPlayersPactTest -Dsurefire.failIfNoSpecifiedTests=false
+test-pact: ## Generate consumer pacts then verify providers (players, matches, webhooks)
+	@$(LOAD_ENV) $(MVNW) -pl services/contract-tests -am test -Dtest=ApiGatewayPlayersPactTest,ApiGatewayMatchesPactTest,ApiGatewayWebhooksPactTest -Dsurefire.failIfNoSpecifiedTests=false
 	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service -am test -Dtest=PlayerControllerProviderPactTest -Dsurefire.failIfNoSpecifiedTests=false -Dpact_do_not_track=true
+	@$(LOAD_ENV) $(MVNW) -pl services/match-service -am test -Dtest=MatchControllerProviderPactTest -Dsurefire.failIfNoSpecifiedTests=false -Dpact_do_not_track=true
+	@$(LOAD_ENV) $(MVNW) -pl services/user-service -am test -Dtest=PublicWebhookControllerProviderPactTest -Dsurefire.failIfNoSpecifiedTests=false -Dpact_do_not_track=true
+
+.PHONY: zap-stub
+zap-stub: ## Header-faithful /api/v1 stub for local ZAP when gateway is down (API_KEY required)
+	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_... (disposable key)"; exit 1; }
+	@python3 ./scripts/zap-gateway-stub.py
 
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports
