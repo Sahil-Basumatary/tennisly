@@ -14,6 +14,10 @@
   <description>API Gateway for routing, rate limiting, and CORS</description>
   <dependencies>
     <dependency>
+      <groupId>dev.sahilbasumatary</groupId>
+      <artifactId>tennisly-common</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-gateway</artifactId>
     </dependency>
