@@ -7,7 +7,7 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | Layer | Tooling | Where it runs |
 |---|---|---|
 | Unit | JUnit 5 + Mockito | `mvn test` / CI backend job |
-| Coverage | Jacoco reports on every module; **≥70% line on webhook + notification packages in `tennisly-common`** | CI `jacoco:report` + `verify -Djacoco.skip.check=false` for common |
+| Coverage | Jacoco reports on every module; **≥80% line on webhook + notification in `tennisly-common`**; **≥70% on gateway `filter` + `ratelimit`** | CI `jacoco:report` + `verify -Djacoco.skip.check=false` for common + gateway |
 | Integration | Testcontainers Postgres (`PublicWebhookApiIT`, `WebhookDeliveryWorkerIT`) | Local + CI (Docker required); skips cleanly if Docker is unavailable |
 | Frontend unit | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
@@ -40,8 +40,8 @@ make test-pact
 # Coverage HTML: services/<svc>/target/site/jacoco/index.html
 ./mvnw test jacoco:report -pl services/tennisly-common -am
 
-# Enforce common floor locally
-./mvnw -pl services/tennisly-common verify -Djacoco.skip.check=false
+# Enforce common + gateway floors locally
+./mvnw -pl services/tennisly-common,services/api-gateway verify -Djacoco.skip.check=false
 ```
 
 ## Integration tests (Testcontainers)
@@ -71,12 +71,13 @@ make test-pact
 ## Coverage policy (honest)
 
 - Parent property `jacoco.skip.check=true` so greenfield services do not fail CI overnight.
-- Shared security-sensitive packages in `tennisly-common` (`webhook`, `notification`) must stay ≥ 70% line coverage — ratchet this up and expand package scope as Phase 7 continues.
-- Portfolio target remains **>80%** on business-critical packages (auth, match scoring, webhook crypto). Do not claim 80% until Jacoco shows it.
+- Shared security-sensitive packages in `tennisly-common` (`webhook`, `notification`) must stay ≥ **80%** line coverage.
+- Gateway auth/rate-limit packages (`filter`, `ratelimit`) must stay ≥ **70%** line coverage.
+- Portfolio target remains **>80%** on business-critical packages. Do not claim 80% repo-wide until Jacoco shows it.
 
 ## Next slices
 
-1. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).
-2. Authenticated Playwright flows (Clerk test user storageState).
-3. First live ZAP triage + rule ratchet after a staging run.
-4. Expand Pact to matches + webhooks; optional Pact Broker later.
+1. Authenticated Playwright flows (Clerk test user storageState).
+2. First live ZAP triage + rule ratchet after a staging run.
+3. Expand Pact to matches + webhooks; optional Pact Broker later.
+4. Jacoco next: user-service security packages, then notification worker.
