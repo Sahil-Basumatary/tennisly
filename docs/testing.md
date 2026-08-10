@@ -13,7 +13,8 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
 | Load smoke | k6 | Local / staging: `k6 run tests/load/public-api-smoke.js` |
 | Security scan | OWASP ZAP api-scan | Local `make zap-api`; optional CI when `RUN_ZAP=true` + staging secrets |
-| Pact / mutation | Planned | Not gated in CI yet |
+| Contract | Pact JVM (`api-gateway` ↔ `tennis-data-service` players list) | `make test-pact`; committed JSON under `tests/pacts/` |
+| Pact / mutation | Mutation still planned | Pact gated via module tests in CI |
 
 ## Local commands
 
@@ -29,6 +30,9 @@ make e2e
 
 # OWASP ZAP against a live gateway (disposable API_KEY; Docker required)
 # API_KEY=tly_live_... TARGET_URL=http://host.docker.internal:8080 make zap-api
+
+# Pact: regenerate consumer contract then verify tennis-data provider
+make test-pact
 
 # Broader suite (includes gateway + common + users)
 ./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service,services/match-service,services/tennis-data-service,services/analytics-service -am test
@@ -57,6 +61,13 @@ make e2e
 - First-time browser install: `pnpm --filter @tennisly/web exec playwright install chromium`.
 - Run: `make e2e` or `pnpm --filter @tennisly/web test:e2e` (both build first). Use `test:e2e:only` only when `.next` already exists.
 
+## Pact contracts
+
+- Consumer module: `services/contract-tests` (`ApiGatewayPlayersPactTest`) writes `tests/pacts/api-gateway-tennis-data-service.json`.
+- Provider: `PlayerControllerProviderPactTest` in tennis-data verifies that JSON via standalone MockMvc (no DB/Redis).
+- Contract path is the **service** path `/api/tennis/players` (what the gateway calls after rewrite). Public `/api/v1/players` stays a gateway concern.
+- After changing the consumer DSL, re-run `make test-pact` and **commit** the updated pact JSON.
+
 ## Coverage policy (honest)
 
 - Parent property `jacoco.skip.check=true` so greenfield services do not fail CI overnight.
@@ -65,7 +76,7 @@ make e2e
 
 ## Next slices
 
-1. Pact contracts for `/api/v1/**` between gateway consumers and tennis-data/match producers.
-2. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).
-3. Authenticated Playwright flows (Clerk test user storageState).
-4. First live ZAP triage + rule ratchet after a staging run.
+1. Raise Jacoco floors module-by-module (gateway filters → user-service security → notification worker).
+2. Authenticated Playwright flows (Clerk test user storageState).
+3. First live ZAP triage + rule ratchet after a staging run.
+4. Expand Pact to matches + webhooks; optional Pact Broker later.

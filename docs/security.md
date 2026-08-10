@@ -65,7 +65,7 @@ make zap-api
 1. Tighten CSP (`unsafe-inline` / `unsafe-eval` still required by Next + Clerk — document residual risk).
 2. SQL injection / XSS spot-check on admin forms (prefer parameterized JPA — already default).
 3. Secrets scan in CI (gitleaks) before open-sourcing.
-4. Pact contracts for public API consumers.
+4. Expand Pact beyond players list (matches, webhooks) and consider a Pact Broker when multi-repo consumers appear.
 5. Triage first real ZAP report and ratchet rules (WARN → FAIL) as findings clear.
 
 ## Threat notes worth remembering

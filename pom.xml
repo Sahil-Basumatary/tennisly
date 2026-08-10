@@ -26,6 +26,7 @@
     <jacoco.version>0.8.12</jacoco.version>
     <jacoco.skip.check>true</jacoco.skip.check>
     <testcontainers.version>1.20.6</testcontainers.version>
+    <pact.version>4.6.21</pact.version>
   </properties>
   <modules>
     <module>services/tennisly-common</module>
@@ -39,6 +40,7 @@
     <module>services/replay-service</module>
     <module>services/analytics-service</module>
     <module>services/notification-service</module>
+    <module>services/contract-tests</module>
   </modules>
   <dependencyManagement>
     <dependencies>
@@ -60,6 +62,21 @@
         <groupId>dev.sahilbasumatary</groupId>
         <artifactId>tennisly-common</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.com.dius.pact.consumer</groupId>
+        <artifactId>junit5</artifactId>
+        <version>${pact.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.com.dius.pact.provider</groupId>
+        <artifactId>junit5</artifactId>
+        <version>${pact.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.com.dius.pact.provider</groupId>
+        <artifactId>junit5spring</artifactId>
+        <version>${pact.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

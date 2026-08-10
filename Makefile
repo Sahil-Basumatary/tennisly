@@ -174,6 +174,11 @@ zap-api: ## OWASP ZAP api-scan of /api/v1 (needs Docker + API_KEY + running gate
 zap-rules-gen: ## Write a full ZAP api-scan rules template into .run/zap/
 	@./scripts/zap-api-scan.sh --gen-rules
 
+.PHONY: test-pact
+test-pact: ## Generate consumer pacts then verify tennis-data provider
+	@$(LOAD_ENV) $(MVNW) -pl services/contract-tests -am test -Dtest=ApiGatewayPlayersPactTest -Dsurefire.failIfNoSpecifiedTests=false
+	@$(LOAD_ENV) $(MVNW) -pl services/tennis-data-service -am test -Dtest=PlayerControllerProviderPactTest -Dsurefire.failIfNoSpecifiedTests=false -Dpact_do_not_track=true
+
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports
 	@$(LOAD_ENV) \
