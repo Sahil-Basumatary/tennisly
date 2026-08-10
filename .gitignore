@@ -1,5 +1,10 @@
 node_modules/
 node_modules.nosync/
+# iCloud Drive duplicates the repo when two machines sync the same folder.
+.git.nosync/
+.git 2
+**/node_modules 2/
+.npmrc
 .pnpm-store/
 jspm_packages/
 dist/
@@ -69,7 +74,11 @@ coverage/
 test-results/
 playwright-report/
 playwright/.cache/
-playwright/.clerk/
+# Anchored patterns miss apps/web/playwright/.clerk, which holds real Clerk session state.
+**/playwright-report/
+**/playwright/.cache/
+**/playwright/.clerk/
+**/test-results/
 .DS_Store
 .DS_Store?
 ._*
