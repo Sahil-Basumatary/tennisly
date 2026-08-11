@@ -1,11 +1,18 @@
 package dev.sahilbasumatary.common.kafka;
 
 import org.apache.kafka.clients.admin.NewTopic;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 
+// KafkaAdmin materialises every NewTopic bean on refresh, so a brokerless deploy
+// retries the bootstrap server forever unless the whole config drops out.
 @Configuration
+@ConditionalOnProperty(
+        name = "tennisly.kafka.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class KafkaTopicConfig {
 
     private static final int DEFAULT_PARTITIONS = 3;
