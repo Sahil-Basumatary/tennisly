@@ -17,7 +17,19 @@ public class EventPublisher {
         this.kafkaTemplate = kafkaTemplate;
     }
 
+    /** Phase 8a cloud cut — no broker; sync/ingest must not block on metadata timeouts. */
+    public static EventPublisher noop() {
+        return new EventPublisher(null);
+    }
+
     public void publish(String topic, String key, BaseEvent event) {
+        if (kafkaTemplate == null) {
+            log.debug(
+                    "Kafka disabled — skipping publish eventId={} topic={}",
+                    event.getEventId(),
+                    topic);
+            return;
+        }
         ProducerRecord<String, BaseEvent> record = new ProducerRecord<>(topic, key, event);
         record.headers().add("eventType", event.getEventType().getBytes());
         record.headers().add("source", event.getSource().getBytes());

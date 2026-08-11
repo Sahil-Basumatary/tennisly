@@ -70,6 +70,14 @@ services:
         value: "false"
       - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
         value: "false"
+      - key: TENNISLY_KAFKA_ENABLED
+        value: "false"
+      # Seed after health is green via make verify-deploy SEED=true — BallDontLie
+      # rate limits make on-boot sync hang the free-tier deploy for many minutes.
+      - key: TENNIS_DATA_SEED_ON_STARTUP
+        value: "false"
+      - key: SPRING_AUTOCONFIGURE_EXCLUDE
+        value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
       - key: GATEWAY_INTERNAL_TOKEN
         sync: false
       - key: POSTGRES_HOST
@@ -117,6 +125,10 @@ services:
         value: "false"
       - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
         value: "false"
+      - key: TENNISLY_KAFKA_ENABLED
+        value: "false"
+      - key: SPRING_AUTOCONFIGURE_EXCLUDE
+        value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
       - key: MATCH_INGEST_ENABLED
         value: "true"
       - key: GATEWAY_INTERNAL_TOKEN

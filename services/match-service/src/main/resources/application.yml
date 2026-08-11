@@ -42,6 +42,8 @@ tennisly:
     page-size: ${MATCH_INGEST_PAGE_SIZE:50}
   # Same secret the gateway presents; blank locally so make up stays open.
   internal-token: ${GATEWAY_INTERNAL_TOKEN:}
+  kafka:
+    enabled: ${TENNISLY_KAFKA_ENABLED:true}
 eureka:
   client:
     enabled: ${EUREKA_CLIENT_ENABLED:true}

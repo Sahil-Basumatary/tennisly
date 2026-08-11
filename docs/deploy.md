@@ -71,11 +71,12 @@ Allowed origins / redirect URLs:
 1. Import the GitHub repo.
 2. Framework: Next.js.
 3. **Root Directory: `apps/web`** (required — Vercel detects `next` from that package.json; the repo root only has workspace tooling).
-4. `apps/web/vercel.json` installs from the monorepo root, then builds `@tennisly/web`.
-5. Node **22**.
-6. Env from `apps/web/.env.production.example` — both upstream URLs point at **api-gateway**, not the backends.
+4. Config lives in **`apps/web/vercel.json` only** (do not put `"framework": "nextjs"` in a repo-root `vercel.json` — that makes Vercel probe the root `package.json` and fail with “No Next.js version detected”).
+5. Install runs from the monorepo root; build is `pnpm build` inside `apps/web`.
+6. Node **22**.
+7. Env from `apps/web/.env.production.example` — both upstream URLs point at **api-gateway**, not the backends.
 
-Do **not** leave Root Directory empty: that makes Vercel read the root `package.json` (no `next`) and fail with “No Next.js version detected”.
+Do **not** leave Root Directory empty.
 
 ## Render
 
@@ -124,8 +125,12 @@ EUREKA_CLIENT_ENABLED=false
 CONFIG_SERVER_ENABLED=false
 GATEWAY_DISCOVERY_LOCATOR_ENABLED=false
 MANAGEMENT_HEALTH_KAFKA_ENABLED=false
+TENNISLY_KAFKA_ENABLED=false
+SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+TENNIS_DATA_SEED_ON_STARTUP=false
 ```
 
+Without Kafka disabled, the producer AdminClient retries `localhost:9092` and startup catalogue seed (BallDontLie at 5 req/min) can hang a free-tier deploy for a long time. Seed after health is green with `SEED=true make verify-deploy`.
 ### Build
 
 ```bash

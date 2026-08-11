@@ -61,6 +61,9 @@ tennis:
 tennisly:
   # Blank locally; set GATEWAY_INTERNAL_TOKEN on Render so public URLs stay locked.
   internal-token: ${GATEWAY_INTERNAL_TOKEN:}
+  # Phase 8a has no broker — disable to avoid AdminClient spam and sync timeouts.
+  kafka:
+    enabled: ${TENNISLY_KAFKA_ENABLED:true}
 eureka:
   client:
     enabled: ${EUREKA_CLIENT_ENABLED:true}
