@@ -72,7 +72,8 @@ wait_for_health() {
 
 check_collection() {
   local name="$1" url="$2" required="${3:-true}" body count
-  body="$(curl -s --max-time 30 "${auth_headers[@]}" "$url" || true)"
+  # Empty array + set -u → unbound; expand only when headers exist.
+  body="$(curl -s --max-time 30 ${auth_headers[@]+"${auth_headers[@]}"} "$url" || true)"
 
   if ! jq -e . >/dev/null 2>&1 <<<"$body"; then
     fail "$name did not return JSON"
