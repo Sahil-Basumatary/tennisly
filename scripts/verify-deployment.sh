@@ -115,6 +115,7 @@ check_backend_locked() {
 
 trigger_sync() {
   local kind="$1" code
+  local seed_timeout="${SEED_TIMEOUT_SECONDS:-900}"
   if [[ -z "$TENNIS_DATA_URL" ]]; then
     fail "SEED=true needs TENNIS_DATA_URL (sync is not public on the gateway)"
     return 1
@@ -123,7 +124,9 @@ trigger_sync() {
     fail "SEED=true needs GATEWAY_INTERNAL_TOKEN for the locked tennis-data URL"
     return 1
   fi
-  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 -X POST \
+  # BallDontLie free tier is ~5 req/min; a full players sync easily exceeds 2 minutes.
+  log "sync $kind (waiting up to ${seed_timeout}s)…"
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time "$seed_timeout" -X POST \
     -H "X-Gateway-Token: ${GATEWAY_INTERNAL_TOKEN}" \
     "$TENNIS_DATA_URL/api/tennis/sync/$kind" || true)"
   if [[ "$code" == "200" || "$code" == "202" ]]; then
@@ -166,13 +169,13 @@ if [[ -n "$CATALOGUE_BASE" ]]; then
   # Through the gateway: no token header — the gateway stamps it outbound.
   auth_headers=()
   check_collection "players" "$CATALOGUE_BASE/api/tennis/players" true || true
-  check_collection "rankings (ATP singles)" "$CATALOGUE_BASE/api/tennis/rankings?gender=MEN" true || true
+  check_collection "rankings (ATP singles)" "$CATALOGUE_BASE/api/tennis/rankings?gender=MALE" true || true
   check_collection "tournaments" "$CATALOGUE_BASE/api/tennis/tournaments" true || true
   check_collection "shot distributions" "$CATALOGUE_BASE/api/tennis/shot-distributions" true || true
   check_collection "matches" "$CATALOGUE_BASE/api/matches" "$MATCH_REQUIRED" || true
 else
   check_collection "players" "$TENNIS_DATA_URL/api/tennis/players" true || true
-  check_collection "rankings (ATP singles)" "$TENNIS_DATA_URL/api/tennis/rankings?gender=MEN" true || true
+  check_collection "rankings (ATP singles)" "$TENNIS_DATA_URL/api/tennis/rankings?gender=MALE" true || true
   check_collection "tournaments" "$TENNIS_DATA_URL/api/tennis/tournaments" true || true
   check_collection "shot distributions" "$TENNIS_DATA_URL/api/tennis/shot-distributions" true || true
   check_collection "matches" "$MATCH_URL/api/matches" "$MATCH_REQUIRED" || true
