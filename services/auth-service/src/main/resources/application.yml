@@ -1,13 +1,15 @@
 server:
-  port: 8084
+  port: ${SERVER_PORT:8084}
 spring:
   application:
     name: auth-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_AUTH:tennisly_auth}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB_AUTH:tennisly_auth}${POSTGRES_URL_PARAMS:}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${POSTGRES_POOL_MAX:10}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -24,8 +26,13 @@ spring:
 clerk:
   webhook:
     secret: ${CLERK_WEBHOOK_SECRET:}
+tennisly:
+  internal-token: ${GATEWAY_INTERNAL_TOKEN:}
+  kafka:
+    enabled: ${TENNISLY_KAFKA_ENABLED:true}
 eureka:
   client:
+    enabled: ${EUREKA_CLIENT_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
   instance:
@@ -38,3 +45,6 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    kafka:
+      enabled: ${MANAGEMENT_HEALTH_KAFKA_ENABLED:true}

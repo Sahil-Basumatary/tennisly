@@ -1,12 +1,13 @@
-# Tennisly Phase 8a — Render Blueprint (Vercel hosts the web app separately).
+# Tennisly Phase 8 — Render Blueprint (Vercel hosts the web app separately).
 # Docs: docs/deploy.md
 #
-# Postgres is external (Neon). Private Render services are paid, so tennis-data
-# and match stay free "web" services but require GATEWAY_INTERNAL_TOKEN. Only
-# api-gateway is the advertised public origin (api.tennisly.tv later).
+# Postgres is external (Neon). Private Render services are paid, so backends
+# stay free "web" services but require GATEWAY_INTERNAL_TOKEN. Only api-gateway
+# is the advertised public origin (api.tennisly.tv later).
 #
-# Create databases tennisly_tennis_data + tennisly_matches in Neon before first
-# deploy — Flyway migrates schemas, it does not create databases.
+# Create databases tennisly_tennis_data, tennisly_matches, tennisly_auth, and
+# tennisly_users in Neon before first deploy — Flyway migrates schemas, it does
+# not create databases.
 
 services:
   - type: redis
@@ -55,6 +56,12 @@ services:
         sync: false
       - key: RATE_LIMIT_FAIL_OPEN
         value: "true"
+      - key: AUTH_SERVICE_URI
+        sync: false
+      - key: USER_SERVICE_URI
+        sync: false
+      - key: USER_SERVICE_ROUTE_URI
+        sync: false
 
   - type: web
     name: tennis-data-service
@@ -161,5 +168,85 @@ services:
         sync: false
       - key: MATCH_SERVICE_WS_ALLOWED_ORIGINS
         value: https://tennisly.tv,https://www.tennisly.tv,http://localhost:3000
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092
+
+  - type: web
+    name: auth-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/auth-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: CONFIG_SERVER_ENABLED
+        value: "false"
+      - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
+        value: "false"
+      - key: TENNISLY_KAFKA_ENABLED
+        value: "false"
+      - key: SPRING_AUTOCONFIGURE_EXCLUDE
+        value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - key: GATEWAY_INTERNAL_TOKEN
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_DB_AUTH
+        value: tennisly_auth
+      - key: POSTGRES_URL_PARAMS
+        value: "?sslmode=require"
+      - key: POSTGRES_POOL_MAX
+        value: "5"
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092
+
+  - type: web
+    name: user-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/user-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: CONFIG_SERVER_ENABLED
+        value: "false"
+      - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
+        value: "false"
+      - key: TENNISLY_KAFKA_ENABLED
+        value: "false"
+      - key: SPRING_AUTOCONFIGURE_EXCLUDE
+        value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - key: GATEWAY_INTERNAL_TOKEN
+        sync: false
+      - key: WEBHOOK_ENCRYPTION_KEY
+        sync: false
+      - key: WEBHOOK_ALLOW_PRIVATE_TARGETS
+        value: "false"
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_DB_USERS
+        value: tennisly_users
+      - key: POSTGRES_URL_PARAMS
+        value: "?sslmode=require"
+      - key: POSTGRES_POOL_MAX
+        value: "5"
       - key: KAFKA_BOOTSTRAP_SERVERS
         value: localhost:9092

@@ -195,6 +195,8 @@ render-images: ## Build the Render deploy images locally to catch Dockerfile dri
 	@docker build -f services/api-gateway/Dockerfile -t tennisly/gateway:render-test .
 	@docker build -f services/tennis-data-service/Dockerfile -t tennisly/tennis-data:render-test .
 	@docker build -f services/match-service/Dockerfile -t tennisly/match:render-test .
+	@docker build -f services/auth-service/Dockerfile -t tennisly/auth:render-test .
+	@docker build -f services/user-service/Dockerfile -t tennisly/user:render-test .
 
 .PHONY: health
 health: ## Probe every local service health endpoint using allocated ports

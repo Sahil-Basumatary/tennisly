@@ -1,6 +1,8 @@
 package dev.sahilbasumatary.apigateway.config;
 
+import dev.sahilbasumatary.common.security.InternalToken;
 import io.netty.channel.ChannelOption;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
@@ -36,16 +38,21 @@ public class UserServiceClientConfig {
 
     @Bean
     WebClient userServiceWebClient(
-            WebClient.Builder builder, ApiKeyAuthProperties properties) {
+            WebClient.Builder builder,
+            ApiKeyAuthProperties properties,
+            @Value("${tennisly.internal-token:}") String internalToken) {
         HttpClient httpClient =
                 HttpClient.create()
                         .responseTimeout(properties.getReadTimeout())
                         .option(
                                 ChannelOption.CONNECT_TIMEOUT_MILLIS,
                                 (int) properties.getConnectTimeout().toMillis());
-        return builder
+        WebClient.Builder client = builder
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl(properties.getUserServiceUri())
-                .build();
+                .baseUrl(properties.getUserServiceUri());
+        if (InternalToken.isEnabled(internalToken)) {
+            client.defaultHeader(InternalToken.HEADER, internalToken);
+        }
+        return client.build();
     }
 }

@@ -9,3 +9,9 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_tennis_data'
 
 SELECT 'CREATE DATABASE tennisly_matches'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_matches')\gexec
+
+SELECT 'CREATE DATABASE tennisly_auth'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_auth')\gexec
+
+SELECT 'CREATE DATABASE tennisly_users'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_users')\gexec
