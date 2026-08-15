@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -39,10 +40,12 @@ public class UserProjectionClient {
         this.restClient = builder.build();
     }
 
+    @Async
     public void relayUser(UserEvent event) {
         post("/internal/auth-events/users", event, event.getClerkId());
     }
 
+    @Async
     public void relayOrganization(OrganizationEvent event) {
         post("/internal/auth-events/organizations", event, event.getClerkOrgId());
     }
