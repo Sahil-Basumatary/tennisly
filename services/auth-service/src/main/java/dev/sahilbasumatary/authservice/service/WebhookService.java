@@ -2,6 +2,7 @@ package dev.sahilbasumatary.authservice.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.sahilbasumatary.authservice.client.UserProjectionClient;
 import dev.sahilbasumatary.authservice.dto.ClerkEmailAddress;
 import dev.sahilbasumatary.authservice.dto.ClerkOrganizationData;
 import dev.sahilbasumatary.authservice.dto.ClerkUserData;
@@ -27,57 +28,77 @@ public class WebhookService {
     private final OrganizationRepository organizationRepository;
     private final ObjectMapper objectMapper;
     private final EventPublisher eventPublisher;
+    private final UserProjectionClient userProjectionClient;
 
-    public WebhookService(AppUserRepository userRepository,
+    public WebhookService(
+            AppUserRepository userRepository,
             OrganizationRepository organizationRepository,
             ObjectMapper objectMapper,
-            EventPublisher eventPublisher) {
+            EventPublisher eventPublisher,
+            UserProjectionClient userProjectionClient) {
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
+        this.userProjectionClient = userProjectionClient;
     }
 
     public void processEvent(String eventType, JsonNode data) {
         switch (eventType) {
-            case "user.created" -> handleUserCreated(data);
-            case "user.updated" -> handleUserUpdated(data);
-            case "user.deleted" -> handleUserDeleted(data);
-            case "organization.created" -> handleOrganizationCreated(data);
-            case "organization.updated" -> handleOrganizationUpdated(data);
-            case "organization.deleted" -> handleOrganizationDeleted(data);
+            case "user.created" -> emitUser(handleUserCreated(data));
+            case "user.updated" -> emitUser(handleUserUpdated(data));
+            case "user.deleted" -> emitUser(handleUserDeleted(data));
+            case "organization.created" -> emitOrg(handleOrganizationCreated(data));
+            case "organization.updated" -> emitOrg(handleOrganizationUpdated(data));
+            case "organization.deleted" -> emitOrg(handleOrganizationDeleted(data));
             default -> log.info("Ignoring unhandled webhook event: {}", eventType);
         }
     }
 
-    @Transactional
-    void handleUserCreated(JsonNode data) {
-        ClerkUserData userData = objectMapper.convertValue(data, ClerkUserData.class);
-        if (userRepository.findByClerkId(userData.id()).isPresent()) {
-            log.info("User already exists for clerkId={}, skipping", userData.id());
+    private void emitUser(UserEvent event) {
+        if (event == null) {
             return;
         }
-        AppUser user = new AppUser();
-        user.setClerkId(userData.id());
-        String email = extractPrimaryEmail(userData);
-        user.setEmail(email);
-        user.setFirstName(userData.firstName());
-        user.setLastName(userData.lastName());
-        user.setImageUrl(userData.imageUrl());
-        user.setRole(UserRole.USER);
-        user.setActive(true);
-        userRepository.save(user);
-        log.info("Synced new user: clerkId={}", userData.id());
-        eventPublisher.publish(
-                TopicNames.USER_EVENTS,
-                userData.id(),
-                UserEvent.created(userData.id(), email,
-                        userData.firstName(), userData.lastName(),
-                        userData.imageUrl()));
+        eventPublisher.publish(TopicNames.USER_EVENTS, event.getClerkId(), event);
+        userProjectionClient.relayUser(event);
+    }
+
+    private void emitOrg(OrganizationEvent event) {
+        if (event == null) {
+            return;
+        }
+        eventPublisher.publish(TopicNames.ORGANIZATION_EVENTS, event.getClerkOrgId(), event);
+        userProjectionClient.relayOrganization(event);
     }
 
     @Transactional
-    void handleUserUpdated(JsonNode data) {
+    UserEvent handleUserCreated(JsonNode data) {
+        ClerkUserData userData = objectMapper.convertValue(data, ClerkUserData.class);
+        String email = extractPrimaryEmail(userData);
+        if (userRepository.findByClerkId(userData.id()).isEmpty()) {
+            AppUser user = new AppUser();
+            user.setClerkId(userData.id());
+            user.setEmail(email);
+            user.setFirstName(userData.firstName());
+            user.setLastName(userData.lastName());
+            user.setImageUrl(userData.imageUrl());
+            user.setRole(UserRole.USER);
+            user.setActive(true);
+            userRepository.save(user);
+            log.info("Synced new user: clerkId={}", userData.id());
+        } else {
+            log.info("User already exists for clerkId={}, still projecting", userData.id());
+        }
+        return UserEvent.created(
+                userData.id(),
+                email,
+                userData.firstName(),
+                userData.lastName(),
+                userData.imageUrl());
+    }
+
+    @Transactional
+    UserEvent handleUserUpdated(JsonNode data) {
         ClerkUserData userData = objectMapper.convertValue(data, ClerkUserData.class);
         AppUser user = userRepository.findByClerkId(userData.id())
                 .orElseGet(() -> {
@@ -95,57 +116,51 @@ public class WebhookService {
         user.setImageUrl(userData.imageUrl());
         userRepository.save(user);
         log.info("Updated user: clerkId={}", userData.id());
-        eventPublisher.publish(
-                TopicNames.USER_EVENTS,
+        return UserEvent.updated(
                 userData.id(),
-                UserEvent.updated(userData.id(), email,
-                        userData.firstName(), userData.lastName(),
-                        userData.imageUrl()));
+                email,
+                userData.firstName(),
+                userData.lastName(),
+                userData.imageUrl());
     }
 
     @Transactional
-    void handleUserDeleted(JsonNode data) {
+    UserEvent handleUserDeleted(JsonNode data) {
         String clerkId = data.path("id").asText();
-        userRepository.findByClerkId(clerkId).ifPresentOrElse(
-                user -> {
-                    user.setActive(false);
-                    userRepository.save(user);
-                    log.info("Soft-deleted user: clerkId={}", clerkId);
-                    eventPublisher.publish(
-                            TopicNames.USER_EVENTS,
-                            clerkId,
-                            UserEvent.deleted(clerkId));
-                },
-                () -> log.warn("Delete event for unknown user: clerkId={}", clerkId)
-        );
+        return userRepository.findByClerkId(clerkId).map(user -> {
+            user.setActive(false);
+            userRepository.save(user);
+            log.info("Soft-deleted user: clerkId={}", clerkId);
+            return UserEvent.deleted(clerkId);
+        }).orElseGet(() -> {
+            log.warn("Delete event for unknown user: clerkId={}", clerkId);
+            return null;
+        });
     }
 
     @Transactional
-    void handleOrganizationCreated(JsonNode data) {
+    OrganizationEvent handleOrganizationCreated(JsonNode data) {
         ClerkOrganizationData orgData =
                 objectMapper.convertValue(data, ClerkOrganizationData.class);
-        if (organizationRepository.findByClerkOrgId(orgData.id()).isPresent()) {
-            log.info("Organization already exists for clerkOrgId={}, skipping",
+        if (organizationRepository.findByClerkOrgId(orgData.id()).isEmpty()) {
+            Organization org = new Organization();
+            org.setClerkOrgId(orgData.id());
+            org.setName(orgData.name());
+            org.setSlug(orgData.slug());
+            org.setImageUrl(orgData.imageUrl());
+            org.setActive(true);
+            organizationRepository.save(org);
+            log.info("Synced new organization: clerkOrgId={}", orgData.id());
+        } else {
+            log.info("Organization already exists for clerkOrgId={}, still projecting",
                     orgData.id());
-            return;
         }
-        Organization org = new Organization();
-        org.setClerkOrgId(orgData.id());
-        org.setName(orgData.name());
-        org.setSlug(orgData.slug());
-        org.setImageUrl(orgData.imageUrl());
-        org.setActive(true);
-        organizationRepository.save(org);
-        log.info("Synced new organization: clerkOrgId={}", orgData.id());
-        eventPublisher.publish(
-                TopicNames.ORGANIZATION_EVENTS,
-                orgData.id(),
-                OrganizationEvent.created(orgData.id(), orgData.name(),
-                        orgData.slug(), orgData.imageUrl()));
+        return OrganizationEvent.created(
+                orgData.id(), orgData.name(), orgData.slug(), orgData.imageUrl());
     }
 
     @Transactional
-    void handleOrganizationUpdated(JsonNode data) {
+    OrganizationEvent handleOrganizationUpdated(JsonNode data) {
         ClerkOrganizationData orgData =
                 objectMapper.convertValue(data, ClerkOrganizationData.class);
         Organization org = organizationRepository.findByClerkOrgId(orgData.id())
@@ -162,29 +177,22 @@ public class WebhookService {
         org.setImageUrl(orgData.imageUrl());
         organizationRepository.save(org);
         log.info("Updated organization: clerkOrgId={}", orgData.id());
-        eventPublisher.publish(
-                TopicNames.ORGANIZATION_EVENTS,
-                orgData.id(),
-                OrganizationEvent.updated(orgData.id(), orgData.name(),
-                        orgData.slug(), orgData.imageUrl()));
+        return OrganizationEvent.updated(
+                orgData.id(), orgData.name(), orgData.slug(), orgData.imageUrl());
     }
 
     @Transactional
-    void handleOrganizationDeleted(JsonNode data) {
+    OrganizationEvent handleOrganizationDeleted(JsonNode data) {
         String clerkOrgId = data.path("id").asText();
-        organizationRepository.findByClerkOrgId(clerkOrgId).ifPresentOrElse(
-                org -> {
-                    org.setActive(false);
-                    organizationRepository.save(org);
-                    log.info("Soft-deleted organization: clerkOrgId={}", clerkOrgId);
-                    eventPublisher.publish(
-                            TopicNames.ORGANIZATION_EVENTS,
-                            clerkOrgId,
-                            OrganizationEvent.deleted(clerkOrgId));
-                },
-                () -> log.warn("Delete event for unknown org: clerkOrgId={}",
-                        clerkOrgId)
-        );
+        return organizationRepository.findByClerkOrgId(clerkOrgId).map(org -> {
+            org.setActive(false);
+            organizationRepository.save(org);
+            log.info("Soft-deleted organization: clerkOrgId={}", clerkOrgId);
+            return OrganizationEvent.deleted(clerkOrgId);
+        }).orElseGet(() -> {
+            log.warn("Delete event for unknown org: clerkOrgId={}", clerkOrgId);
+            return null;
+        });
     }
 
     private String extractPrimaryEmail(ClerkUserData userData) {

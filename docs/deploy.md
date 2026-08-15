@@ -173,10 +173,10 @@ Never commit live keys. Rotate after any paste into chat/logs.
 
 **8b sequence** (one slice at a time; Kafka stays off on free Render):
 
-1. **This cut:** cloud-boot auth-service + user-service (Docker, Neon DBs, Kafka disabled, shared token). Clerk webhooks write the auth DB; user-service profiles will not follow until an HTTP fan-out or a broker exists.
-2. Wire gateway `AUTH_SERVICE_URI` / `USER_SERVICE_URI` / `USER_SERVICE_ROUTE_URI` to the new `*.onrender.com` URLs; point Clerk at `https://api-gateway-….onrender.com/api/auth/webhooks/clerk`.
-3. Enable `/api/v1` against a live user-service (API keys).
-4. HTTP sync auth→user (or managed Kafka) so sign-ups create user-service profiles.
+1. **This cut:** cloud-boot auth-service + user-service (Docker, Neon DBs, Kafka disabled, shared token).
+2. Wire gateway `AUTH_SERVICE_URI` / `USER_SERVICE_URI` / `USER_SERVICE_ROUTE_URI`; Clerk → `https://api-gateway-….onrender.com/api/auth/webhooks/clerk`.
+3. Auth HTTP-projects Clerk users/orgs to user-service (`USER_SERVICE_URI` on auth). Kafka stays off on free Render.
+4. Enable `/api/v1` against a live user-service (API keys).
 5. notification-service.
 
 **8c:** analytics + Elasticsearch; R2 for replay objects; promote backends to private/always-on if budget allows.
@@ -186,7 +186,7 @@ Never commit live keys. Rotate after any paste into chat/logs.
 | Where | Secrets |
 |---|---|
 | Neon | Extra DBs `tennisly_auth`, `tennisly_users` via `infrastructure/neon/init-databases.sql` |
-| Render auth | Same `GATEWAY_INTERNAL_TOKEN`; `CLERK_WEBHOOK_SECRET`; `POSTGRES_*` / `POSTGRES_DB_AUTH` |
+| Render auth | Same `GATEWAY_INTERNAL_TOKEN`; `CLERK_WEBHOOK_SECRET`; `USER_SERVICE_URI`; `POSTGRES_*` / `POSTGRES_DB_AUTH` |
 | Render user | Same token; `WEBHOOK_ENCRYPTION_KEY` (`openssl rand -base64 32`); `POSTGRES_DB_USERS` |
 | Render gateway | `AUTH_SERVICE_URI`; `USER_SERVICE_URI` + `USER_SERVICE_ROUTE_URI` (same user URL) |
 

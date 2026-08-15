@@ -30,6 +30,8 @@ tennisly:
   internal-token: ${GATEWAY_INTERNAL_TOKEN:}
   kafka:
     enabled: ${TENNISLY_KAFKA_ENABLED:true}
+  clients:
+    user-service-uri: ${USER_SERVICE_URI:}
 eureka:
   client:
     enabled: ${EUREKA_CLIENT_ENABLED:true}

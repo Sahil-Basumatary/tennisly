@@ -191,6 +191,8 @@ services:
         value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
       - key: GATEWAY_INTERNAL_TOKEN
         sync: false
+      - key: USER_SERVICE_URI
+        sync: false
       - key: CLERK_WEBHOOK_SECRET
         sync: false
       - key: POSTGRES_HOST
