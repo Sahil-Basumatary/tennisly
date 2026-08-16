@@ -20,9 +20,9 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     @Query(
             """
             SELECT u FROM UserProfile u
-            WHERE (:q IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
-                OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :q, '%'))
-                OR LOWER(u.clerkId) LIKE LOWER(CONCAT('%', :q, '%')))
+            WHERE (:q IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR LOWER(u.clerkId) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
             AND (:active IS NULL OR u.active = :active)
             """)
     Page<UserProfile> search(

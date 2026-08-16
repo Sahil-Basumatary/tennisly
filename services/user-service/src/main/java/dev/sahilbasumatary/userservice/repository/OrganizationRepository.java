@@ -18,8 +18,8 @@ public interface OrganizationRepository extends JpaRepository<Organization, UUID
     @Query(
             """
             SELECT o FROM Organization o
-            WHERE (:q IS NULL OR LOWER(o.name) LIKE LOWER(CONCAT('%', :q, '%'))
-                OR LOWER(o.slug) LIKE LOWER(CONCAT('%', :q, '%')))
+            WHERE (:q IS NULL OR LOWER(o.name) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR LOWER(o.slug) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
             AND (:active IS NULL OR o.active = :active)
             """)
     Page<Organization> search(

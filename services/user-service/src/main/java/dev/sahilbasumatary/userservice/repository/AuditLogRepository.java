@@ -14,9 +14,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     @Query(
             """
             SELECT a FROM AuditLog a
-            WHERE (:q IS NULL OR LOWER(a.actorEmail) LIKE LOWER(CONCAT('%', :q, '%'))
-                OR LOWER(a.actorClerkId) LIKE LOWER(CONCAT('%', :q, '%'))
-                OR LOWER(a.resourceId) LIKE LOWER(CONCAT('%', :q, '%')))
+            WHERE (:q IS NULL OR LOWER(a.actorEmail) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR LOWER(a.actorClerkId) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%'))
+                OR LOWER(a.resourceId) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))
             AND (:action IS NULL OR a.action = :action)
             AND (:organizationId IS NULL OR a.organizationId = :organizationId)
             AND (:from IS NULL OR a.createdAt >= :from)
