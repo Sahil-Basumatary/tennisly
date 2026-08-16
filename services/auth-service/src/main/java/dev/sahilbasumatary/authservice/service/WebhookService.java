@@ -75,6 +75,12 @@ public class WebhookService {
     UserEvent handleUserCreated(JsonNode data) {
         ClerkUserData userData = objectMapper.convertValue(data, ClerkUserData.class);
         String email = extractPrimaryEmail(userData);
+        // Phone-only Clerk accounts (and dashboard test payloads) carry no email, and
+        // email is NOT NULL — ack the delivery instead of making Clerk retry forever.
+        if (email == null || email.isBlank()) {
+            log.warn("Skipping user without email: clerkId={}", userData.id());
+            return null;
+        }
         if (userRepository.findByClerkId(userData.id()).isEmpty()) {
             AppUser user = new AppUser();
             user.setClerkId(userData.id());
@@ -110,6 +116,13 @@ public class WebhookService {
                     return newUser;
                 });
         String email = extractPrimaryEmail(userData);
+        if (email == null || email.isBlank()) {
+            if (user.getEmail() == null) {
+                log.warn("Skipping user update without email: clerkId={}", userData.id());
+                return null;
+            }
+            email = user.getEmail();
+        }
         user.setEmail(email);
         user.setFirstName(userData.firstName());
         user.setLastName(userData.lastName());
