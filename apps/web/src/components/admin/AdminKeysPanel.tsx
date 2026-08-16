@@ -31,6 +31,8 @@ export function AdminKeysPanel() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [plaintextKey, setPlaintextKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -64,6 +66,8 @@ export function AdminKeysPanel() {
     setCreating(true);
     setCreateError(null);
     setPlaintextKey(null);
+    setCopied(false);
+    setCopyError(null);
     try {
       const response = await fetch("/api/admin/api-keys", {
         method: "POST",
@@ -106,9 +110,28 @@ export function AdminKeysPanel() {
     }
   }
 
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
   async function copyPlaintextKey() {
     if (!plaintextKey) return;
-    await navigator.clipboard.writeText(plaintextKey);
+    try {
+      await navigator.clipboard.writeText(plaintextKey);
+      setCopied(true);
+      setCopyError(null);
+    } catch {
+      setCopied(false);
+      setCopyError("Clipboard blocked — select the key and copy it yourself.");
+    }
+  }
+
+  function dismissPlaintextKey() {
+    setPlaintextKey(null);
+    setCopied(false);
+    setCopyError(null);
   }
 
   return (
@@ -118,29 +141,44 @@ export function AdminKeysPanel() {
           <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
             Copy this key now — it will not be shown again
           </p>
-          <p className="mt-2 break-all font-data text-[13px] tabular-nums">{plaintextKey}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <p className="mt-2 max-w-3xl font-sans text-sm text-foreground">
+            This is the only time Tennisly shows the full secret. Save it in a password manager or
+            your team&apos;s secrets vault. We store a hash, not this string — if you lose it, revoke
+            the key and issue a new one.
+          </p>
+          <p className="mt-3 break-all font-data text-[13px] tabular-nums">{plaintextKey}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => void copyPlaintextKey()}
               className="border border-primary bg-primary px-4 py-2 font-sans text-[11px] font-semibold uppercase tracking-wide text-primary-foreground"
             >
-              Copy key
+              {copied ? "Copied" : "Copy key"}
             </button>
             <button
               type="button"
-              onClick={() => setPlaintextKey(null)}
+              onClick={dismissPlaintextKey}
               className="border border-hairline bg-white px-4 py-2 font-sans text-[11px] font-semibold uppercase tracking-wide"
             >
               Dismiss
             </button>
+            <span className="sr-only" role="status" aria-live="polite">
+              {copied ? "API key copied to clipboard" : ""}
+            </span>
           </div>
+          {copyError ? (
+            <p className="mt-2 font-sans text-sm text-destructive">{copyError}</p>
+          ) : null}
         </div>
       ) : null}
       <div className="border border-hairline bg-white p-4 sm:p-5">
         <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Issue key
         </h2>
+        <p className="mb-4 max-w-3xl font-sans text-sm text-muted-foreground">
+          The full key is shown once, right after you create it. Copy it immediately and store it
+          somewhere durable. After you dismiss that banner, only the prefix stays in this table.
+        </p>
         <form onSubmit={(event) => void handleCreate(event)} className="flex flex-wrap items-end gap-4">
           <label className="min-w-[280px] flex-1">
             <span className="mb-1.5 block font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

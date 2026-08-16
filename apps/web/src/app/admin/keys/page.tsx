@@ -10,7 +10,7 @@ export default function AdminKeysPage() {
       <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <AdminPageHeader
           title="API keys"
-          description="Issue scoped partner keys. Plaintext secrets are shown once at creation."
+          description="Issue scoped partner keys. The full secret is shown once at creation — store it before you leave this page."
         />
         <AdminKeysPanel />
       </main>
