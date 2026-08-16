@@ -23,7 +23,14 @@ import type {
 } from "@/types/admin";
 
 function userServiceBase(): string {
-  return (process.env.USER_SERVICE_URL ?? "http://localhost:8082").replace(/\/$/, "");
+  const configured = process.env.USER_SERVICE_URL?.replace(/\/$/, "");
+  if (configured) {
+    return configured;
+  }
+  if (process.env.VERCEL) {
+    throw new AdminUpstreamError("USER_SERVICE_URL is not set", 503);
+  }
+  return "http://localhost:8082";
 }
 
 export class AdminUpstreamError extends Error {
@@ -55,12 +62,16 @@ function authHeaders(token: string | null, userId: string, roles: string): Heade
 }
 
 async function upstreamFetch(path: string, init?: RequestInit): Promise<Response> {
+  const url = `${userServiceBase()}${path}`;
   try {
-    return await fetch(`${userServiceBase()}${path}`, {
+    return await fetch(url, {
       cache: "no-store",
       ...init,
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof AdminUpstreamError) {
+      throw err;
+    }
     throw new AdminUpstreamError("user-service unreachable", 502);
   }
 }
@@ -338,7 +349,14 @@ export async function fetchUpstreamAdminUsage(
 }
 
 function notificationServiceBase(): string {
-  return (process.env.NOTIFICATION_SERVICE_URL ?? "http://localhost:18087").replace(/\/$/, "");
+  const configured = process.env.NOTIFICATION_SERVICE_URL?.replace(/\/$/, "");
+  if (configured) {
+    return configured;
+  }
+  if (process.env.VERCEL) {
+    throw new AdminUpstreamError("NOTIFICATION_SERVICE_URL is not set", 503);
+  }
+  return "http://localhost:18087";
 }
 
 async function notificationFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -347,7 +365,10 @@ async function notificationFetch(path: string, init?: RequestInit): Promise<Resp
       cache: "no-store",
       ...init,
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof AdminUpstreamError) {
+      throw err;
+    }
     throw new AdminUpstreamError("notification-service unreachable", 502);
   }
 }

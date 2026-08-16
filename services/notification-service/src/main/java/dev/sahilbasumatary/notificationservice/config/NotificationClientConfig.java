@@ -1,6 +1,8 @@
 package dev.sahilbasumatary.notificationservice.config;
 
+import dev.sahilbasumatary.common.security.InternalToken;
 import java.net.URI;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.ClientHttpRequestFactories;
 import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
@@ -21,15 +23,22 @@ public class NotificationClientConfig {
     @Bean
     RestClient userServiceRestClient(
             @LoadBalanced RestClient.Builder loadBalancedBuilder,
-            NotificationClientProperties properties) {
+            NotificationClientProperties properties,
+            @Value("${tennisly.internal-token:}") String internalToken) {
         String uri = properties.userServiceUri();
         RestClient.Builder builder =
                 usesDiscovery(uri) ? loadBalancedBuilder.clone() : RestClient.builder();
-        return builder.baseUrl(uri).requestFactory(requestFactory(properties)).build();
+        builder.baseUrl(uri).requestFactory(requestFactory(properties));
+        if (InternalToken.isEnabled(internalToken)) {
+            builder.defaultHeader(InternalToken.HEADER, internalToken);
+        }
+        return builder.build();
     }
 
     private static boolean usesDiscovery(String uri) {
-        return URI.create(uri).getPort() == -1;
+        String host = URI.create(uri).getHost();
+        // Eureka ids have no dots; Render hostnames do. Port-only checks treat HTTPS as discovery.
+        return host != null && !host.contains(".");
     }
 
     private ClientHttpRequestFactory requestFactory(NotificationClientProperties properties) {

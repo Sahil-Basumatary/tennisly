@@ -30,6 +30,10 @@ spring:
           uri: ${USER_SERVICE_ROUTE_URI:lb://user-service}
           predicates:
             - Path=/api/users/**
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URI:lb://notification-service}
+          predicates:
+            - Path=/api/notifications/**
         - id: tennis-data-service
           uri: ${TENNIS_DATA_SERVICE_URI:lb://tennis-data-service}
           predicates:

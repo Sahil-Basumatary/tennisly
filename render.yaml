@@ -5,9 +5,9 @@
 # stay free "web" services but require GATEWAY_INTERNAL_TOKEN. Only api-gateway
 # is the advertised public origin (api.tennisly.tv later).
 #
-# Create databases tennisly_tennis_data, tennisly_matches, tennisly_auth, and
-# tennisly_users in Neon before first deploy — Flyway migrates schemas, it does
-# not create databases.
+# Create databases tennisly_tennis_data, tennisly_matches, tennisly_auth,
+# tennisly_users, and tennisly_notifications in Neon before first deploy —
+# Flyway migrates schemas, it does not create databases.
 
 services:
   - type: redis
@@ -61,6 +61,8 @@ services:
       - key: USER_SERVICE_URI
         sync: false
       - key: USER_SERVICE_ROUTE_URI
+        sync: false
+      - key: NOTIFICATION_SERVICE_URI
         sync: false
 
   - type: web
@@ -246,6 +248,49 @@ services:
         sync: false
       - key: POSTGRES_DB_USERS
         value: tennisly_users
+      - key: POSTGRES_URL_PARAMS
+        value: "?sslmode=require"
+      - key: POSTGRES_POOL_MAX
+        value: "5"
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092
+
+  - type: web
+    name: notification-service
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/notification-service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: EUREKA_CLIENT_ENABLED
+        value: "false"
+      - key: CONFIG_SERVER_ENABLED
+        value: "false"
+      - key: MANAGEMENT_HEALTH_KAFKA_ENABLED
+        value: "false"
+      - key: TENNISLY_KAFKA_ENABLED
+        value: "false"
+      - key: SPRING_AUTOCONFIGURE_EXCLUDE
+        value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - key: GATEWAY_INTERNAL_TOKEN
+        sync: false
+      - key: NOTIFICATION_USER_SERVICE_URI
+        sync: false
+      - key: NOTIFICATION_EMAIL_PROVIDER
+        value: logging
+      - key: NOTIFICATION_PUSH_PROVIDER
+        value: logging
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: "5432"
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_DB_NOTIFICATIONS
+        value: tennisly_notifications
       - key: POSTGRES_URL_PARAMS
         value: "?sslmode=require"
       - key: POSTGRES_POOL_MAX

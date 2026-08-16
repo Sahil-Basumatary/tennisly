@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 
 function notificationBase(): string {
-  return (process.env.NOTIFICATION_SERVICE_URL ?? "http://localhost:18087").replace(/\/$/, "");
+  const configured = process.env.NOTIFICATION_SERVICE_URL?.replace(/\/$/, "");
+  if (configured) {
+    return configured;
+  }
+  if (process.env.VERCEL) {
+    throw new Error("NOTIFICATION_SERVICE_URL is not set");
+  }
+  return "http://localhost:18087";
 }
 
 async function requireSession() {

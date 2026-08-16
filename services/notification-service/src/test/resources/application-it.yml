@@ -24,6 +24,9 @@ spring:
 eureka:
   client:
     enabled: false
+tennisly:
+  kafka:
+    enabled: false
 notification:
   clients:
     user-service-uri: http://localhost:9

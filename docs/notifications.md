@@ -2,7 +2,8 @@
 
 Tennisly sends transactional **email** and **push** from `notification-service`.
 Preferences live in `user-service` (`user_preferences`); delivery logs and device
-tokens live in `tennisly_notifications`.
+tokens live in `tennisly_notifications`. On Render, Kafka is off and email/push
+use the `logging` provider until Resend/FCM keys exist.
 
 ## Email providers
 

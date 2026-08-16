@@ -15,3 +15,6 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_auth')\gexec
 
 SELECT 'CREATE DATABASE tennisly_users'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_users')\gexec
+
+SELECT 'CREATE DATABASE tennisly_notifications'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'tennisly_notifications')\gexec

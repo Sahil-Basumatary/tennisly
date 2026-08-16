@@ -177,7 +177,7 @@ Never commit live keys. Rotate after any paste into chat/logs.
 2. Wire gateway `AUTH_SERVICE_URI` / `USER_SERVICE_URI` / `USER_SERVICE_ROUTE_URI`; Clerk → `https://api-gateway-….onrender.com/api/auth/webhooks/clerk`.
 3. Auth HTTP-projects Clerk users/orgs to user-service (`USER_SERVICE_URI` on auth). Kafka stays off on free Render.
 4. Enable `/api/v1` against a live user-service (API keys).
-5. notification-service.
+5. **notification-service** (this cut): Docker + Neon `tennisly_notifications`, Kafka off, same internal token. Gateway `NOTIFICATION_SERVICE_URI`. Vercel `NOTIFICATION_SERVICE_URL` = gateway (not the locked backend URL). Email/push stay `logging` until Resend/FCM. Webhook **enqueue** still needs an HTTP ingest path (next slice) because Kafka is off on free Render.
 
 **8c:** analytics + Elasticsearch; R2 for replay objects; promote backends to private/always-on if budget allows.
 
@@ -189,6 +189,15 @@ Never commit live keys. Rotate after any paste into chat/logs.
 | Render auth | Same `GATEWAY_INTERNAL_TOKEN`; `CLERK_WEBHOOK_SECRET`; `USER_SERVICE_URI`; `POSTGRES_*` / `POSTGRES_DB_AUTH` |
 | Render user | Same token; `WEBHOOK_ENCRYPTION_KEY` (`openssl rand -base64 32`); `POSTGRES_DB_USERS` |
 | Render gateway | `AUTH_SERVICE_URI`; `USER_SERVICE_URI` + `USER_SERVICE_ROUTE_URI` (same user URL) |
+
+### 8b secrets (notification)
+
+| Where | Secrets |
+|---|---|
+| Neon | Extra DB `tennisly_notifications` (same init SQL) |
+| Render notification | Same `GATEWAY_INTERNAL_TOKEN`; `NOTIFICATION_USER_SERVICE_URI` = user-service HTTPS URL (not gateway — `/internal/**` is not routed); `POSTGRES_DB_NOTIFICATIONS` |
+| Render gateway | `NOTIFICATION_SERVICE_URI` = notification-service HTTPS URL |
+| Vercel | `NOTIFICATION_SERVICE_URL` = **gateway** URL (same as `USER_SERVICE_URL`) |
 
 Two more free JVMs will sleep like tennis-data/match. Do not treat a cold 502 as a code regression.
 

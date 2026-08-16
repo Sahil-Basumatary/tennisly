@@ -4,7 +4,14 @@ import { auth } from "@clerk/nextjs/server";
 type RouteContext = { params: Promise<{ id: string }> };
 
 function notificationBase(): string {
-  return (process.env.NOTIFICATION_SERVICE_URL ?? "http://localhost:18087").replace(/\/$/, "");
+  const configured = process.env.NOTIFICATION_SERVICE_URL?.replace(/\/$/, "");
+  if (configured) {
+    return configured;
+  }
+  if (process.env.VERCEL) {
+    throw new Error("NOTIFICATION_SERVICE_URL is not set");
+  }
+  return "http://localhost:18087";
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {

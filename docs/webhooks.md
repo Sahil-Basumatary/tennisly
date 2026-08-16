@@ -73,7 +73,10 @@ Each delivery is sent with a connect timeout of 3 seconds and a read timeout of
 ## Admin delivery observability
 
 Platform admins can inspect and requeue deliveries from `/admin/webhooks`
-(Delivery log panel). The web BFF calls notification-service directly:
+(Delivery log panel). The web BFF calls `/api/notifications/admin/deliveries`
+through the same origin as other admin APIs. Locally that is notification-service
+on `:18087`; in production `NOTIFICATION_SERVICE_URL` is the **gateway**, which
+relays `X-Gateway-Token` and routes `/api/notifications/**`.
 
 ```
 GET  /api/notifications/admin/deliveries?organizationId=&endpointId=&status=&eventType=&page=&size=

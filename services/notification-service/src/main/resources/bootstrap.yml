@@ -3,6 +3,7 @@ spring:
     name: notification-service
   cloud:
     config:
+      enabled: ${CONFIG_SERVER_ENABLED:true}
       uri: ${CONFIG_SERVER_URI:http://localhost:8888}
       username: ${CONFIG_SERVER_USER:configadmin}
       password: ${CONFIG_SERVER_PASSWORD:configsecret}
