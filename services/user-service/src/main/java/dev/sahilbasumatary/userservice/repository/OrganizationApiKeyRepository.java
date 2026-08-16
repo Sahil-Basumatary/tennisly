@@ -14,11 +14,21 @@ public interface OrganizationApiKeyRepository extends JpaRepository<Organization
     Optional<OrganizationApiKey> findByKeyHash(String keyHash);
 
     @Query(
-            """
-            SELECT k FROM OrganizationApiKey k
-            WHERE (:organizationId IS NULL OR k.organization.id = :organizationId)
-            AND (:active IS NULL OR k.active = :active)
-            """)
+            value =
+                    """
+                    SELECT k FROM OrganizationApiKey k
+                    JOIN FETCH k.organization
+                    WHERE (CAST(:organizationId AS uuid) IS NULL
+                        OR k.organization.id = CAST(:organizationId AS uuid))
+                    AND (CAST(:active AS boolean) IS NULL OR k.active = CAST(:active AS boolean))
+                    """,
+            countQuery =
+                    """
+                    SELECT COUNT(k) FROM OrganizationApiKey k
+                    WHERE (CAST(:organizationId AS uuid) IS NULL
+                        OR k.organization.id = CAST(:organizationId AS uuid))
+                    AND (CAST(:active AS boolean) IS NULL OR k.active = CAST(:active AS boolean))
+                    """)
     Page<OrganizationApiKey> search(
             @Param("organizationId") UUID organizationId,
             @Param("active") Boolean active,

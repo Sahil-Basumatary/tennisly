@@ -56,9 +56,12 @@ public class ApiKeyService {
             UUID organizationId, Boolean active, int page, int size) {
         AdminAccess.assertPlatformAdmin();
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<AdminApiKeyResponse> result =
-                apiKeyRepository.search(organizationId, active, pageable).map(AdminApiKeyResponse::from);
-        return AdminPageResponse.from(result);
+        // Untyped null UUID binds as bytea on Postgres and 500s the empty filter on /admin/keys.
+        Page<OrganizationApiKey> keys =
+                organizationId == null && active == null
+                        ? apiKeyRepository.findAll(pageable)
+                        : apiKeyRepository.search(organizationId, active, pageable);
+        return AdminPageResponse.from(keys.map(AdminApiKeyResponse::from));
     }
 
     @Transactional
