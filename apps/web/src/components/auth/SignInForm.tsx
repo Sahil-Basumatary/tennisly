@@ -56,7 +56,10 @@ export function SignInForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signIn) {
+      setFormError("Sign-in is not ready yet. Refresh the page and try again.");
+      return;
+    }
     if (!validateLogin()) return;
     setPending(true);
     setFormError("");
@@ -82,7 +85,10 @@ export function SignInForm() {
   async function onSocial(
     strategy: "oauth_google" | "oauth_apple" | "oauth_facebook",
   ) {
-    if (!isLoaded || !signIn) return;
+    if (!isLoaded || !signIn) {
+      setFormError("Sign-in is not ready yet. Refresh the page and try again.");
+      return;
+    }
     setPending(true);
     setFormError("");
     try {

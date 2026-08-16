@@ -114,7 +114,10 @@ export function SignUpForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded || !signUp) return;
+    if (!isLoaded || !signUp) {
+      setFormError("Sign-up is not ready yet. Refresh the page and try again.");
+      return;
+    }
     if (!validate()) return;
     setPending(true);
     setFormError("");
@@ -173,7 +176,10 @@ export function SignUpForm() {
   async function onSocial(
     strategy: "oauth_google" | "oauth_apple" | "oauth_facebook",
   ) {
-    if (!isLoaded || !signUp) return;
+    if (!isLoaded || !signUp) {
+      setFormError("Sign-up is not ready yet. Refresh the page and try again.");
+      return;
+    }
     setPending(true);
     setFormError("");
     try {
