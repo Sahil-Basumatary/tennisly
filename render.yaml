@@ -168,6 +168,8 @@ services:
           property: port
       - key: TENNIS_DATA_SERVICE_URI
         sync: false
+      - key: NOTIFICATION_SERVICE_URI
+        sync: false
       - key: MATCH_SERVICE_WS_ALLOWED_ORIGINS
         value: https://tennisly.tv,https://www.tennisly.tv,http://localhost:3000
       - key: KAFKA_BOOTSTRAP_SERVERS
@@ -238,6 +240,8 @@ services:
         sync: false
       - key: WEBHOOK_ALLOW_PRIVATE_TARGETS
         value: "false"
+      - key: NOTIFICATION_SERVICE_URI
+        sync: false
       - key: POSTGRES_HOST
         sync: false
       - key: POSTGRES_PORT

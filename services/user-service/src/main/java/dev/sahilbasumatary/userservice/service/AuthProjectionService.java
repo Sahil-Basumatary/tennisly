@@ -2,6 +2,7 @@ package dev.sahilbasumatary.userservice.service;
 
 import dev.sahilbasumatary.common.event.OrganizationEvent;
 import dev.sahilbasumatary.common.event.UserEvent;
+import dev.sahilbasumatary.userservice.client.NotificationEventClient;
 import dev.sahilbasumatary.userservice.entity.Organization;
 import dev.sahilbasumatary.userservice.entity.UserProfile;
 import dev.sahilbasumatary.userservice.repository.OrganizationRepository;
@@ -18,14 +19,17 @@ public class AuthProjectionService {
     private final UserProfileRepository profileRepository;
     private final OrganizationRepository organizationRepository;
     private final UserPreferenceService preferenceService;
+    private final NotificationEventClient notificationEventClient;
 
     public AuthProjectionService(
             UserProfileRepository profileRepository,
             OrganizationRepository organizationRepository,
-            UserPreferenceService preferenceService) {
+            UserPreferenceService preferenceService,
+            NotificationEventClient notificationEventClient) {
         this.profileRepository = profileRepository;
         this.organizationRepository = organizationRepository;
         this.preferenceService = preferenceService;
+        this.notificationEventClient = notificationEventClient;
     }
 
     @Transactional
@@ -33,7 +37,11 @@ public class AuthProjectionService {
         log.info("Applying user event eventId={} type={} clerkId={}",
                 event.getEventId(), event.getEventType(), event.getClerkId());
         switch (event.getEventType()) {
-            case "USER_CREATED" -> onUserCreated(event);
+            case "USER_CREATED" -> {
+                if (onUserCreated(event)) {
+                    notificationEventClient.relayUser(event);
+                }
+            }
             case "USER_UPDATED" -> onUserUpdated(event);
             case "USER_DELETED" -> onUserDeleted(event);
             default -> log.warn("Unknown user event type: {}", event.getEventType());
@@ -52,10 +60,10 @@ public class AuthProjectionService {
         }
     }
 
-    private void onUserCreated(UserEvent event) {
+    private boolean onUserCreated(UserEvent event) {
         if (profileRepository.findByClerkId(event.getClerkId()).isPresent()) {
             log.info("Profile already exists for clerkId={}, skipping", event.getClerkId());
-            return;
+            return false;
         }
         UserProfile profile = new UserProfile();
         profile.setClerkId(event.getClerkId());
@@ -67,6 +75,7 @@ public class AuthProjectionService {
         profileRepository.save(profile);
         preferenceService.ensureDefaults(profile);
         log.info("Created user profile from event for clerkId={}", event.getClerkId());
+        return true;
     }
 
     private void onUserUpdated(UserEvent event) {

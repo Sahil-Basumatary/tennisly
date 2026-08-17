@@ -3,6 +3,7 @@ package dev.sahilbasumatary.matchservice.service;
 import dev.sahilbasumatary.common.event.MatchEvent;
 import dev.sahilbasumatary.common.kafka.EventPublisher;
 import dev.sahilbasumatary.common.kafka.TopicNames;
+import dev.sahilbasumatary.matchservice.client.NotificationEventClient;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.ResolvedPlayerDto;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.UpstreamMatchDto;
@@ -45,6 +46,7 @@ public class MatchIngestionService {
     private final MatchEventLogService eventLogService;
     private final MatchRealtimeNotifier realtimeNotifier;
     private final EventPublisher eventPublisher;
+    private final NotificationEventClient notificationEventClient;
     private final int pageSize;
 
     public MatchIngestionService(
@@ -54,6 +56,7 @@ public class MatchIngestionService {
             MatchEventLogService eventLogService,
             MatchRealtimeNotifier realtimeNotifier,
             EventPublisher eventPublisher,
+            NotificationEventClient notificationEventClient,
             @Value("${tennisly.ingest.page-size:50}") int pageSize) {
         this.matchClient = matchClient;
         this.matchRepository = matchRepository;
@@ -61,6 +64,7 @@ public class MatchIngestionService {
         this.eventLogService = eventLogService;
         this.realtimeNotifier = realtimeNotifier;
         this.eventPublisher = eventPublisher;
+        this.notificationEventClient = notificationEventClient;
         this.pageSize = Math.max(1, Math.min(pageSize, 100));
     }
 
@@ -202,6 +206,7 @@ public class MatchIngestionService {
         MatchResponse response = MatchResponse.from(match);
         realtimeNotifier.publishSnapshot(response);
         eventPublisher.publish(TopicNames.MATCH_EVENTS, match.getId().toString(), event);
+        notificationEventClient.relayMatch(event);
     }
 
     private static MatchPlayer toPlayer(ResolvedPlayerDto player, PlayerSide side) {

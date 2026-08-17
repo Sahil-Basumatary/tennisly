@@ -28,6 +28,8 @@ tennisly:
   internal-token: ${GATEWAY_INTERNAL_TOKEN:}
   kafka:
     enabled: ${TENNISLY_KAFKA_ENABLED:true}
+  clients:
+    notification-service-uri: ${NOTIFICATION_SERVICE_URI:}
   webhooks:
     encryption-key: ${WEBHOOK_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
     allow-private-targets: ${WEBHOOK_ALLOW_PRIVATE_TARGETS:true}

@@ -35,6 +35,7 @@ tennisly:
     allowed-origins: ${MATCH_SERVICE_WS_ALLOWED_ORIGINS:http://localhost:3000}
   clients:
     tennis-data-service-uri: ${TENNIS_DATA_SERVICE_URI:http://localhost:18083}
+    notification-service-uri: ${NOTIFICATION_SERVICE_URI:}
   ingest:
     enabled: ${MATCH_INGEST_ENABLED:true}
     live-fixed-delay-ms: ${MATCH_INGEST_LIVE_DELAY_MS:60000}

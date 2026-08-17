@@ -4,6 +4,7 @@ import dev.sahilbasumatary.common.event.WebhookDomainEvent;
 import dev.sahilbasumatary.common.event.WebhookEventTypes;
 import dev.sahilbasumatary.common.kafka.EventPublisher;
 import dev.sahilbasumatary.common.kafka.TopicNames;
+import dev.sahilbasumatary.userservice.client.NotificationEventClient;
 import dev.sahilbasumatary.userservice.context.RequestContext;
 import dev.sahilbasumatary.userservice.dto.request.CreateWebhookEndpointRequest;
 import dev.sahilbasumatary.userservice.dto.response.CreateWebhookEndpointResponse;
@@ -39,6 +40,7 @@ public class WebhookEndpointService {
     private final AuditLogService auditLogService;
     private final UsageMeter usageMeter;
     private final EventPublisher eventPublisher;
+    private final NotificationEventClient notificationEventClient;
 
     public WebhookEndpointService(
             OrganizationWebhookEndpointRepository webhookRepository,
@@ -47,7 +49,8 @@ public class WebhookEndpointService {
             WebhookUrlValidator urlValidator,
             AuditLogService auditLogService,
             UsageMeter usageMeter,
-            EventPublisher eventPublisher) {
+            EventPublisher eventPublisher,
+            NotificationEventClient notificationEventClient) {
         this.webhookRepository = webhookRepository;
         this.organizationRepository = organizationRepository;
         this.secretCipher = secretCipher;
@@ -55,6 +58,7 @@ public class WebhookEndpointService {
         this.auditLogService = auditLogService;
         this.usageMeter = usageMeter;
         this.eventPublisher = eventPublisher;
+        this.notificationEventClient = notificationEventClient;
     }
 
     @Transactional(readOnly = true)
@@ -143,6 +147,7 @@ public class WebhookEndpointService {
         }
         WebhookDomainEvent event = WebhookDomainEvent.webhookTest(orgId, id);
         eventPublisher.publish(TopicNames.WEBHOOK_EVENTS, orgId.toString(), event);
+        notificationEventClient.relayWebhook(event);
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("endpointId", id.toString());
         auditLogService.record(

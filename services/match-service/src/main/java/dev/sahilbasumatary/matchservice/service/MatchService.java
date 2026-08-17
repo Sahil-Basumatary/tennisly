@@ -3,6 +3,7 @@ package dev.sahilbasumatary.matchservice.service;
 import dev.sahilbasumatary.common.event.MatchEvent;
 import dev.sahilbasumatary.common.kafka.EventPublisher;
 import dev.sahilbasumatary.common.kafka.TopicNames;
+import dev.sahilbasumatary.matchservice.client.NotificationEventClient;
 import dev.sahilbasumatary.matchservice.dto.request.CreateMatchPlayerRequest;
 import dev.sahilbasumatary.matchservice.dto.request.CreateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.RecordPointRequest;
@@ -49,6 +50,7 @@ public class MatchService {
     private final MatchEventLogService eventLogService;
     private final MatchRealtimeNotifier realtimeNotifier;
     private final EventPublisher eventPublisher;
+    private final NotificationEventClient notificationEventClient;
 
     public MatchService(
             MatchRepository matchRepository,
@@ -57,7 +59,8 @@ public class MatchService {
             MatchStateMachine stateMachine,
             MatchEventLogService eventLogService,
             MatchRealtimeNotifier realtimeNotifier,
-            EventPublisher eventPublisher) {
+            EventPublisher eventPublisher,
+            NotificationEventClient notificationEventClient) {
         this.matchRepository = matchRepository;
         this.pointRepository = pointRepository;
         this.eventLogRepository = eventLogRepository;
@@ -65,6 +68,7 @@ public class MatchService {
         this.eventLogService = eventLogService;
         this.realtimeNotifier = realtimeNotifier;
         this.eventPublisher = eventPublisher;
+        this.notificationEventClient = notificationEventClient;
     }
 
     @Transactional
@@ -361,5 +365,6 @@ public class MatchService {
     private void publish(UUID matchId, MatchEvent event, MatchResponse response) {
         realtimeNotifier.publishSnapshot(response);
         eventPublisher.publish(TopicNames.MATCH_EVENTS, matchId.toString(), event);
+        notificationEventClient.relayMatch(event);
     }
 }

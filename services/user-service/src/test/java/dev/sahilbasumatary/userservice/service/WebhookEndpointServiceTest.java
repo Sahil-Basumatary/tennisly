@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import dev.sahilbasumatary.common.kafka.EventPublisher;
+import dev.sahilbasumatary.userservice.client.NotificationEventClient;
 import dev.sahilbasumatary.userservice.context.RequestContext;
 import dev.sahilbasumatary.userservice.dto.request.CreateWebhookEndpointRequest;
 import dev.sahilbasumatary.userservice.entity.Organization;
@@ -43,6 +44,7 @@ class WebhookEndpointServiceTest {
     @Mock private AuditLogService auditLogService;
     @Mock private UsageMeter usageMeter;
     @Mock private EventPublisher eventPublisher;
+    @Mock private NotificationEventClient notificationEventClient;
     @InjectMocks private WebhookEndpointService service;
 
     @BeforeEach

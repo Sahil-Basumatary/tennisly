@@ -67,6 +67,8 @@ are attempted.
 
 The `notification-service` polls the `webhook_deliveries` table every 2 seconds
 for rows with status `PENDING` or `FAILED` whose `next_attempt_at <= now()`.
+On Render, Kafka is off, so user-service and match-service POST the same events
+to `/internal/events/**` (idempotent with the Kafka path).
 Each delivery is sent with a connect timeout of 3 seconds and a read timeout of
 10 seconds.
 

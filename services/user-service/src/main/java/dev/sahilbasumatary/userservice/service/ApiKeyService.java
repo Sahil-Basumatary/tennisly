@@ -3,6 +3,7 @@ package dev.sahilbasumatary.userservice.service;
 import dev.sahilbasumatary.common.event.WebhookDomainEvent;
 import dev.sahilbasumatary.common.kafka.EventPublisher;
 import dev.sahilbasumatary.common.kafka.TopicNames;
+import dev.sahilbasumatary.userservice.client.NotificationEventClient;
 import dev.sahilbasumatary.userservice.context.RequestContext;
 import dev.sahilbasumatary.userservice.dto.request.AdminCreateApiKeyRequest;
 import dev.sahilbasumatary.userservice.dto.response.AdminApiKeyResponse;
@@ -37,18 +38,21 @@ public class ApiKeyService {
     private final AuditLogService auditLogService;
     private final UsageMeter usageMeter;
     private final EventPublisher eventPublisher;
+    private final NotificationEventClient notificationEventClient;
 
     public ApiKeyService(
             OrganizationApiKeyRepository apiKeyRepository,
             OrganizationRepository organizationRepository,
             AuditLogService auditLogService,
             UsageMeter usageMeter,
-            EventPublisher eventPublisher) {
+            EventPublisher eventPublisher,
+            NotificationEventClient notificationEventClient) {
         this.apiKeyRepository = apiKeyRepository;
         this.organizationRepository = organizationRepository;
         this.auditLogService = auditLogService;
         this.usageMeter = usageMeter;
         this.eventPublisher = eventPublisher;
+        this.notificationEventClient = notificationEventClient;
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +124,7 @@ public class ApiKeyService {
                     key.getOrganization().getId(), key.getId(), key.getKeyPrefix());
             eventPublisher.publish(
                     TopicNames.WEBHOOK_EVENTS, key.getOrganization().getId().toString(), webhookEvent);
+            notificationEventClient.relayWebhook(webhookEvent);
             log.info("Admin revoked API key keyId={}", id);
         }
         return AdminApiKeyResponse.from(key);
