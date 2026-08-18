@@ -4,10 +4,12 @@ spring:
   application:
     name: analytics-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_ANALYTICS:tennisly_analytics}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_ANALYTICS:tennisly_analytics}${POSTGRES_URL_PARAMS:}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${POSTGRES_POOL_MAX:10}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -25,6 +27,7 @@ spring:
     uris: ${ELASTICSEARCH_URI:http://localhost:19200}
 eureka:
   client:
+    enabled: ${EUREKA_CLIENT_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:18761/eureka}
   instance:
@@ -37,6 +40,13 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    kafka:
+      enabled: ${MANAGEMENT_HEALTH_KAFKA_ENABLED:true}
+tennisly:
+  internal-token: ${GATEWAY_INTERNAL_TOKEN:}
+  kafka:
+    enabled: ${TENNISLY_KAFKA_ENABLED:true}
 analytics:
   clients:
     match-service-uri: ${ANALYTICS_MATCH_SERVICE_URI:http://match-service}

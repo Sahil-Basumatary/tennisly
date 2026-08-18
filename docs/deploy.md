@@ -177,9 +177,15 @@ Never commit live keys. Rotate after any paste into chat/logs.
 2. Wire gateway `AUTH_SERVICE_URI` / `USER_SERVICE_URI` / `USER_SERVICE_ROUTE_URI`; Clerk → `https://api-gateway-….onrender.com/api/auth/webhooks/clerk`.
 3. Auth HTTP-projects Clerk users/orgs to user-service (`USER_SERVICE_URI` on auth). Kafka stays off on free Render.
 4. Enable `/api/v1` against a live user-service (API keys).
-5. **notification-service:** Docker + Neon `tennisly_notifications`, Kafka off, HTTP ingest from user-service/match-service (`NOTIFICATION_SERVICE_URI` on those backends). Gateway `NOTIFICATION_SERVICE_URI`. Vercel `NOTIFICATION_SERVICE_URL` = gateway. Email/push stay `logging` until Resend/FCM.
+5. **notification-service:** Docker + Neon `tennisly_notifications`, Kafka off, HTTP ingest from user-service/match-service (`NOTIFICATION_SERVICE_URI` on those backends). Gateway `NOTIFICATION_SERVICE_URI`. Vercel `NOTIFICATION_SERVICE_URL` = gateway. Email/push stay `logging` until Resend/FCM. Live Test delivery is deferred (free-tier sleep + Clerk JWT 401).
 
-**8c:** analytics + Elasticsearch; R2 for replay objects; promote backends to private/always-on if budget allows.
+**8c sequence** (one slice at a time; Kafka stays off on free Render):
+
+1. **This cut:** Docker + shared token + Kafka/Eureka off for analytics-service. Neon `tennisly_analytics` (SQL only; do not create a Render service yet). Do **not** run Elasticsearch on Render free (512MB will OOM). HTTP ingest and Elastic Cloud come next.
+2. HTTP ingest from match-service (same dual-write as notification; Kafka stays off).
+3. Elastic Cloud (or equivalent) URL on analytics-service; gateway `ANALYTICS_SERVICE_URI`; Vercel `ANALYTICS_SERVICE_URL` = **gateway**. Reindex via `/internal/analytics/reindex`.
+4. R2 for replay objects.
+5. Paid always-on only if you want a live demo without sleep.
 
 ### 8b secrets (auth + user)
 
@@ -201,6 +207,17 @@ Never commit live keys. Rotate after any paste into chat/logs.
 | Vercel | `NOTIFICATION_SERVICE_URL` = **gateway** URL (same as `USER_SERVICE_URL`) |
 
 Two more free JVMs will sleep like tennis-data/match. Do not treat a cold 502 as a code regression.
+
+### 8c secrets (analytics)
+
+| Where | Secrets |
+|---|---|
+| Neon | Extra DB `tennisly_analytics` (same init SQL) |
+| Render analytics | Same token; `ELASTICSEARCH_URI` (Elastic Cloud, not a Render ES box); `ANALYTICS_MATCH_SERVICE_URI` = match-service HTTPS (not gateway — `/internal/**` is not routed); `POSTGRES_DB_ANALYTICS` |
+| Render gateway | `ANALYTICS_SERVICE_URI` = analytics-service HTTPS URL |
+| Vercel | `ANALYTICS_SERVICE_URL` = **gateway** URL (same as `USER_SERVICE_URL`) |
+
+Do not create the Render analytics service until `ELASTICSEARCH_URI` exists. Boot without ES fails.
 
 ## Local vs cloud
 
