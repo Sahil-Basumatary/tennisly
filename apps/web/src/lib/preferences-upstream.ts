@@ -35,7 +35,14 @@ export function noStoreJson<T>(data: T, init?: ResponseInit) {
 }
 
 function userServiceBase(): string {
-  return (process.env.USER_SERVICE_URL ?? "http://localhost:8082").replace(/\/$/, "");
+  const configured = process.env.USER_SERVICE_URL?.replace(/\/$/, "");
+  if (configured) {
+    return configured;
+  }
+  if (process.env.VERCEL) {
+    throw new PreferencesUpstreamError("USER_SERVICE_URL is not set", 503);
+  }
+  return "http://localhost:8082";
 }
 
 export type UserPreferences = {
