@@ -179,12 +179,12 @@ Never commit live keys. Rotate after any paste into chat/logs.
 4. Enable `/api/v1` against a live user-service (API keys).
 5. **notification-service:** Docker + Neon `tennisly_notifications`, Kafka off, HTTP ingest from user-service/match-service (`NOTIFICATION_SERVICE_URI` on those backends). Gateway `NOTIFICATION_SERVICE_URI`. Vercel `NOTIFICATION_SERVICE_URL` = gateway. Email/push stay `logging` until Resend/FCM. Live Test delivery is deferred (free-tier sleep + Clerk JWT 401).
 
-**8c sequence** (one slice at a time; Kafka stays off on free Render):
+**8c sequence** (engineering is this cut; Kafka stays off on free Render):
 
-1. **This cut:** Docker + shared token + Kafka/Eureka off for analytics-service. Neon `tennisly_analytics` (SQL only; do not create a Render service yet). Do **not** run Elasticsearch on Render free (512MB will OOM). HTTP ingest and Elastic Cloud come next.
-2. HTTP ingest from match-service (same dual-write as notification; Kafka stays off).
-3. Elastic Cloud (or equivalent) URL on analytics-service; gateway `ANALYTICS_SERVICE_URI`; Vercel `ANALYTICS_SERVICE_URL` = **gateway**. Reindex via `/internal/analytics/reindex`.
-4. R2 for replay objects.
+1. HTTP ingest match → analytics (`/internal/events/matches`) and match → replay (COMPLETED → materialize). Same dual-write as notification.
+2. R2-compatible S3 client (checksums + chunked encoding off). Gateway `GET /api/replays/**` permitAll; `REPLAY_SERVICE_URI` on gateway.
+3. Replay cloud-boot flags (Docker, token, Kafka/Eureka/config off, Neon `tennisly_replay`). Do **not** add analytics/replay web services to this Blueprint — boot without Elastic Cloud / R2 dies, and auto-create on push would crash the JVM.
+4. **Dashboard, not this commit:** Elastic Cloud URL, R2 bucket + access keys, Neon DBs, then create the two Render services by hand. Vercel `ANALYTICS_SERVICE_URL` / `REPLAY_SERVICE_URL` = **gateway**. Reindex via `/internal/analytics/reindex`.
 5. Paid always-on only if you want a live demo without sleep.
 
 ### 8b secrets (auth + user)
@@ -218,6 +218,22 @@ Two more free JVMs will sleep like tennis-data/match. Do not treat a cold 502 as
 | Vercel | `ANALYTICS_SERVICE_URL` = **gateway** URL (same as `USER_SERVICE_URL`) |
 
 Do not create the Render analytics service until `ELASTICSEARCH_URI` exists. Boot without ES fails.
+
+### 8c secrets (replay)
+
+| Where | Secrets |
+|---|---|
+| Neon | Extra DB `tennisly_replay` (same init SQL) |
+| Render replay (create by hand later) | Same token; `REPLAY_MATCH_SERVICE_URI` + `REPLAY_TENNIS_DATA_SERVICE_URI` = match / tennis-data HTTPS (not gateway — `/internal/**` is not routed); `POSTGRES_DB_REPLAY`; R2: `REPLAY_STORAGE_ENDPOINT` (`https://<accountid>.r2.cloudflarestorage.com`), `REPLAY_STORAGE_REGION=auto`, `REPLAY_STORAGE_BUCKET`, access/secret keys; `REPLAY_STORAGE_AUTO_CREATE_BUCKET=false` |
+| Render match | `ANALYTICS_SERVICE_URI` + `REPLAY_SERVICE_URI` = those HTTPS URLs (blank = no-op clients until the services exist) |
+| Render gateway | `REPLAY_SERVICE_URI` = replay-service HTTPS URL |
+| Vercel | `REPLAY_SERVICE_URL` = **gateway** URL (same as `USER_SERVICE_URL`) |
+
+Do not create the Render replay service until the R2 bucket exists. Boot without object storage fails puts, not health — but a missing Neon DB fails Flyway.
+
+When you create the two web services by hand, copy notification-service boot flags: `EUREKA_CLIENT_ENABLED=false`, `CONFIG_SERVER_ENABLED=false`, `TENNISLY_KAFKA_ENABLED=false`, `MANAGEMENT_HEALTH_KAFKA_ENABLED=false`, `SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration`, `POSTGRES_URL_PARAMS=?sslmode=require`, `POSTGRES_POOL_MAX=5`.
+
+**8c honesty:** the code path is complete. Live analytics and replays are not proven until Elastic Cloud, R2, Neon DBs, and the two Render services exist. Paid always-on is a dashboard choice, not a code change.
 
 ## Local vs cloud
 

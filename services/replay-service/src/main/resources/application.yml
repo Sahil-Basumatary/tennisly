@@ -4,10 +4,13 @@ spring:
   application:
     name: replay-service
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_REPLAY:tennisly_replay}
+    # POSTGRES_URL_PARAMS carries managed-provider requirements (Neon needs ?sslmode=require).
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:15432}/${POSTGRES_DB_REPLAY:tennisly_replay}${POSTGRES_URL_PARAMS:}
     username: ${POSTGRES_USER:tennisly}
     password: ${POSTGRES_PASSWORD:tennisly_dev}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${POSTGRES_POOL_MAX:10}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -23,6 +26,7 @@ spring:
       auto-offset-reset: earliest
 eureka:
   client:
+    enabled: ${EUREKA_CLIENT_ENABLED:true}
     service-url:
       defaultZone: ${EUREKA_URI:http://localhost:18761/eureka}
   instance:
@@ -35,12 +39,20 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    kafka:
+      enabled: ${MANAGEMENT_HEALTH_KAFKA_ENABLED:true}
+tennisly:
+  internal-token: ${GATEWAY_INTERNAL_TOKEN:}
+  kafka:
+    enabled: ${TENNISLY_KAFKA_ENABLED:true}
 replay:
   clients:
     match-service-uri: ${REPLAY_MATCH_SERVICE_URI:http://match-service}
     tennis-data-service-uri: ${REPLAY_TENNIS_DATA_SERVICE_URI:http://tennis-data-service}
     connect-timeout: ${REPLAY_CLIENT_CONNECT_TIMEOUT:PT5S}
-    read-timeout: ${REPLAY_CLIENT_READ_TIMEOUT:PT10S}
+    # Full point tape from a cold match-service exceeds 10s.
+    read-timeout: ${REPLAY_CLIENT_READ_TIMEOUT:PT20S}
   engine:
     frames-per-second: ${REPLAY_ENGINE_FPS:60}
     integration-step-seconds: ${REPLAY_ENGINE_STEP:0.002}

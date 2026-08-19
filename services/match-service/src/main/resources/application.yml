@@ -36,6 +36,8 @@ tennisly:
   clients:
     tennis-data-service-uri: ${TENNIS_DATA_SERVICE_URI:http://localhost:18083}
     notification-service-uri: ${NOTIFICATION_SERVICE_URI:}
+    analytics-service-uri: ${ANALYTICS_SERVICE_URI:}
+    replay-service-uri: ${REPLAY_SERVICE_URI:}
   ingest:
     enabled: ${MATCH_INGEST_ENABLED:true}
     live-fixed-delay-ms: ${MATCH_INGEST_LIVE_DELAY_MS:60000}

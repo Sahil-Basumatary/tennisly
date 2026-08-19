@@ -82,6 +82,7 @@ public class SecurityConfig {
                         .pathMatchers("/ws/matches/**").permitAll()
                         .pathMatchers("/api/analytics/views/**").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/analytics/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/replays/**").permitAll()
                         .pathMatchers("/api/**").authenticated()
                         .anyExchange().authenticated()
                 )

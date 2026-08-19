@@ -6,8 +6,8 @@
 # is the advertised public origin (api.tennisly.tv later).
 #
 # Create databases tennisly_tennis_data, tennisly_matches, tennisly_auth,
-# tennisly_users, tennisly_notifications, and tennisly_analytics in Neon before
-# first deploy — Flyway migrates schemas, it does not create databases.
+# tennisly_users, tennisly_notifications, tennisly_analytics, and tennisly_replay
+# in Neon before first deploy — Flyway migrates schemas, it does not create databases.
 
 services:
   - type: redis
@@ -65,6 +65,8 @@ services:
       - key: NOTIFICATION_SERVICE_URI
         sync: false
       - key: ANALYTICS_SERVICE_URI
+        sync: false
+      - key: REPLAY_SERVICE_URI
         sync: false
 
   - type: web
@@ -171,6 +173,10 @@ services:
       - key: TENNIS_DATA_SERVICE_URI
         sync: false
       - key: NOTIFICATION_SERVICE_URI
+        sync: false
+      - key: ANALYTICS_SERVICE_URI
+        sync: false
+      - key: REPLAY_SERVICE_URI
         sync: false
       - key: MATCH_SERVICE_WS_ALLOWED_ORIGINS
         value: https://tennisly.tv,https://www.tennisly.tv,http://localhost:3000

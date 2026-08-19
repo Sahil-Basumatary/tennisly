@@ -25,7 +25,7 @@ public record ReplayClientProperties(
             connectTimeout = Duration.ofSeconds(5);
         }
         if (readTimeout == null) {
-            readTimeout = Duration.ofSeconds(10);
+            readTimeout = Duration.ofSeconds(20);
         }
     }
 }

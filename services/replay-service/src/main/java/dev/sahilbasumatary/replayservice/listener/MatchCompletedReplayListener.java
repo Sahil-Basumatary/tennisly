@@ -1,44 +1,35 @@
 package dev.sahilbasumatary.replayservice.listener;
 
+import dev.sahilbasumatary.common.event.BaseEvent;
 import dev.sahilbasumatary.common.event.MatchEvent;
 import dev.sahilbasumatary.common.kafka.TopicNames;
-import dev.sahilbasumatary.replayservice.service.ReplayArtifactService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import dev.sahilbasumatary.replayservice.service.MatchCompletedReplayHandler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-/**
- * When a match flips to COMPLETED, materialize the deterministic replay into object storage so the
- * next GET is a cheap read. Failures retry then land on the match-events DLQ; match-service itself
- * never blocks on this path.
- */
 @Component
+@Profile("!it")
+@ConditionalOnProperty(
+        name = "tennisly.kafka.enabled",
+        havingValue = "true",
+        matchIfMissing = true)
 public class MatchCompletedReplayListener {
 
-    private static final Logger log = LoggerFactory.getLogger(MatchCompletedReplayListener.class);
+    private final MatchCompletedReplayHandler matchCompletedReplayHandler;
 
-    private final ReplayArtifactService replayArtifactService;
-
-    public MatchCompletedReplayListener(ReplayArtifactService replayArtifactService) {
-        this.replayArtifactService = replayArtifactService;
+    public MatchCompletedReplayListener(MatchCompletedReplayHandler matchCompletedReplayHandler) {
+        this.matchCompletedReplayHandler = matchCompletedReplayHandler;
     }
 
-    @KafkaListener(topics = TopicNames.MATCH_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
-    public void onMatchEvent(MatchEvent event) {
-        if (event == null || event.getMatchId() == null) {
-            return;
+    @KafkaListener(
+            topics = TopicNames.MATCH_EVENTS,
+            groupId = "${spring.kafka.consumer.group-id}",
+            containerFactory = "kafkaListenerContainerFactory")
+    public void onMatchEvent(BaseEvent baseEvent) {
+        if (baseEvent instanceof MatchEvent event) {
+            matchCompletedReplayHandler.handle(event);
         }
-        if (!MatchEvent.MATCH_STATUS_CHANGED.equals(event.getEventType())) {
-            return;
-        }
-        if (!"COMPLETED".equals(event.getStatus())) {
-            return;
-        }
-        log.info(
-                "Match completed — materializing replay matchId={} eventId={}",
-                event.getMatchId(),
-                event.getEventId());
-        replayArtifactService.materialize(event.getMatchId());
     }
 }

@@ -3,7 +3,7 @@ package dev.sahilbasumatary.matchservice.service;
 import dev.sahilbasumatary.common.event.MatchEvent;
 import dev.sahilbasumatary.common.kafka.EventPublisher;
 import dev.sahilbasumatary.common.kafka.TopicNames;
-import dev.sahilbasumatary.matchservice.client.NotificationEventClient;
+import dev.sahilbasumatary.matchservice.client.MatchEventFanout;
 import dev.sahilbasumatary.matchservice.dto.request.CreateMatchPlayerRequest;
 import dev.sahilbasumatary.matchservice.dto.request.CreateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.RecordPointRequest;
@@ -50,7 +50,7 @@ public class MatchService {
     private final MatchEventLogService eventLogService;
     private final MatchRealtimeNotifier realtimeNotifier;
     private final EventPublisher eventPublisher;
-    private final NotificationEventClient notificationEventClient;
+    private final MatchEventFanout matchEventFanout;
 
     public MatchService(
             MatchRepository matchRepository,
@@ -60,7 +60,7 @@ public class MatchService {
             MatchEventLogService eventLogService,
             MatchRealtimeNotifier realtimeNotifier,
             EventPublisher eventPublisher,
-            NotificationEventClient notificationEventClient) {
+            MatchEventFanout matchEventFanout) {
         this.matchRepository = matchRepository;
         this.pointRepository = pointRepository;
         this.eventLogRepository = eventLogRepository;
@@ -68,7 +68,7 @@ public class MatchService {
         this.eventLogService = eventLogService;
         this.realtimeNotifier = realtimeNotifier;
         this.eventPublisher = eventPublisher;
-        this.notificationEventClient = notificationEventClient;
+        this.matchEventFanout = matchEventFanout;
     }
 
     @Transactional
@@ -365,6 +365,6 @@ public class MatchService {
     private void publish(UUID matchId, MatchEvent event, MatchResponse response) {
         realtimeNotifier.publishSnapshot(response);
         eventPublisher.publish(TopicNames.MATCH_EVENTS, matchId.toString(), event);
-        notificationEventClient.relayMatch(event);
+        matchEventFanout.relay(event);
     }
 }

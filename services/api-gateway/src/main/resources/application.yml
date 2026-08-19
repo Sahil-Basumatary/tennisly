@@ -54,6 +54,10 @@ spring:
           uri: ${ANALYTICS_SERVICE_URI:lb://analytics-service}
           predicates:
             - Path=/api/analytics/**
+        - id: replay-service
+          uri: ${REPLAY_SERVICE_URI:lb://replay-service}
+          predicates:
+            - Path=/api/replays/**
         - id: public-api-v1-tennis
           uri: ${TENNIS_DATA_SERVICE_URI:lb://tennis-data-service}
           predicates:

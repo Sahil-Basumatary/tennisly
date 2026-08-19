@@ -1,6 +1,8 @@
 package dev.sahilbasumatary.analyticsservice.config;
 
+import dev.sahilbasumatary.common.security.InternalToken;
 import java.net.URI;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.ClientHttpRequestFactories;
 import org.springframework.boot.web.client.ClientHttpRequestFactorySettings;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
@@ -21,19 +23,22 @@ public class AnalyticsClientConfig {
     @Bean
     RestClient matchServiceRestClient(
             @LoadBalanced RestClient.Builder loadBalancedBuilder,
-            AnalyticsClientProperties properties) {
+            AnalyticsClientProperties properties,
+            @Value("${tennisly.internal-token:}") String internalToken) {
         String uri = properties.matchServiceUri();
         RestClient.Builder builder =
                 usesDiscovery(uri) ? loadBalancedBuilder.clone() : RestClient.builder();
-        return builder.baseUrl(uri).requestFactory(requestFactory(properties)).build();
+        builder.baseUrl(uri).requestFactory(requestFactory(properties));
+        if (InternalToken.isEnabled(internalToken)) {
+            builder.defaultHeader(InternalToken.HEADER, internalToken);
+        }
+        return builder.build();
     }
 
-    /**
-     * The load balancer resolves the host as a Eureka service id, so an absolute host:port
-     * override from local runs must bypass it rather than be looked up as "localhost".
-     */
     private static boolean usesDiscovery(String uri) {
-        return URI.create(uri).getPort() == -1;
+        String host = URI.create(uri).getHost();
+        // Eureka ids have no dots; Render hostnames do. Port-only checks treat HTTPS as discovery.
+        return host != null && !host.contains(".");
     }
 
     private ClientHttpRequestFactory requestFactory(AnalyticsClientProperties properties) {
