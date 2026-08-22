@@ -243,7 +243,8 @@ When you create the two web services by hand, copy notification-service boot fla
 | Token blank → filter off | Token required on backends |
 | Web → localhost services | Web → gateway HTTPS |
 
-## After Phase 8 — performance achievement (later)
+## After Phase 8 — performance
 
-Ultra-low-latency work returns as a **measured** Week 31+ achievement.  
-**Honesty bound:** browser→Vercel→Render RTT cannot be “everything under 1ms” on the public internet. Sub-1ms targets apply to in-process / same-AZ Redis / JVM hot paths with published p50/p99 — not marketing fiction.
+See [docs/slo.md](slo.md) and [docs/performance.md](performance.md). Gateway, tennis-data, and match stay **Starter** in this Blueprint so a later apply does not sleep them. Auth/user remain free.
+
+**Honesty bound:** browser→Vercel→Render RTT cannot be “everything under 1ms” on the public internet. Sub-1ms targets apply to in-process JMH hot paths with published p50/p99.

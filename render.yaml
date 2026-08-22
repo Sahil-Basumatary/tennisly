@@ -19,7 +19,7 @@ services:
   - type: web
     name: api-gateway
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./services/api-gateway/Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
@@ -72,7 +72,7 @@ services:
   - type: web
     name: tennis-data-service
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./services/tennis-data-service/Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
@@ -127,7 +127,7 @@ services:
   - type: web
     name: match-service
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./services/match-service/Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
