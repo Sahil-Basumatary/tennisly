@@ -11,7 +11,7 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | Integration | Testcontainers Postgres (`PublicWebhookApiIT`, `WebhookDeliveryWorkerIT`) | Local + CI (Docker required); skips cleanly if Docker is unavailable |
 | Frontend unit | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
-| Load | k6 | Public reads: `./scripts/k6-load.sh`; local Postgres commit/outbox writes: `make load-durable`; `/api/v1`: `tests/load/public-api-v1.js` |
+| Load | k6 | Public reads: `./scripts/k6-load.sh`; local Postgres writes: `make load-durable`; STOMP fanout: `make load-websocket`; `/api/v1`: `tests/load/public-api-v1.js` |
 | Security scan | OWASP ZAP api-scan | Local `make zap-api`; optional CI when `RUN_ZAP=true` + staging secrets |
 | Contract | Pact JVM (`api-gateway` ↔ tennis-data players, match-service matches, user-service webhooks) | `make test-pact`; committed JSON under `tests/pacts/` |
 | Pact / mutation | Mutation still planned | Pact gated via module tests in CI |
@@ -39,6 +39,12 @@ make test-pact
 
 # Broader suite (includes gateway + common + users)
 ./mvnw -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service,services/match-service,services/tennis-data-service,services/analytics-service -am test
+
+# Local Postgres commit → STOMP client delivery, p99 < 50 ms
+make load-websocket
+
+# All clients on one topic; this is not a 100k claim
+WS_MODE=hot WS_CLIENTS=500 make load-websocket
 
 # Coverage HTML: services/<svc>/target/site/jacoco/index.html
 ./mvnw test jacoco:report -pl services/tennisly-common -am

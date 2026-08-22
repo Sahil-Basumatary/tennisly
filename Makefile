@@ -177,6 +177,10 @@ load-v1: ## k6 /api/v1 (needs API_KEY + warm user-service)
 load-durable: ## Local HTTP -> Postgres point/outbox durability benchmark
 	@$(LOAD_ENV) ./scripts/match-durable-load.sh
 
+.PHONY: load-websocket
+load-websocket: ## Local STOMP fanout benchmark (WS_MODE=realistic|hot)
+	@$(LOAD_ENV) ./scripts/match-websocket-load.sh
+
 .PHONY: jmh
 jmh: ## Forked JMH uber-jar (p99 < 1ms gates)
 	@$(LOAD_ENV) ./scripts/jmh-run.sh
