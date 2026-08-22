@@ -8,11 +8,8 @@ import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
 import dev.sahilbasumatary.matchservice.metrics.MatchTimers;
 import java.time.Instant;
 import java.util.UUID;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -24,19 +21,19 @@ public class MatchEventDispatch {
     private final MatchRealtimeNotifier realtimeNotifier;
     private final EventPublisher eventPublisher;
     private final MatchOutboxWriter outboxWriter;
-    private final Executor matchFanoutExecutor;
+    private final MatchFanoutScheduler matchFanoutScheduler;
     private final MatchTimers matchTimers;
 
     public MatchEventDispatch(
             MatchRealtimeNotifier realtimeNotifier,
             EventPublisher eventPublisher,
             MatchOutboxWriter outboxWriter,
-            @Qualifier("matchFanoutExecutor") Executor matchFanoutExecutor,
+            MatchFanoutScheduler matchFanoutScheduler,
             MatchTimers matchTimers) {
         this.realtimeNotifier = realtimeNotifier;
         this.eventPublisher = eventPublisher;
         this.outboxWriter = outboxWriter;
-        this.matchFanoutExecutor = matchFanoutExecutor;
+        this.matchFanoutScheduler = matchFanoutScheduler;
         this.matchTimers = matchTimers;
     }
 
@@ -47,14 +44,14 @@ public class MatchEventDispatch {
 
     private void scheduleFanout(UUID matchId, MatchEvent event, MatchResponse response) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            submitFanout(matchId, event, response, Instant.now(), System.nanoTime());
+            submitFanout(matchId, event, response, Instant.now());
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        submitFanout(matchId, event, response, Instant.now(), System.nanoTime());
+                        submitFanout(matchId, event, response, Instant.now());
                     }
                 });
     }
@@ -63,25 +60,19 @@ public class MatchEventDispatch {
             UUID matchId,
             MatchEvent event,
             MatchResponse response,
-            Instant commitObservedAt,
-            long commitObservedNanos) {
-        matchFanoutExecutor.execute(
-                () -> publishAfterCommit(
-                        matchId, event, response, commitObservedAt, commitObservedNanos));
+            Instant commitObservedAt) {
+        matchFanoutScheduler.execute(
+                matchId, () -> publishAfterCommit(matchId, event, response, commitObservedAt));
     }
 
     private void publishAfterCommit(
             UUID matchId,
             MatchEvent event,
             MatchResponse response,
-            Instant commitObservedAt,
-            long commitObservedNanos) {
+            Instant commitObservedAt) {
         try {
             realtimeNotifier.publish(
                     MatchLiveEventResponse.from(event, response, commitObservedAt));
-            matchTimers
-                    .livePublishAfterCommit()
-                    .record(System.nanoTime() - commitObservedNanos, TimeUnit.NANOSECONDS);
         } catch (RuntimeException ex) {
             matchTimers.livePublishFailure().increment();
             log.warn(

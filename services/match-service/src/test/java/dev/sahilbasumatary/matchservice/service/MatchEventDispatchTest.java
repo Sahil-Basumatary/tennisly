@@ -37,10 +37,11 @@ class MatchEventDispatchTest {
     private final EventPublisher eventPublisher = mock(EventPublisher.class);
     private final MatchOutboxWriter outboxWriter = mock(MatchOutboxWriter.class);
     private final Executor directExecutor = command -> Objects.requireNonNull(command).run();
+    private final MatchFanoutScheduler fanoutScheduler = new MatchFanoutScheduler(directExecutor);
     private final MatchTimers matchTimers = new MatchTimers(new SimpleMeterRegistry());
     private final MatchEventDispatch dispatch =
             new MatchEventDispatch(
-                    realtimeNotifier, eventPublisher, outboxWriter, directExecutor, matchTimers);
+                    realtimeNotifier, eventPublisher, outboxWriter, fanoutScheduler, matchTimers);
 
     @Test
     void persistsOutboxBeforeImmediateFanoutWithoutTransaction() {

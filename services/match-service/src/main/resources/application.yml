@@ -33,6 +33,11 @@ spring:
 tennisly:
   websocket:
     allowed-origins: ${MATCH_SERVICE_WS_ALLOWED_ORIGINS:http://localhost:3000}
+    redis-channel: ${MATCH_LIVE_REDIS_CHANNEL:match-live-events}
+    send-time-limit-ms: ${MATCH_WS_SEND_TIME_LIMIT_MS:500}
+    send-buffer-limit-bytes: ${MATCH_WS_SEND_BUFFER_BYTES:16384}
+    outbound-pool-size: ${MATCH_WS_OUTBOUND_POOL:16}
+    outbound-queue-capacity: ${MATCH_WS_OUTBOUND_QUEUE:20000}
   clients:
     tennis-data-service-uri: ${TENNIS_DATA_SERVICE_URI:http://localhost:18083}
     notification-service-uri: ${NOTIFICATION_SERVICE_URI:}

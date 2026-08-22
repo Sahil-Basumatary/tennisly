@@ -14,9 +14,9 @@ public class AsyncConfig {
     @Bean(name = "matchFanoutExecutor")
     Executor matchFanoutExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(4);
-        executor.setQueueCapacity(200);
+        executor.setCorePoolSize(8);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(1_000);
         executor.setThreadNamePrefix("match-fanout-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();

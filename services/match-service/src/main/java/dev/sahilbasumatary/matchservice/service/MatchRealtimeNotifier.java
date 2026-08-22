@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -21,18 +22,39 @@ public class MatchRealtimeNotifier {
     private final SimpMessagingTemplate messagingTemplate;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final String liveEventChannel;
 
     public MatchRealtimeNotifier(
             SimpMessagingTemplate messagingTemplate,
             StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            @Value("${tennisly.websocket.redis-channel:match-live-events}") String liveEventChannel) {
         this.messagingTemplate = messagingTemplate;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.liveEventChannel = liveEventChannel;
     }
 
     public void publish(MatchLiveEventResponse event) {
         cacheSnapshot(event.snapshot());
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(event);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Failed to serialize live match event", ex);
+        }
+        try {
+            Long subscribers = redisTemplate.convertAndSend(liveEventChannel, json);
+            if (subscribers == null || subscribers == 0) {
+                publishLocally(event);
+            }
+        } catch (RuntimeException ex) {
+            publishLocally(event);
+            throw ex;
+        }
+    }
+
+    public void publishLocally(MatchLiveEventResponse event) {
         messagingTemplate.convertAndSend(topic(event.matchId()), event);
     }
 
@@ -57,8 +79,12 @@ public class MatchRealtimeNotifier {
                             cacheKey(response.id()),
                             objectMapper.writeValueAsString(response),
                             LIVE_SNAPSHOT_TTL);
-        } catch (JsonProcessingException ex) {
-            log.warn("Failed to serialize live match snapshot matchId={}", response.id(), ex);
+        } catch (Exception ex) {
+            log.warn(
+                    "Failed to cache live match snapshot matchId={}: {}",
+                    response.id(),
+                    ex.getMessage());
+            log.debug("Live match snapshot cache failure", ex);
         }
     }
 
