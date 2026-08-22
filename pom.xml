@@ -41,6 +41,7 @@
     <module>services/analytics-service</module>
     <module>services/notification-service</module>
     <module>services/contract-tests</module>
+    <module>services/performance-benchmarks</module>
   </modules>
   <dependencyManagement>
     <dependencies>

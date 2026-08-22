@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>dev.sahilbasumatary</groupId>
+    <artifactId>tennisly-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <artifactId>performance-benchmarks</artifactId>
+  <name>Performance Benchmarks</name>
+  <description>JMH in-process hot paths. Sub-1ms p99 only applies here.</description>
+  <properties>
+    <jmh.version>1.37</jmh.version>
+    <jacoco.skip>true</jacoco.skip>
+    <hotpath.dir>${project.build.directory}/generated-sources/hotpath</hotpath.dir>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>${jmh.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>copy-hotpaths</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${hotpath.dir}"/>
+                <copy file="${project.basedir}/../api-gateway/src/main/java/dev/sahilbasumatary/apigateway/ratelimit/RateLimitDecision.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/apigateway/ratelimit"/>
+                <copy file="${project.basedir}/../user-service/src/main/java/dev/sahilbasumatary/userservice/security/ApiKeyHasher.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/userservice/security"/>
+                <copy file="${project.basedir}/../match-service/src/main/java/dev/sahilbasumatary/matchservice/service/MatchStateMachine.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/matchservice/service"/>
+                <copy file="${project.basedir}/../match-service/src/main/java/dev/sahilbasumatary/matchservice/entity/MatchStatus.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/matchservice/entity"/>
+                <copy file="${project.basedir}/../match-service/src/main/java/dev/sahilbasumatary/matchservice/exception/InvalidMatchStateException.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/matchservice/exception"/>
+                <copy file="${project.basedir}/../analytics-service/src/main/java/dev/sahilbasumatary/analyticsservice/service/TapeMetricAggregator.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/analyticsservice/service"/>
+                <copy file="${project.basedir}/../analytics-service/src/main/java/dev/sahilbasumatary/analyticsservice/client/dto/MatchSummary.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/analyticsservice/client/dto"/>
+                <copy file="${project.basedir}/../analytics-service/src/main/java/dev/sahilbasumatary/analyticsservice/client/dto/MatchPointSummary.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/analyticsservice/client/dto"/>
+                <copy file="${project.basedir}/../analytics-service/src/main/java/dev/sahilbasumatary/analyticsservice/client/dto/MatchPlayerSummary.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/analyticsservice/client/dto"/>
+                <copy file="${project.basedir}/../analytics-service/src/main/java/dev/sahilbasumatary/analyticsservice/domain/TapeMatchMetrics.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/analyticsservice/domain"/>
+                <copy file="${project.basedir}/../analytics-service/src/main/java/dev/sahilbasumatary/analyticsservice/domain/TapeSideMetrics.java"
+                      todir="${hotpath.dir}/dev/sahilbasumatary/analyticsservice/domain"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>add-hotpath-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${hotpath.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.openjdk.jmh</groupId>
+              <artifactId>jmh-generator-annprocess</artifactId>
+              <version>${jmh.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.2</version>
+        <executions>
+          <execution>
+            <id>jmh-uber-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration combine.self="override">
+              <finalName>benchmarks</finalName>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>dev.sahilbasumatary.perf.BenchmarkRunner</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

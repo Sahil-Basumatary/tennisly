@@ -186,6 +186,35 @@ jobs:
       - name: Build
         run: mvn package -DskipTests -B
 
+  performance:
+    name: Performance budgets
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    env:
+      JMH_QUICK: 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+      - name: Package JMH module
+        run: mvn -pl services/performance-benchmarks -am package -DskipTests -B
+      - name: JMH hot-path p99 budget
+        run: java -Djmh.output="$PWD/services/performance-benchmarks/target/jmh-result.json" -jar services/performance-benchmarks/target/benchmarks.jar
+      - name: Upload JMH result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmh-result
+          path: services/performance-benchmarks/target/jmh-result.json
+          if-no-files-found: ignore
+          retention-days: 14
+
   dependency-review:
     name: Dependency Review
     if: github.event_name == 'pull_request'
@@ -203,13 +232,13 @@ jobs:
 
   ci-success:
     name: CI Success
-    needs: [frontend, backend, dependency-review, e2e, zap, gitleaks]
+    needs: [frontend, backend, performance, dependency-review, e2e, zap, gitleaks]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check job results
         run: |
-          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]] || [[ "${{ needs.zap.result }}" == "failure" ]] || [[ "${{ needs.gitleaks.result }}" == "failure" ]]; then
+          if [[ "${{ needs.frontend.result }}" == "failure" ]] || [[ "${{ needs.backend.result }}" == "failure" ]] || [[ "${{ needs.performance.result }}" == "failure" ]] || [[ "${{ needs.dependency-review.result }}" == "failure" ]] || [[ "${{ needs.e2e.result }}" == "failure" ]] || [[ "${{ needs.zap.result }}" == "failure" ]] || [[ "${{ needs.gitleaks.result }}" == "failure" ]]; then
             echo "One or more jobs failed"
             exit 1
           fi
