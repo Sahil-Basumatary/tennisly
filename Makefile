@@ -178,8 +178,28 @@ load-durable: ## Local HTTP -> Postgres point/outbox durability benchmark
 	@$(LOAD_ENV) ./scripts/match-durable-load.sh
 
 .PHONY: load-websocket
-load-websocket: ## Local STOMP fanout benchmark (WS_MODE=realistic|hot)
+load-websocket: ## Local STOMP/Redis fanout benchmark (MATCH_INSTANCE_COUNT=1+)
 	@$(LOAD_ENV) ./scripts/match-websocket-load.sh
+
+.PHONY: load-websocket-backpressure
+load-websocket-backpressure: ## Slow-client isolation; gates healthy-client p99
+	@$(LOAD_ENV) WS_MODE=hot WS_CLIENTS=40 SLOW_CLIENT_PERCENT=20 SLOW_CLIENT_DELAY_MS=250 \
+		WS_DURATION=8s WRITER_START=2s WS_HOLD_MS=10000 SUBSCRIBER_MAX_DURATION=14s \
+		POINT_INTERVAL_MS=100 ./scripts/match-websocket-load.sh
+
+.PHONY: load-websocket-recovery
+load-websocket-recovery: ## Reconnect + Postgres replay; unrecovered gaps must be 0
+	@$(LOAD_ENV) WS_MODE=hot WS_CLIENTS=20 SUBSCRIBER_ITERATIONS=3 WS_HOLD_MS=2000 \
+		RECONNECT_PAUSE_MS=1500 REPLAY_ON_RECONNECT=true REQUIRE_REPLAY=true WS_DURATION=12s WRITER_START=2s \
+		SUBSCRIBER_MAX_DURATION=18s POINT_INTERVAL_MS=100 ./scripts/match-websocket-load.sh
+
+.PHONY: load-live-capacity
+load-live-capacity: ## Staged sanity, backpressure, replay, failover (not a 100k claim)
+	@$(LOAD_ENV) ./scripts/match-live-capacity.sh
+
+.PHONY: load-live-scale
+load-live-scale: ## Staged 100→100k live WS proof (needs cluster+approval for >10k)
+	@$(LOAD_ENV) ./scripts/match-live-scale.sh
 
 .PHONY: jmh
 jmh: ## Forked JMH uber-jar (p99 < 1ms gates)

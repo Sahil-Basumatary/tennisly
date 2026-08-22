@@ -81,3 +81,35 @@ export async function fetchUpstreamMatchPoints(matchId: string): Promise<Upstrea
   if (response.status === 404) return [];
   return readJson<UpstreamMatchPoint[]>(response);
 }
+
+export type UpstreamMatchEvent = {
+  id: string;
+  sequence: number;
+  eventType: string;
+  payload?: Record<string, unknown>;
+  createdAt?: string;
+};
+
+export async function fetchUpstreamMatchEvents(
+  matchId: string,
+  afterSequence = 0,
+  limit = 100,
+): Promise<UpstreamMatchEvent[]> {
+  const params = new URLSearchParams();
+  params.set("afterSequence", String(Math.max(0, afterSequence)));
+  params.set("limit", String(Math.max(1, Math.min(limit, 1_000))));
+  let response: Response;
+  try {
+    response = await fetch(
+      `${matchServiceBase()}/api/matches/${matchId}/events?${params}`,
+      {
+        headers: upstreamHeaders(),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    throw new MatchUpstreamError("match-service unreachable", 502);
+  }
+  if (response.status === 404) return [];
+  return readJson<UpstreamMatchEvent[]>(response);
+}

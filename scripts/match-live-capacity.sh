@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPORT_DIR="${PERF_REPORT_DIR:-$ROOT/.run/performance}"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+SUMMARY="$REPORT_DIR/live-capacity-${STAMP}.txt"
+STATUS=0
+
+mkdir -p "$REPORT_DIR"
+: >"$SUMMARY"
+
+run_stage() {
+  local name="$1"
+  shift
+  echo "=== capacity stage $name ===" | tee -a "$SUMMARY"
+  if env RUN_ID="cap-${STAMP}-${name}" "$@" "$ROOT/scripts/match-websocket-load.sh" | tee -a "$SUMMARY"; then
+    echo "stage $name PASS" | tee -a "$SUMMARY"
+  else
+    echo "stage $name FAIL" | tee -a "$SUMMARY"
+    STATUS=1
+  fi
+}
+
+cd "$ROOT"
+run_stage sanity-hot \
+  WS_MODE=hot WS_CLIENTS=20 MATCH_INSTANCE_COUNT=1 \
+  WS_DURATION=8s WRITER_START=2s WS_HOLD_MS=10000 SUBSCRIBER_MAX_DURATION=14s \
+  POINT_INTERVAL_MS=100 WARMUP_POINTS=5 DELIVERY_P99_MS=50
+
+run_stage backpressure \
+  WS_MODE=hot WS_CLIENTS=40 MATCH_INSTANCE_COUNT=1 \
+  SLOW_CLIENT_PERCENT=20 SLOW_CLIENT_DELAY_MS=250 \
+  WS_DURATION=8s WRITER_START=2s WS_HOLD_MS=10000 SUBSCRIBER_MAX_DURATION=14s \
+  POINT_INTERVAL_MS=100 WARMUP_POINTS=5 DELIVERY_P99_MS=50
+
+run_stage recovery-replay \
+  WS_MODE=hot WS_CLIENTS=20 MATCH_INSTANCE_COUNT=1 \
+  SUBSCRIBER_ITERATIONS=3 WS_HOLD_MS=2000 RECONNECT_PAUSE_MS=1500 \
+  REPLAY_ON_RECONNECT=true REQUIRE_REPLAY=true \
+  WS_DURATION=12s WRITER_START=2s SUBSCRIBER_MAX_DURATION=18s \
+  POINT_INTERVAL_MS=100 WARMUP_POINTS=5 DELIVERY_P99_MS=50
+
+run_stage failover \
+  WS_MODE=hot WS_CLIENTS=20 MATCH_INSTANCE_COUNT=2 \
+  SUBSCRIBER_ITERATIONS=3 WS_HOLD_MS=4000 RECONNECT_PAUSE_MS=500 \
+  REPLAY_ON_RECONNECT=true REQUIRE_REPLAY=true KILL_NODE=2 KILL_AFTER_S=6 \
+  WS_DURATION=12s WRITER_START=2s SUBSCRIBER_MAX_DURATION=20s \
+  POINT_INTERVAL_MS=100 WARMUP_POINTS=5 DELIVERY_P99_MS=80
+
+echo "capacity-summary=$SUMMARY status=$STATUS"
+exit "$STATUS"
