@@ -31,8 +31,10 @@ public class PlayerController {
     @GetMapping
     public ResponseEntity<List<PlayerResponse>> listPlayers(
             @RequestParam(required = false) Gender gender,
-            @RequestParam(required = false) String nationality) {
-        return ResponseEntity.ok(playerService.listPlayers(gender, nationality));
+            @RequestParam(required = false) String nationality,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(playerService.listPlayers(gender, nationality, page, size));
     }
 
     @PostMapping("/resolve")

@@ -3,16 +3,13 @@ import { GlobalNav } from "@/components/layout/GlobalNav";
 import { ScoresStrip } from "@/components/layout/ScoresStrip";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SkipToContent } from "@/components/layout/SkipToContent";
-import { getScoresFeed } from "@/services/scores";
 
 export async function SiteChrome({ children }: { children: React.ReactNode }) {
-  const feed = await getScoresFeed();
-
   return (
     <>
       <SkipToContent />
       <AppShell
-        ticker={<ScoresStrip items={feed.items} />}
+        ticker={<ScoresStrip />}
         nav={<GlobalNav />}
         footer={<SiteFooter />}
       >

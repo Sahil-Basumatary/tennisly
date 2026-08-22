@@ -60,7 +60,7 @@ class PlayerControllerProviderPactTest {
     @State("players exist")
     void playersExist() {
         Instant stamped = Instant.parse("2024-01-01T12:00:00Z");
-        when(playerService.listPlayers(isNull(), isNull()))
+        when(playerService.listPlayers(isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(
                         List.of(
                                 new PlayerResponse(

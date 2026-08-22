@@ -1,4 +1,5 @@
 import type { UpstreamMatchPoint } from "@/lib/match-stats";
+import { isReplayMatchUuid } from "@/lib/replay-index";
 import {
   toMatchCentrePanel,
   toScoreboardDay,
@@ -35,6 +36,8 @@ export async function getScoresFeed(uiStatus?: string): Promise<ScoresFeed> {
   try {
     const matches = await fetchUpstreamMatches({
       status: toUpstreamStatus(uiStatus),
+      page: 0,
+      size: 50,
     });
     return toScoresFeed(matches);
   } catch (err) {
@@ -49,6 +52,8 @@ export async function getScoreboardDay(uiStatus?: string): Promise<ScoreboardDay
   try {
     const matches = await fetchUpstreamMatches({
       status: toUpstreamStatus(uiStatus),
+      page: 0,
+      size: 50,
     });
     return toScoreboardDay(matches);
   } catch (err) {
@@ -61,16 +66,27 @@ export async function getScoreboardDay(uiStatus?: string): Promise<ScoreboardDay
 
 export async function getMatchCentre(id: string): Promise<MatchCentrePanel | null> {
   try {
+    if (isReplayMatchUuid(id)) {
+      const [match, points] = await Promise.all([
+        fetchUpstreamMatch(id),
+        fetchUpstreamMatchPoints(id).catch((err) => {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("[match-centre] points unavailable", err);
+          }
+          return [] as UpstreamMatchPoint[];
+        }),
+      ]);
+      if (!match) return null;
+      return toMatchCentrePanel(match, points);
+    }
     const match = await fetchUpstreamMatch(id);
     if (!match) return null;
-    let points: UpstreamMatchPoint[] = [];
-    try {
-      points = await fetchUpstreamMatchPoints(match.id);
-    } catch (err) {
+    const points = await fetchUpstreamMatchPoints(match.id).catch((err) => {
       if (process.env.NODE_ENV === "development") {
         console.warn("[match-centre] points unavailable", err);
       }
-    }
+      return [] as UpstreamMatchPoint[];
+    });
     return toMatchCentrePanel(match, points);
   } catch (err) {
     if (process.env.NODE_ENV === "development") {

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/brandIcons";
-import type { ScoreCard } from "@/types/scores";
+import type { ScoreCard, ScoresFeed } from "@/types/scores";
 import { cn } from "@/lib/utils";
 
 type ScoresStripProps = {
-  items: ScoreCard[];
+  items?: ScoreCard[];
 };
 
 function statusLabel(card: ScoreCard) {
@@ -60,25 +60,43 @@ export function ScoresStrip({ items }: ScoresStripProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-
-  const syncButtons = () => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setCanPrev(el.scrollLeft > 4);
-    setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  };
+  const [cards, setCards] = useState<ScoreCard[]>(items ?? []);
 
   useEffect(() => {
-    syncButtons();
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", syncButtons, { passive: true });
-    window.addEventListener("resize", syncButtons);
+    if (items) {
+      setCards(items);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/matches/ticker");
+        if (!res.ok) return;
+        const feed = (await res.json()) as ScoresFeed;
+        if (!cancelled) setCards(feed.items ?? []);
+      } catch {
+        if (!cancelled) setCards([]);
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), 10_000);
     return () => {
-      el.removeEventListener("scroll", syncButtons);
-      window.removeEventListener("resize", syncButtons);
+      cancelled = true;
+      window.clearInterval(timer);
     };
   }, [items]);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => {
+      setCanPrev(el.scrollLeft > 4);
+      setCanNext(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    return () => el.removeEventListener("scroll", update);
+  }, [cards]);
 
   const scrollByCards = (dir: -1 | 1) => {
     const el = scrollerRef.current;
@@ -118,7 +136,7 @@ export function ScoresStrip({ items }: ScoresStripProps) {
           className="flex flex-1 overflow-x-auto scrollbar-none"
           style={{ scrollbarWidth: "none" }}
         >
-          {items.map((card) => (
+          {cards.map((card) => (
             <ScoreCardView key={card.id} card={card} />
           ))}
         </div>

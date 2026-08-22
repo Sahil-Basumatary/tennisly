@@ -17,6 +17,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const statusParam = searchParams.get("status") ?? undefined;
   const tournamentId = searchParams.get("tournamentId") ?? undefined;
+  const page = searchParams.get("page");
+  const size = searchParams.get("size");
   if (statusParam && !STATUSES.has(statusParam as UpstreamMatchStatus)) {
     return NextResponse.json({ error: "invalid status" }, { status: 400 });
   }
@@ -24,6 +26,8 @@ export async function GET(request: Request) {
     const matches = await fetchUpstreamMatches({
       status: statusParam as UpstreamMatchStatus | undefined,
       tournamentId: tournamentId ?? undefined,
+      page: page ? Number(page) : undefined,
+      size: size ? Number(size) : undefined,
     });
     return NextResponse.json(matches, {
       headers: { "Cache-Control": "no-store" },

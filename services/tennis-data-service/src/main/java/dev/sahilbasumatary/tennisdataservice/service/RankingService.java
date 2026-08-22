@@ -21,6 +21,7 @@ public class RankingService {
 
     @Cacheable(
             cacheNames = RedisCacheConfig.RANKINGS_CACHE,
+            sync = true,
             key = "#gender.name() + ':' + #rankingType.name()")
     @Transactional(readOnly = true)
     public List<RankingResponse> getCurrentRankings(Gender gender, RankingType rankingType) {
