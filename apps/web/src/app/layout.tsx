@@ -3,6 +3,7 @@ import { montserrat, montserratDisplay, robotoCondensed } from "@/lib/fonts";
 import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SiteChrome } from "@/components/layout/SiteChrome";
+import { WebVitalsReporter } from "@/components/observability/WebVitalsReporter";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({
       >
         <body className="font-sans antialiased">
           <ThemeProvider>
+            <WebVitalsReporter />
             <SiteChrome>{children}</SiteChrome>
           </ThemeProvider>
         </body>

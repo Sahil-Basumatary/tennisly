@@ -1,9 +1,21 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { AnalyticsEmptyState } from "@/components/analytics/AnalyticsEmptyState";
-import { SurfaceBreakdownChart } from "@/components/analytics/SurfaceBreakdownChart";
-import { TrendLineChart } from "@/components/analytics/TrendLineChart";
 import type { PlayerAnalytics, PlayerTrends } from "@/types/analytics";
 import { cn } from "@/lib/utils";
+
+const TrendLineChart = dynamic(
+  () => import("@/components/analytics/TrendLineChart").then((mod) => mod.TrendLineChart),
+  { ssr: false, loading: () => <div className="h-56 border border-hairline bg-white" /> },
+);
+
+const SurfaceBreakdownChart = dynamic(
+  () =>
+    import("@/components/analytics/SurfaceBreakdownChart").then(
+      (mod) => mod.SurfaceBreakdownChart,
+    ),
+  { ssr: false, loading: () => <div className="h-56 border border-hairline bg-white" /> },
+);
 
 function formatDate(iso: string | null) {
   if (!iso) return "—";
