@@ -2,13 +2,16 @@ package dev.sahilbasumatary.apigateway.filter;
 
 import dev.sahilbasumatary.apigateway.config.ApiKeyAuthProperties;
 import dev.sahilbasumatary.apigateway.config.PlanTierRateLimitProperties;
+import dev.sahilbasumatary.apigateway.metrics.GatewayTimers;
 import dev.sahilbasumatary.apigateway.ratelimit.PlanTierRateLimits;
 import dev.sahilbasumatary.apigateway.ratelimit.RateLimitDecision;
+import io.micrometer.core.instrument.Timer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
@@ -30,14 +33,25 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
     private final ReactiveStringRedisTemplate redisTemplate;
     private final PlanTierRateLimitProperties rateLimits;
     private final ApiKeyAuthProperties authProperties;
+    private final GatewayTimers timers;
 
     public TieredApiKeyRateLimitFilter(
             ReactiveStringRedisTemplate redisTemplate,
             PlanTierRateLimitProperties rateLimits,
             ApiKeyAuthProperties authProperties) {
+        this(redisTemplate, rateLimits, authProperties, null);
+    }
+
+    @Autowired
+    public TieredApiKeyRateLimitFilter(
+            ReactiveStringRedisTemplate redisTemplate,
+            PlanTierRateLimitProperties rateLimits,
+            ApiKeyAuthProperties authProperties,
+            GatewayTimers timers) {
         this.redisTemplate = redisTemplate;
         this.rateLimits = rateLimits;
         this.authProperties = authProperties;
+        this.timers = timers;
     }
 
     @Override
@@ -56,6 +70,7 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
         int limit = PlanTierRateLimits.requestsPerMinute(planTier, rateLimits);
         Instant now = Instant.now();
         String redisKey = RateLimitDecision.redisKey(orgId, now);
+        Timer.Sample sample = timers == null ? null : Timer.start();
         return redisTemplate
                 .opsForValue()
                 .increment(redisKey)
@@ -67,6 +82,7 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
                                                 .thenReturn(count)
                                         : Mono.just(count))
                 .map(count -> RateLimitDecision.fromCount(count, limit, now))
+                .doOnSuccess(d -> stopRateLimitTimer(sample))
                 .flatMap(
                         decision -> {
                             exchange.getResponse()
@@ -98,6 +114,12 @@ public class TieredApiKeyRateLimitFilter implements WebFilter, Ordered {
     @Override
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE - 10;
+    }
+
+    private void stopRateLimitTimer(Timer.Sample sample) {
+        if (sample != null && timers != null) {
+            sample.stop(timers.rateLimitCheck());
+        }
     }
 
     private Mono<Void> rateLimitExceeded(

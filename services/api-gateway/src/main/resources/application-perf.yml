@@ -1,0 +1,10 @@
+# Local / load-test only. Never enable on public Render.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  prometheus:
+    metrics:
+      export:
+        enabled: true

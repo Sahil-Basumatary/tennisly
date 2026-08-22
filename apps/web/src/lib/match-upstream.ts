@@ -1,4 +1,5 @@
 import { isReplayMatchUuid } from "@/lib/replay-index";
+import { upstreamHeaders } from "@/lib/request-id";
 import type { UpstreamMatchPoint } from "@/lib/match-stats";
 import type { UpstreamMatch, UpstreamMatchStatus } from "@/types/match-catalogue";
 
@@ -26,16 +27,20 @@ async function readJson<T>(response: Response): Promise<T> {
 export async function fetchUpstreamMatches(options?: {
   status?: UpstreamMatchStatus;
   tournamentId?: string;
+  page?: number;
+  size?: number;
 }): Promise<UpstreamMatch[]> {
   const params = new URLSearchParams();
   if (options?.status) params.set("status", options.status);
   if (options?.tournamentId) params.set("tournamentId", options.tournamentId);
+  if (options?.page != null) params.set("page", String(options.page));
+  if (options?.size != null) params.set("size", String(options.size));
   const query = params.toString();
   const url = `${matchServiceBase()}/api/matches${query ? `?${query}` : ""}`;
   let response: Response;
   try {
     response = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: upstreamHeaders(),
       cache: "no-store",
     });
   } catch {
@@ -53,7 +58,7 @@ export async function fetchUpstreamMatch(idOrExternal: string): Promise<Upstream
   let response: Response;
   try {
     response = await fetch(path, {
-      headers: { Accept: "application/json" },
+      headers: upstreamHeaders(),
       cache: "no-store",
     });
   } catch {
@@ -67,7 +72,7 @@ export async function fetchUpstreamMatchPoints(matchId: string): Promise<Upstrea
   let response: Response;
   try {
     response = await fetch(`${matchServiceBase()}/api/matches/${matchId}/points`, {
-      headers: { Accept: "application/json" },
+      headers: upstreamHeaders(),
       cache: "no-store",
     });
   } catch {

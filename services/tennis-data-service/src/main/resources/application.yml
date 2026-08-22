@@ -82,3 +82,6 @@ management:
   health:
     kafka:
       enabled: ${MANAGEMENT_HEALTH_KAFKA_ENABLED:true}
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"

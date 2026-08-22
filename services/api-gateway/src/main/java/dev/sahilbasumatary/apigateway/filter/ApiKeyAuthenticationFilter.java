@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.sahilbasumatary.apigateway.client.ApiKeyValidationRequest;
 import dev.sahilbasumatary.apigateway.client.ApiKeyValidationResponse;
+import dev.sahilbasumatary.apigateway.metrics.GatewayTimers;
+import io.micrometer.core.instrument.Timer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -34,16 +37,28 @@ public class ApiKeyAuthenticationFilter implements WebFilter, Ordered {
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final Duration cacheTtl;
+    private final GatewayTimers timers;
 
     public ApiKeyAuthenticationFilter(
             WebClient userServiceWebClient,
             ReactiveStringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
             @Value("${gateway.api-key.cache-ttl-seconds:30}") long cacheTtlSeconds) {
+        this(userServiceWebClient, redisTemplate, objectMapper, cacheTtlSeconds, null);
+    }
+
+    @Autowired
+    public ApiKeyAuthenticationFilter(
+            WebClient userServiceWebClient,
+            ReactiveStringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper,
+            @Value("${gateway.api-key.cache-ttl-seconds:30}") long cacheTtlSeconds,
+            GatewayTimers timers) {
         this.userServiceWebClient = userServiceWebClient;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.cacheTtl = Duration.ofSeconds(Math.max(1, cacheTtlSeconds));
+        this.timers = timers;
     }
 
     @Override
@@ -80,11 +95,24 @@ public class ApiKeyAuthenticationFilter implements WebFilter, Ordered {
 
     private Mono<ApiKeyValidationResponse> validateApiKey(String apiKey) {
         String cacheKey = CACHE_PREFIX + sha256Hex(apiKey);
+        Timer.Sample sample = timers == null ? null : Timer.start();
         return redisTemplate
                 .opsForValue()
                 .get(cacheKey)
                 .flatMap(this::deserializeCached)
-                .switchIfEmpty(Mono.defer(() -> validateAndCache(apiKey, cacheKey)));
+                .doOnSuccess(v -> stopTimer(sample, true))
+                .switchIfEmpty(
+                        Mono.defer(
+                                () ->
+                                        validateAndCache(apiKey, cacheKey)
+                                                .doOnSuccess(v -> stopTimer(sample, false))));
+    }
+
+    private void stopTimer(Timer.Sample sample, boolean hit) {
+        if (sample == null || timers == null) {
+            return;
+        }
+        sample.stop(hit ? timers.apiKeyHit() : timers.apiKeyMiss());
     }
 
     private Mono<ApiKeyValidationResponse> validateAndCache(String apiKey, String cacheKey) {

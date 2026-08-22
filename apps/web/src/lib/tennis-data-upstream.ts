@@ -1,3 +1,5 @@
+import { upstreamHeaders } from "@/lib/request-id";
+
 export type UpstreamGender = "MALE" | "FEMALE";
 export type UpstreamRankingType = "SINGLES" | "DOUBLES";
 
@@ -55,7 +57,7 @@ export async function fetchUpstreamRankings(options: {
   let response: Response;
   try {
     response = await fetch(`${tennisDataBase()}/api/tennis/rankings?${params}`, {
-      headers: { Accept: "application/json" },
+      headers: upstreamHeaders(),
       cache: "no-store",
     });
   } catch {
@@ -75,7 +77,7 @@ export async function fetchUpstreamPlayers(options?: {
     response = await fetch(
       `${tennisDataBase()}/api/tennis/players${query ? `?${query}` : ""}`,
       {
-        headers: { Accept: "application/json" },
+        headers: upstreamHeaders(),
         cache: "no-store",
       },
     );
