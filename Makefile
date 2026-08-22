@@ -161,9 +161,33 @@ test-coverage: ## Run tests and write Jacoco HTML reports
 	@$(LOAD_ENV) $(MVNW) test jacoco:report -pl services/tennisly-common,services/api-gateway,services/user-service,services/notification-service -am
 
 .PHONY: load-smoke
-load-smoke: ## k6 smoke against public API (needs BASE_URL + API_KEY)
+load-smoke: ## k6 smoke against public catalogue GETs (BASE_URL, no API key)
+	@SCENARIO=smoke ./scripts/k6-load.sh
+
+.PHONY: load-run
+load-run: ## k6 catalogue profile (SCENARIO=smoke|load|burst|soak BASE_URL=...)
+	@./scripts/k6-load.sh
+
+.PHONY: load-v1
+load-v1: ## k6 /api/v1 (needs API_KEY + warm user-service)
 	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_..."; exit 1; }
-	k6 run -e BASE_URL=$${BASE_URL:-http://localhost:8080} -e API_KEY=$$API_KEY tests/load/public-api-smoke.js
+	k6 run -e BASE_URL=$${BASE_URL:-http://localhost:8080} -e API_KEY=$$API_KEY tests/load/public-api-v1.js
+
+.PHONY: load-durable
+load-durable: ## Local HTTP -> Postgres point/outbox durability benchmark
+	@$(LOAD_ENV) ./scripts/match-durable-load.sh
+
+.PHONY: jmh
+jmh: ## Forked JMH uber-jar (p99 < 1ms gates)
+	@$(LOAD_ENV) ./scripts/jmh-run.sh
+
+.PHONY: jfr
+jfr: ## Local JFR capture (JFR_PID=... DURATION=30)
+	@./scripts/jfr-capture.sh
+
+.PHONY: lighthouse
+lighthouse: ## Lighthouse JSON under .run/performance (LHCI_URL or localhost:3000)
+	@./scripts/lighthouse-local.sh
 
 .PHONY: zap-api
 zap-api: ## OWASP ZAP api-scan of /api/v1 (needs Docker + API_KEY + running gateway)
