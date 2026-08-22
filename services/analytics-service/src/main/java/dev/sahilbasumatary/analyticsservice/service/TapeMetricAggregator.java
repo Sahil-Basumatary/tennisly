@@ -14,34 +14,50 @@ import org.springframework.stereotype.Component;
 public class TapeMetricAggregator {
 
     public TapeMatchMetrics aggregate(MatchSummary match, List<MatchPointSummary> points) {
-        SideBag sides = sideIds(match.players());
-        MutableBucket home = new MutableBucket();
-        MutableBucket away = new MutableBucket();
-        for (MatchPointSummary point : points) {
-            bucketFor(sides, point.winnerId(), home, away).pointsWon += 1;
-            if (point.winnerId().equals(point.serverId())) {
-                bucketFor(sides, point.serverId(), home, away).servicePointsWon += 1;
-            } else if (isServiceBreak(point)) {
-                bucketFor(sides, point.winnerId(), home, away).breakPointsWon += 1;
+        UUID homeId = null;
+        UUID awayId = null;
+        for (MatchPlayerSummary player : match.players()) {
+            if ("HOME".equals(player.side())) {
+                homeId = player.playerId();
+            } else if ("AWAY".equals(player.side())) {
+                awayId = player.playerId();
             }
         }
-        return new TapeMatchMetrics(home.toMetrics(), away.toMetrics(), points.size());
-    }
-
-    private static SideBag sideIds(List<MatchPlayerSummary> players) {
-        MatchPlayerSummary home =
-                players.stream().filter(player -> "HOME".equals(player.side())).findFirst().orElse(null);
-        MatchPlayerSummary away =
-                players.stream().filter(player -> "AWAY".equals(player.side())).findFirst().orElse(null);
-        if (home == null || away == null) {
+        if (homeId == null || awayId == null) {
             throw new IllegalArgumentException("Match players incomplete for stats");
         }
-        return new SideBag(home.playerId(), away.playerId());
-    }
-
-    private static MutableBucket bucketFor(
-            SideBag sides, UUID playerId, MutableBucket home, MutableBucket away) {
-        return playerId.equals(sides.awayId()) ? away : home;
+        int homePointsWon = 0;
+        int homeServicePointsWon = 0;
+        int homeBreakPointsWon = 0;
+        int awayPointsWon = 0;
+        int awayServicePointsWon = 0;
+        int awayBreakPointsWon = 0;
+        for (MatchPointSummary point : points) {
+            boolean awayWon = point.winnerId().equals(awayId);
+            if (awayWon) {
+                awayPointsWon += 1;
+            } else {
+                homePointsWon += 1;
+            }
+            if (point.winnerId().equals(point.serverId())) {
+                if (awayWon) {
+                    awayServicePointsWon += 1;
+                } else {
+                    homeServicePointsWon += 1;
+                }
+            } else if (isServiceBreak(point)) {
+                if (awayWon) {
+                    awayBreakPointsWon += 1;
+                } else {
+                    homeBreakPointsWon += 1;
+                }
+            }
+        }
+        TapeSideMetrics home =
+                new TapeSideMetrics(homePointsWon, homeServicePointsWon, homeBreakPointsWon);
+        TapeSideMetrics away =
+                new TapeSideMetrics(awayPointsWon, awayServicePointsWon, awayBreakPointsWon);
+        return new TapeMatchMetrics(home, away, points.size());
     }
 
     private static boolean isServiceBreak(MatchPointSummary point) {
@@ -59,15 +75,4 @@ public class TapeMetricAggregator {
         return "0".equals(String.valueOf(list.get(0))) && "0".equals(String.valueOf(list.get(1)));
     }
 
-    private record SideBag(UUID homeId, UUID awayId) {}
-
-    private static final class MutableBucket {
-        int pointsWon;
-        int servicePointsWon;
-        int breakPointsWon;
-
-        TapeSideMetrics toMetrics() {
-            return new TapeSideMetrics(pointsWon, servicePointsWon, breakPointsWon);
-        }
-    }
 }
