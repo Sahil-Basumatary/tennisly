@@ -53,6 +53,8 @@ Forked JMH: [tests/load/baselines/2026-08-22-jmh-forked.md](../tests/load/baseli
 CPU throughput: [tests/load/baselines/2026-08-22-cpu-decision-throughput.md](../tests/load/baselines/2026-08-22-cpu-decision-throughput.md).
 Durable match writes: [tests/load/baselines/2026-08-22-durable-match-write.md](../tests/load/baselines/2026-08-22-durable-match-write.md).
 Live WebSocket delivery: [tests/load/baselines/2026-08-22-live-websocket.md](../tests/load/baselines/2026-08-22-live-websocket.md).
+Staged live capacity: [tests/load/baselines/2026-08-22-live-capacity.md](../tests/load/baselines/2026-08-22-live-capacity.md).
+100k realistic staging: [tests/load/baselines/2026-08-22-live-100k-realistic.md](../tests/load/baselines/2026-08-22-live-100k-realistic.md).
 
 | Layer | What we ran | Result vs SLO |
 |---|---|---|
@@ -60,6 +62,8 @@ Live WebSocket delivery: [tests/load/baselines/2026-08-22-live-websocket.md](../
 | JMH CPU decision bundle (local, 3 forks, 1 thread) | validation + rate-limit decision + eight-point aggregation | 12.40M ops/s; allocation 544 → 112 B/op |
 | Durable match write (local, 8 VUs) | HTTP → point + counter + audit + transactional outbox in Postgres | 270.63 commits/s; p95 72.09 ms; p99 150.51 ms; 0 errors |
 | Live WebSocket delivery (local, 100 clients) | Post-commit envelope → STOMP client; realistic and hot-topic profiles | p99 33 ms / 28 ms; 0 gaps, duplicates or errors |
+| Live capacity stages (local, 20–40 clients) | Hot path, slow-client isolation, reconnect replay, two-node kill | healthy p99 15 / 37 / 13 / 58 ms; unrecovered gaps 0; not 100k |
+| Live 100k realistic staging (local laptop) | Ramped 100 then 1,000 subscribers, 8 topics | 100: p99 30 ms pass; 1,000: p99 1.66 s fail; 100k not run |
 | Warm public gateway (UK → live Render) | k6 smoke, 39× HTTP 200, 0 errors | p50 682 ms, p95 1.84 s, p99 1.97 s (**miss** 250/500 ms) |
 
 Live lists are still unbounded (1450 players / 422 rankings / 230 in-progress matches in one GET). That payload plus UK→Render RTT is most of the HTTP time, not the Java hot paths.
@@ -74,14 +78,20 @@ The ordered protocol foundation is now:
 - WebSocket envelopes carry `eventId`, `sequence`, `occurredAt`, `commitObservedAt`, and the current snapshot.
 - `GET /api/matches/{matchId}/events?afterSequence=N&limit=1000` supplies durable missed-event replay.
 - `(match_id, sequence_number)` is unique, so duplicate sequence allocation fails rather than silently corrupting a stream.
-- `match.live_publish_after_commit` measures from Spring's successful commit callback through Redis snapshot caching and WebSocket broker enqueue.
+- Every match-service instance subscribes to the same Redis Pub/Sub channel and republishes each envelope to its local STOMP clients.
+- A keyed serial scheduler preserves per-match publication order while allowing unrelated matches to fan out in parallel.
+- `match.live_publish_after_commit` measures from Spring's successful commit callback through Redis and each node's WebSocket broker enqueue.
 - `make load-websocket` measures STOMP connection and client delivery latency while gating sequence gaps, duplicates, malformed frames, write failures, and p99 delivery.
 
 `commitObservedAt` is captured immediately after Spring reports a successful commit. It is an honest application-side lower bound, not the database server's WAL flush timestamp. End-to-end client tests must measure from this field to receipt and report clock synchronization.
 
-The local harness supports realistic topic distribution (`WS_MODE=realistic`), one hot topic (`WS_MODE=hot`), point bursts (`POINT_INTERVAL_MS=0`), controlled reconnects (`SUBSCRIBER_ITERATIONS` and `WS_HOLD_MS`), and slow consumers (`SLOW_CLIENT_PERCENT` and `SLOW_CLIENT_DELAY_MS`). It refuses more than 10,000 local clients by default because a single load generator cannot substantiate a 100k claim.
+The local harness supports multiple service JVMs (`MATCH_INSTANCE_COUNT`), realistic topic distribution (`WS_MODE=realistic`), one hot topic (`WS_MODE=hot`), point bursts (`POINT_INTERVAL_MS=0`), controlled reconnects (`SUBSCRIBER_ITERATIONS` and `WS_HOLD_MS`), and slow consumers (`SLOW_CLIENT_PERCENT` and `SLOW_CLIENT_DELAY_MS`). It refuses more than 10,000 local clients by default because a single load generator cannot substantiate a 100k claim.
 
-No 100k result will be published until a distributed test records connected clients, successful subscriptions, p50/p95/p99 delivery, disconnects, replay gaps, duplicate applications, server CPU/memory/GC, network throughput, and load-generator saturation.
+- Redis Pub/Sub is intentionally the low-latency broadcast plane, not the system of record. It is at-most-once. Postgres event logs and client sequence cursors remain the recovery plane; reconnect replay and process-failure proof are exercised by `make load-websocket-recovery` and the failover stage of `make load-live-capacity`.
+- Slow clients are disconnected when they exceed the WebSocket send-time or send-buffer limit. Healthy clients keep receiving on a dedicated outbound pool. `make load-websocket-backpressure` gates p99 on `{client:normal}` only.
+- Provider-neutral 100k jobs live in `infrastructure/kubernetes/live-100k/`. Apply them only after [tests/load/baselines/2026-08-22-live-100k-preflight.md](../tests/load/baselines/2026-08-22-live-100k-preflight.md). `make load-live-scale` ramps 100 → 100k and stops at the first failed gate.
+
+No 100k result will be published until a distributed test records connected clients, successful subscriptions, **global** p50/p95/p99 delivery from Prometheus native histograms, disconnects, replay gaps, duplicate applications, server CPU/memory/GC, network throughput, load-generator saturation, and an immutable image digest. Local laptops cannot host this job. Per-worker k6 p99 values must not be averaged.
 
 ## Evidence template
 

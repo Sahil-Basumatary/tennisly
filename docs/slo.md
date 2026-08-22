@@ -23,6 +23,17 @@ Cold starts and deploys are a **separate dataset**. They must not enter warm p50
 
 Success is **HTTP 200 only**. 401/403/429 count as failures for these gates.
 
+## Local live delivery (lab)
+
+Not a public-internet SLO. Measured from `commitObservedAt` to STOMP client receipt.
+
+| Layer | p50 | p95 | p99 | Correctness |
+|---|---:|---:|---:|---|
+| Healthy live WebSocket | report | report | < 50 ms | unrecovered gaps = 0 |
+| Failover reconnect | report | report | < 80 ms | unrecovered gaps = 0 |
+
+Slow clients are excluded from the healthy p99 sample and may be disconnected. Evidence: [tests/load/baselines/2026-08-22-live-capacity.md](../tests/load/baselines/2026-08-22-live-capacity.md).
+
 ## How to measure
 
 1. Warm the three Starter services with a dedicated warm-up stage.

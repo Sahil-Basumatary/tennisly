@@ -46,6 +46,22 @@ make load-websocket
 # All clients on one topic; this is not a 100k claim
 WS_MODE=hot WS_CLIENTS=500 make load-websocket
 
+# Split subscribers across two match-service JVMs through Redis Pub/Sub
+MATCH_INSTANCE_COUNT=2 WS_MODE=hot WS_CLIENTS=100 make load-websocket
+
+# Slow clients must not stall healthy-client p99
+make load-websocket-backpressure
+
+# Disconnect, replay missed events, unrecovered gaps must be 0
+make load-websocket-recovery
+
+# Staged sanity + backpressure + replay + node-kill (not a 100k claim)
+make load-live-capacity
+
+# Staged 100 → 100k (local stops at the laptop cap; cluster needs APPROVE_SCALE_PROVISION=true)
+make load-live-scale
+PROFILE=hot make load-live-scale
+
 # Coverage HTML: services/<svc>/target/site/jacoco/index.html
 ./mvnw test jacoco:report -pl services/tennisly-common -am
 

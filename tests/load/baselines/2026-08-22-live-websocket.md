@@ -63,11 +63,38 @@ Results:
 - durability: 81 event-log rows = 81 outbox rows
 - database sequence violations: 0
 
+## Two-node Redis fanout
+
+Two independent match-service JVMs shared Postgres and Redis. HTTP writes entered node one, while subscribers were split evenly between both WebSocket nodes. Redis Pub/Sub broadcast each envelope to both local STOMP brokers.
+
+The 100-client hot-match run passed:
+
+- client messages: 7,200
+- node one messages: 3,672
+- node two messages: 3,528
+- delivery p50: 8 ms
+- delivery p95: 26 ms
+- delivery p99: 35 ms
+- delivery max: 56 ms
+- write failures, sequence gaps, duplicates and malformed frames: 0
+- durability: 79 event-log rows = 79 outbox rows
+- database sequence violations: 0
+
+The two-node realistic run used 100 clients, eight topics and eight concurrent writers. It delivered 3,100 messages across both nodes with zero correctness failures, but failed the latency gate at 109 ms p99:
+
+- delivery p50: 12 ms
+- delivery p95: 78 ms
+- delivery p99: 109 ms
+- delivery max: 123 ms
+- durability: 304 event-log rows = 304 outbox rows
+
+This is a capacity limit of the all-on-one-laptop topology, not a passing realistic-distribution result. The service JVMs, Postgres, Redis and k6 competed for the same ten CPU cores. Distributed capacity evidence remains required.
+
 ## Reconnect exercise
 
 Twenty hot-topic clients completed three connections each. The harness observed 40 planned reconnects, 60/60 successful STOMP connections, 580 messages, 9 ms delivery p99, and zero gaps or duplicates.
 
-This run validates reconnect and resubscribe measurement. It does not prove missed-event replay because no event landed inside the short disconnect windows. Deliberate missed-event recovery remains a separate failure-recovery milestone.
+This run validates reconnect and resubscribe measurement. Missed-event replay, slow-client isolation and node-kill recovery are in [2026-08-22-live-capacity.md](2026-08-22-live-capacity.md).
 
 ## Cold-run observation
 
@@ -78,6 +105,7 @@ The first un-warmed ten-client run measured 57 ms delivery p99 and correctly fai
 ```bash
 make load-websocket
 WS_MODE=hot WS_CLIENTS=100 POINT_INTERVAL_MS=100 make load-websocket
+MATCH_INSTANCE_COUNT=2 WS_MODE=hot WS_CLIENTS=100 POINT_INTERVAL_MS=100 make load-websocket
 SUBSCRIBER_ITERATIONS=3 WS_HOLD_MS=3000 make load-websocket
 ```
 
@@ -87,6 +115,6 @@ The harness stores raw output under `.run/performance/`, validates durable event
 
 - Load generator, service and clocks share one laptop.
 - `commitObservedAt` is captured by Spring immediately after commit, not by the Postgres WAL.
-- Spring's in-memory simple broker and one match-service instance were used.
-- Redis was a snapshot cache, not a multi-instance event bus.
-- Slow-consumer backpressure, process failure, missed-event replay and distributed 100k load remain unproven.
+- Each node still uses Spring's in-memory simple broker for its own connected clients.
+- Redis Pub/Sub is at-most-once; Postgres sequence replay, not Redis, is the recovery source.
+- Distributed 100k load remains unproven. Local backpressure, replay and node-kill evidence is in [2026-08-22-live-capacity.md](2026-08-22-live-capacity.md).
