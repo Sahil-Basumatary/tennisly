@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: match-service
+  namespace: tennisly-live
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: match-service
+  template:
+    metadata:
+      labels:
+        app: match-service
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: match-service
+      containers:
+        - name: match-service
+          image: MATCH_SERVICE_IMAGE
+          ports:
+            - containerPort: 18084
+              name: http
+          env:
+            - name: SERVER_PORT
+              value: "18084"
+            - name: SPRING_PROFILES_ACTIVE
+              value: perf
+            - name: JAVA_OPTS
+              value: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+            - name: POSTGRES_POOL_MAX
+              value: "20"
+            - name: MATCH_WS_OUTBOUND_POOL
+              value: "32"
+            - name: MATCH_WS_OUTBOUND_QUEUE
+              value: "50000"
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: tennisly-live-db
+                  key: host
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: tennisly-live-db
+                  key: port
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: tennisly-live-db
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tennisly-live-db
+                  key: password
+            - name: POSTGRES_DB_MATCHES
+              valueFrom:
+                secretKeyRef:
+                  name: tennisly-live-db
+                  key: database
+            - name: REDIS_HOST
+              value: redis
+            - name: REDIS_PORT
+              value: "6379"
+            - name: MATCH_LIVE_REDIS_CHANNEL
+              value: match-live-events
+            - name: MATCH_SERVICE_WS_ALLOWED_ORIGINS
+              value: "*"
+            - name: TENNISLY_KAFKA_ENABLED
+              value: "false"
+            - name: MATCH_INGEST_ENABLED
+              value: "false"
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+            - name: SPRING_CLOUD_CONFIG_ENABLED
+              value: "false"
+            - name: MANAGEMENT_HEALTH_KAFKA_ENABLED
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "4"
+              memory: 3Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: match-service
+  namespace: tennisly-live
+spec:
+  selector:
+    app: match-service
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: match-service-pods
+  namespace: tennisly-live
+spec:
+  clusterIP: None
+  selector:
+    app: match-service
+  ports:
+    - name: http
+      port: 18084
+      targetPort: http

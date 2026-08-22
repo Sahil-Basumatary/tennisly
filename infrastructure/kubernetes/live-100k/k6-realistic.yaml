@@ -1,0 +1,112 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-ws-realistic
+  namespace: tennisly-live
+  labels:
+    tennisly-test: live-scale
+    tennisly-profile: realistic
+spec:
+  completionMode: Indexed
+  completions: 10
+  parallelism: 10
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: k6-ws-realistic
+        tennisly-test: live-scale
+    spec:
+      restartPolicy: Never
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: k6-ws-realistic
+      initContainers:
+        - name: wait-ready
+          image: curlimages/curl:8.10.1
+          command:
+            - /bin/sh
+            - -c
+            - |
+              i=0
+              while [ "$i" -lt 90 ]; do
+                if curl -fsS http://match-service.tennisly-live.svc.cluster.local/actuator/health >/dev/null \
+                  && curl -fsS http://prometheus.tennisly-live.svc.cluster.local:9090/-/ready >/dev/null; then
+                  exit 0
+                fi
+                i=$((i + 1))
+                sleep 2
+              done
+              echo "match-service or prometheus not ready" >&2
+              exit 1
+      containers:
+        - name: k6
+          image: grafana/k6:0.54.0
+          command: ["/bin/sh", "/scripts/k6-execution-segment.sh", "/scripts/match-websocket.js"]
+          env:
+            - name: K6_WORKERS
+              value: "10"
+            - name: K6_WORKER_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['batch.kubernetes.io/job-completion-index']
+            - name: K6_PROMETHEUS_RW_SERVER_URL
+              value: http://prometheus.tennisly-live.svc.cluster.local:9090/api/v1/write
+            - name: BASE_URL
+              value: http://match-service.tennisly-live.svc.cluster.local
+            - name: WS_URL
+              value: ws://match-service.tennisly-live.svc.cluster.local/ws/matches
+            - name: WS_CLIENTS
+              value: "100000"
+            - name: MATCH_COUNT
+              value: "8"
+            - name: SUBSCRIBER_RAMP
+              value: "10m"
+            - name: WS_HOLD_MS
+              value: "600000"
+            - name: WRITER_START
+              value: "10m"
+            - name: WS_DURATION
+              value: "10m"
+            - name: POINT_INTERVAL_MS
+              value: "250"
+            - name: DELIVERY_P99_MS
+              value: "50"
+            - name: SUBSCRIBER_ITERATIONS
+              value: "1"
+            - name: SUBSCRIBER_MAX_DURATION
+              value: "25m"
+            - name: REPLAY_ON_RECONNECT
+              value: "true"
+            - name: REQUIRE_FULL_CONNECT
+              value: "true"
+            - name: REQUIRE_NODE_TRAFFIC
+              value: "false"
+            - name: WARMUP_POINTS
+              value: "5"
+            - name: RUN_ID
+              value: "k8s-scale-realistic"
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: results
+              mountPath: /results
+          resources:
+            requests:
+              cpu: "2"
+              memory: 16Gi
+            limits:
+              cpu: "4"
+              memory: 24Gi
+      volumes:
+        - name: scripts
+          configMap:
+            name: k6-live-scripts
+            defaultMode: 0555
+        - name: results
+          emptyDir: {}
