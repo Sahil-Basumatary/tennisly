@@ -1,21 +1,8 @@
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { AnalyticsEmptyState } from "@/components/analytics/AnalyticsEmptyState";
+import { PlayerAnalyticsCharts } from "@/components/analytics/PlayerAnalyticsCharts";
 import type { PlayerAnalytics, PlayerTrends } from "@/types/analytics";
 import { cn } from "@/lib/utils";
-
-const TrendLineChart = dynamic(
-  () => import("@/components/analytics/TrendLineChart").then((mod) => mod.TrendLineChart),
-  { ssr: false, loading: () => <div className="h-56 border border-hairline bg-white" /> },
-);
-
-const SurfaceBreakdownChart = dynamic(
-  () =>
-    import("@/components/analytics/SurfaceBreakdownChart").then(
-      (mod) => mod.SurfaceBreakdownChart,
-    ),
-  { ssr: false, loading: () => <div className="h-56 border border-hairline bg-white" /> },
-);
 
 function formatDate(iso: string | null) {
   if (!iso) return "—";
@@ -89,14 +76,12 @@ export function PlayerAnalyticsPanel({
           </Link>
         ) : null}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TrendLineChart points={trends.trends} title={`Points won trend for player ${analytics.playerId}`} />
-        <SurfaceBreakdownChart
-          data={surfacePoints(summary.bySurface)}
-          title={surface && surface !== "ALL" ? `${surface} points` : "Points by surface"}
-          valueLabel="Points"
-        />
-      </div>
+      <PlayerAnalyticsCharts
+        trends={trends.trends}
+        trendTitle={`Points won trend for player ${analytics.playerId}`}
+        surfaceData={surfacePoints(summary.bySurface)}
+        surfaceTitle={surface && surface !== "ALL" ? `${surface} points` : "Points by surface"}
+      />
       <div className="border border-hairline bg-white">
         <div className="border-b border-hairline px-4 py-3 sm:px-5">
           <h2 className="font-sans text-[13px] font-bold uppercase tracking-wide">
