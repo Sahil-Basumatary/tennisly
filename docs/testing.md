@@ -11,7 +11,7 @@ Phase 7 quality bar for Tennisly. Goal over Weeks 29–31: raise confidence with
 | Integration | Testcontainers Postgres (`PublicWebhookApiIT`, `WebhookDeliveryWorkerIT`) | Local + CI (Docker required); skips cleanly if Docker is unavailable |
 | Frontend unit | Turbo / package scripts | CI frontend job (lint, type-check, test, build) |
 | E2E smoke | Playwright (`apps/web/e2e`) | Local `make e2e`; optional CI when `RUN_PLAYWRIGHT=true` + Clerk secrets |
-| Load smoke | k6 | Local / staging: `k6 run tests/load/public-api-smoke.js` |
+| Load | k6 | Public reads: `./scripts/k6-load.sh`; local Postgres commit/outbox writes: `make load-durable`; `/api/v1`: `tests/load/public-api-v1.js` |
 | Security scan | OWASP ZAP api-scan | Local `make zap-api`; optional CI when `RUN_ZAP=true` + staging secrets |
 | Contract | Pact JVM (`api-gateway` ↔ tennis-data players, match-service matches, user-service webhooks) | `make test-pact`; committed JSON under `tests/pacts/` |
 | Pact / mutation | Mutation still planned | Pact gated via module tests in CI |
