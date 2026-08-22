@@ -31,6 +31,7 @@ export type UpstreamMatch = {
   currentScore?: Record<string, unknown>;
   players: UpstreamMatchPlayer[];
   pointsPlayed: number;
+  liveSequence?: number;
 };
 
 export function toUiMatchStatus(status: UpstreamMatchStatus): UiMatchStatus {

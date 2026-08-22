@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import type { MatchCentrePanel } from "@/types/scaffolds";
 import { MatchShotStatCard } from "@/components/match/MatchShotStatCard";
 import { MatchStatsRail } from "@/components/match/MatchStatsRail";
+import { MatchLiveBridge } from "@/components/match/MatchLiveBridge";
 import { cn } from "@/lib/utils";
 
 const MatchCourtPanel = dynamic(
@@ -22,6 +23,7 @@ const MatchCourtPanel = dynamic(
 export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
   return (
     <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <MatchLiveBridge matchId={match.id} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="mb-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
