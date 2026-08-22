@@ -1,14 +1,23 @@
 # Deny-by-default: every Dockerfile in this repo builds a Maven service, so the
 # context is limited to what the reactor needs. Keeps Render builds from shipping
 # the 2.8GB web workspace and node_modules trees over the wire.
+#
+# `*` hides nested files, including services/**/Dockerfile. Remote builders
+# (Render BuildKit) read the Dockerfile from the uploaded context, so parent
+# dirs and their contents must both be re-included or the build dies with
+# "open Dockerfile: no such file or directory".
 *
-
 !pom.xml
 !mvnw
-!.mvn/
-!config/
-!services/
-!tests/
+!mvnw.cmd
+!.mvn
+!.mvn/**
+!config
+!config/**
+!services
+!services/**
+!tests
+!tests/**
 
 services/**/target
 **/.DS_Store

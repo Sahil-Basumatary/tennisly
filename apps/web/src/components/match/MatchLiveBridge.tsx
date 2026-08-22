@@ -60,7 +60,7 @@ export function MatchLiveBridge({ matchId }: MatchLiveBridgeProps) {
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
     function connect() {
-      if (stopped) {
+      if (stopped || !url) {
         return;
       }
       const ws = new WebSocket(url);
