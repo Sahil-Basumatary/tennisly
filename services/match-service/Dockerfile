@@ -12,6 +12,6 @@ COPY --from=build /src/services/match-service/target/*.jar app.jar
 RUN chown spring:spring app.jar
 USER spring:spring
 EXPOSE 10000
-ENV JAVA_OPTS="-Xms256m -Xmx512m"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC"
 # Render injects PORT; fall back to the EXPOSEd port for plain docker run.
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-10000} -jar app.jar"]
