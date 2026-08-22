@@ -1,9 +1,6 @@
 package dev.sahilbasumatary.matchservice.service;
 
 import dev.sahilbasumatary.common.event.MatchEvent;
-import dev.sahilbasumatary.common.kafka.EventPublisher;
-import dev.sahilbasumatary.common.kafka.TopicNames;
-import dev.sahilbasumatary.matchservice.client.MatchEventFanout;
 import dev.sahilbasumatary.matchservice.dto.request.CreateMatchPlayerRequest;
 import dev.sahilbasumatary.matchservice.dto.request.CreateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.RecordPointRequest;
@@ -22,9 +19,12 @@ import dev.sahilbasumatary.matchservice.entity.PlayerSide;
 import dev.sahilbasumatary.matchservice.exception.DuplicateResourceException;
 import dev.sahilbasumatary.matchservice.exception.InvalidMatchStateException;
 import dev.sahilbasumatary.matchservice.exception.ResourceNotFoundException;
+import dev.sahilbasumatary.matchservice.metrics.MatchTimers;
 import dev.sahilbasumatary.matchservice.repository.MatchEventLogRepository;
 import dev.sahilbasumatary.matchservice.repository.MatchPointRepository;
 import dev.sahilbasumatary.matchservice.repository.MatchRepository;
+import dev.sahilbasumatary.matchservice.web.PageBounds;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,8 +49,8 @@ public class MatchService {
     private final MatchStateMachine stateMachine;
     private final MatchEventLogService eventLogService;
     private final MatchRealtimeNotifier realtimeNotifier;
-    private final EventPublisher eventPublisher;
-    private final MatchEventFanout matchEventFanout;
+    private final MatchEventDispatch eventDispatch;
+    private final MatchTimers matchTimers;
 
     public MatchService(
             MatchRepository matchRepository,
@@ -59,16 +59,16 @@ public class MatchService {
             MatchStateMachine stateMachine,
             MatchEventLogService eventLogService,
             MatchRealtimeNotifier realtimeNotifier,
-            EventPublisher eventPublisher,
-            MatchEventFanout matchEventFanout) {
+            MatchEventDispatch eventDispatch,
+            MatchTimers matchTimers) {
         this.matchRepository = matchRepository;
         this.pointRepository = pointRepository;
         this.eventLogRepository = eventLogRepository;
         this.stateMachine = stateMachine;
         this.eventLogService = eventLogService;
         this.realtimeNotifier = realtimeNotifier;
-        this.eventPublisher = eventPublisher;
-        this.matchEventFanout = matchEventFanout;
+        this.eventDispatch = eventDispatch;
+        this.matchTimers = matchTimers;
     }
 
     @Transactional
@@ -84,47 +84,54 @@ public class MatchService {
         match.setMetadata(request.metadata());
         match.setCurrentScore(initialScore(request.players()));
         request.players().forEach(playerRequest -> match.addPlayer(toPlayer(playerRequest)));
-        Match saved = matchRepository.save(match);
-        eventLogService.append(saved, MatchEventType.CREATED, Map.of("status", saved.getStatus()));
+        Match saved = matchRepository.saveAndFlush(match);
+        long sequence =
+                eventLogService.append(
+                        saved, MatchEventType.CREATED, Map.of("status", saved.getStatus()));
         MatchResponse response = MatchResponse.from(saved);
-        publish(saved.getId(), MatchEvent.created(saved.getId(), saved.getStatus().name()), response);
+        publish(
+                saved.getId(),
+                MatchEvent.created(saved.getId(), saved.getStatus().name()),
+                response,
+                sequence);
         log.info("Created match matchId={} status={}", saved.getId(), saved.getStatus());
         return response;
     }
 
     @Transactional(readOnly = true)
-    public List<MatchResponse> listMatches(MatchStatus status, UUID tournamentId) {
+    public List<MatchResponse> listMatches(
+            MatchStatus status, UUID tournamentId, Integer page, Integer size) {
+        Pageable pageable = PageBounds.of(page, size);
         List<Match> matches;
         if (tournamentId != null && status != null) {
             matches =
                     matchRepository.findByTournamentIdAndStatusOrderByScheduledAtAsc(
-                            tournamentId, status);
+                            tournamentId, status, pageable);
         } else if (tournamentId != null) {
-            matches = matchRepository.findByTournamentIdOrderByScheduledAtAsc(tournamentId);
+            matches = matchRepository.findByTournamentIdOrderByScheduledAtAsc(tournamentId, pageable);
         } else if (status != null) {
-            matches = matchRepository.findByStatusOrderByScheduledAtAsc(status);
+            matches = matchRepository.findByStatusOrderByScheduledAtAsc(status, pageable);
         } else {
-            matches = matchRepository.findAllByOrderByScheduledAtAsc();
+            matches = matchRepository.findAllByOrderByScheduledAtAsc(pageable);
         }
-        if (matches.isEmpty()) {
-            return List.of();
-        }
-        Map<UUID, Integer> pointCounts = pointCountsFor(matches);
-        return matches.stream()
-                .map(match -> MatchResponse.from(match, pointCounts.getOrDefault(match.getId(), 0)))
-                .toList();
+        return matches.stream().map(MatchResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public MatchResponse getMatch(UUID matchId) {
-        return realtimeNotifier
-                .findCachedSnapshot(matchId)
-                .orElseGet(
-                        () -> {
-                            Match match = findMatch(matchId);
-                            return MatchResponse.from(
-                                    match, pointRepository.countByMatchId(match.getId()));
-                        });
+        Timer.Sample sample = Timer.start();
+        try {
+            var cached = realtimeNotifier.findCachedSnapshot(matchId);
+            if (cached.isPresent()) {
+                matchTimers.liveCacheHit().increment();
+                return cached.get();
+            }
+            matchTimers.liveCacheMiss().increment();
+            Match match = findMatch(matchId);
+            return MatchResponse.from(match);
+        } finally {
+            sample.stop(matchTimers.getMatch());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -136,16 +143,7 @@ public class MatchService {
                                 () ->
                                         new ResourceNotFoundException(
                                                 "Match externalId", externalId));
-        return MatchResponse.from(match, pointRepository.countByMatchId(match.getId()));
-    }
-
-    private Map<UUID, Integer> pointCountsFor(List<Match> matches) {
-        List<UUID> ids = matches.stream().map(Match::getId).toList();
-        Map<UUID, Integer> counts = new HashMap<>();
-        for (Object[] row : pointRepository.countGroupedByMatchIds(ids)) {
-            counts.put((UUID) row[0], ((Number) row[1]).intValue());
-        }
-        return counts;
+        return MatchResponse.from(match);
     }
 
     @Transactional
@@ -172,9 +170,15 @@ public class MatchService {
             match.setMetadata(request.metadata());
         }
         Match saved = matchRepository.save(match);
-        eventLogService.append(saved, MatchEventType.UPDATED, Map.of("status", saved.getStatus()));
+        long sequence =
+                eventLogService.append(
+                        saved, MatchEventType.UPDATED, Map.of("status", saved.getStatus()));
         MatchResponse response = MatchResponse.from(saved);
-        publish(saved.getId(), MatchEvent.updated(saved.getId(), saved.getStatus().name()), response);
+        publish(
+                saved.getId(),
+                MatchEvent.updated(saved.getId(), saved.getStatus().name()),
+                response,
+                sequence);
         log.info("Updated match matchId={}", saved.getId());
         return response;
     }
@@ -194,47 +198,63 @@ public class MatchService {
             match.setMetadata(metadata);
         }
         Match saved = matchRepository.save(match);
-        eventLogService.append(saved, MatchEventType.STATUS_CHANGED, Map.of("status", nextStatus));
+        long sequence =
+                eventLogService.append(
+                        saved, MatchEventType.STATUS_CHANGED, Map.of("status", nextStatus));
         MatchResponse response = MatchResponse.from(saved);
-        publish(saved.getId(), MatchEvent.statusChanged(saved.getId(), nextStatus.name()), response);
+        publish(
+                saved.getId(),
+                MatchEvent.statusChanged(saved.getId(), nextStatus.name()),
+                response,
+                sequence);
         log.info("Changed match status matchId={} status={}", saved.getId(), nextStatus);
         return response;
     }
 
     @Transactional
     public MatchPointResponse recordPoint(UUID matchId, RecordPointRequest request) {
-        Match match = findMatch(matchId);
-        stateMachine.assertCanRecordPoint(match.getStatus());
-        assertPlayerInMatch(match, request.serverId());
-        assertPlayerInMatch(match, request.winnerId());
-        MatchPoint point = new MatchPoint();
-        point.setSequenceNumber(pointRepository.countByMatchId(matchId) + 1);
-        point.setServerId(request.serverId());
-        point.setWinnerId(request.winnerId());
-        point.setOutcome(request.outcome());
-        point.setRallyLength(request.rallyLength());
-        point.setScoreSnapshot(request.scoreSnapshot());
-        point.setShotSummary(request.shotSummary());
-        match.setCurrentScore(request.scoreSnapshot());
-        match.addPoint(point);
-        matchRepository.save(match);
-        eventLogService.append(match, MatchEventType.POINT_RECORDED, pointPayload(point));
-        MatchResponse response = MatchResponse.from(match);
-        publish(
-                matchId,
-                MatchEvent.pointRecorded(
-                        matchId,
-                        match.getStatus().name(),
-                        point.getSequenceNumber(),
-                        point.getWinnerId(),
-                        point.getOutcome().name()),
-                response);
-        log.info(
-                "Recorded point matchId={} sequence={} winnerId={}",
-                matchId,
-                point.getSequenceNumber(),
-                point.getWinnerId());
-        return MatchPointResponse.from(point);
+        Timer.Sample sample = Timer.start();
+        try {
+            Match match = findMatch(matchId);
+            stateMachine.assertCanRecordPoint(match.getStatus());
+            assertPlayerInMatch(match, request.serverId());
+            assertPlayerInMatch(match, request.winnerId());
+            MatchPoint point = new MatchPoint();
+            point.setSequenceNumber(match.getPointCount() + 1);
+            point.setServerId(request.serverId());
+            point.setWinnerId(request.winnerId());
+            point.setOutcome(request.outcome());
+            point.setRallyLength(request.rallyLength());
+            point.setScoreSnapshot(request.scoreSnapshot());
+            point.setShotSummary(request.shotSummary());
+            point.setMatch(match);
+            match.setCurrentScore(request.scoreSnapshot());
+            match.setPointCount(match.getPointCount() + 1);
+            pointRepository.save(point);
+            matchRepository.save(match);
+            long sequence =
+                    eventLogService.append(
+                            match, MatchEventType.POINT_RECORDED, pointPayload(point));
+            MatchResponse response = MatchResponse.from(match);
+            publish(
+                    matchId,
+                    MatchEvent.pointRecorded(
+                            matchId,
+                            match.getStatus().name(),
+                            point.getSequenceNumber(),
+                            point.getWinnerId(),
+                            point.getOutcome().name()),
+                    response,
+                    sequence);
+            log.info(
+                    "Recorded point matchId={} sequence={} winnerId={}",
+                    matchId,
+                    point.getSequenceNumber(),
+                    point.getWinnerId());
+            return MatchPointResponse.from(point);
+        } finally {
+            sample.stop(matchTimers.recordPoint());
+        }
     }
 
     @Transactional(readOnly = true)
@@ -246,9 +266,14 @@ public class MatchService {
     }
 
     @Transactional(readOnly = true)
-    public List<MatchEventLogResponse> listEvents(UUID matchId) {
+    public List<MatchEventLogResponse> listEvents(UUID matchId, long afterSequence, int limit) {
         findMatch(matchId);
-        return eventLogRepository.findByMatchIdOrderByCreatedAtAsc(matchId).stream()
+        int clamped = Math.max(1, Math.min(limit, 1_000));
+        long cursor = Math.max(0, afterSequence);
+        return eventLogRepository
+                .findByMatchIdAndSequenceNumberGreaterThanOrderBySequenceNumberAsc(
+                        matchId, cursor, PageRequest.of(0, clamped))
+                .stream()
                 .map(MatchEventLogResponse::from)
                 .toList();
     }
@@ -362,9 +387,9 @@ public class MatchService {
         return payload;
     }
 
-    private void publish(UUID matchId, MatchEvent event, MatchResponse response) {
-        realtimeNotifier.publishSnapshot(response);
-        eventPublisher.publish(TopicNames.MATCH_EVENTS, matchId.toString(), event);
-        matchEventFanout.relay(event);
+    private void publish(
+            UUID matchId, MatchEvent event, MatchResponse response, long liveSequence) {
+        event.setSequence(liveSequence);
+        eventDispatch.publish(matchId, event, response);
     }
 }

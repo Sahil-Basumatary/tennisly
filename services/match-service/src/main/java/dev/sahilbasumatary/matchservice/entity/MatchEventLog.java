@@ -37,6 +37,9 @@ public class MatchEventLog {
     @Column(name = "event_type", nullable = false, length = 32)
     private MatchEventType eventType;
 
+    @Column(name = "sequence_number", nullable = false)
+    private long sequenceNumber;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> payload = new HashMap<>();
@@ -67,6 +70,14 @@ public class MatchEventLog {
 
     public void setEventType(MatchEventType eventType) {
         this.eventType = eventType;
+    }
+
+    public long getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public void setSequenceNumber(long sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
     }
 
     public Map<String, Object> getPayload() {

@@ -22,11 +22,12 @@ public record MatchResponse(
         Map<String, Object> currentScore,
         List<MatchPlayerResponse> players,
         int pointsPlayed,
+        long liveSequence,
         Instant createdAt,
         Instant updatedAt) {
 
     public static MatchResponse from(Match match) {
-        return from(match, match.getPoints().size());
+        return from(match, match.getPointCount());
     }
 
     public static MatchResponse from(Match match, int pointsPlayed) {
@@ -44,6 +45,7 @@ public record MatchResponse(
                 match.getCurrentScore(),
                 match.getPlayers().stream().map(MatchPlayerResponse::from).toList(),
                 pointsPlayed,
+                match.getLiveSequence(),
                 match.getCreatedAt(),
                 match.getUpdatedAt());
     }

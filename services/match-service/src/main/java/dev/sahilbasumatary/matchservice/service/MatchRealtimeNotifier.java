@@ -2,6 +2,7 @@ package dev.sahilbasumatary.matchservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.sahilbasumatary.matchservice.dto.response.MatchLiveEventResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
 import java.time.Duration;
 import java.util.Optional;
@@ -30,9 +31,9 @@ public class MatchRealtimeNotifier {
         this.objectMapper = objectMapper;
     }
 
-    public void publishSnapshot(MatchResponse response) {
-        cacheSnapshot(response);
-        messagingTemplate.convertAndSend(topic(response.id()), response);
+    public void publish(MatchLiveEventResponse event) {
+        cacheSnapshot(event.snapshot());
+        messagingTemplate.convertAndSend(topic(event.matchId()), event);
     }
 
     public Optional<MatchResponse> findCachedSnapshot(UUID matchId) {

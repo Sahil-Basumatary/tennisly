@@ -47,9 +47,11 @@ public class MatchController {
     @GetMapping
     public ResponseEntity<List<MatchResponse>> listMatches(
             @RequestParam(required = false) MatchStatus status,
-            @RequestParam(required = false) UUID tournamentId) {
+            @RequestParam(required = false) UUID tournamentId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
         log.debug("GET /api/matches status={} tournamentId={}", status, tournamentId);
-        return ResponseEntity.ok(matchService.listMatches(status, tournamentId));
+        return ResponseEntity.ok(matchService.listMatches(status, tournamentId, page, size));
     }
 
     @GetMapping("/external/{externalId}")
@@ -93,8 +95,15 @@ public class MatchController {
     }
 
     @GetMapping("/{matchId}/events")
-    public ResponseEntity<List<MatchEventLogResponse>> listEvents(@PathVariable UUID matchId) {
-        log.debug("GET /api/matches/{}/events", matchId);
-        return ResponseEntity.ok(matchService.listEvents(matchId));
+    public ResponseEntity<List<MatchEventLogResponse>> listEvents(
+            @PathVariable UUID matchId,
+            @RequestParam(defaultValue = "0") long afterSequence,
+            @RequestParam(defaultValue = "100") int limit) {
+        log.debug(
+                "GET /api/matches/{}/events afterSequence={} limit={}",
+                matchId,
+                afterSequence,
+                limit);
+        return ResponseEntity.ok(matchService.listEvents(matchId, afterSequence, limit));
     }
 }

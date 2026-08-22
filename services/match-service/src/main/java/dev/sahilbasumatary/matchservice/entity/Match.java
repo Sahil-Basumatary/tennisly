@@ -66,6 +66,12 @@ public class Match {
     @Column(name = "current_score", nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> currentScore = new HashMap<>();
 
+    @Column(name = "point_count", nullable = false)
+    private int pointCount;
+
+    @Column(name = "live_sequence", nullable = false, insertable = false, updatable = false)
+    private long liveSequence;
+
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("side ASC")
     private List<MatchPlayer> players = new ArrayList<>();
@@ -170,6 +176,22 @@ public class Match {
         this.currentScore = currentScore == null ? new HashMap<>() : currentScore;
     }
 
+    public int getPointCount() {
+        return pointCount;
+    }
+
+    public void setPointCount(int pointCount) {
+        this.pointCount = Math.max(0, pointCount);
+    }
+
+    public long getLiveSequence() {
+        return liveSequence;
+    }
+
+    public void setLiveSequence(long liveSequence) {
+        this.liveSequence = Math.max(0, liveSequence);
+    }
+
     public List<MatchPlayer> getPlayers() {
         return players;
     }
@@ -210,5 +232,6 @@ public class Match {
     public void addPoint(MatchPoint point) {
         points.add(point);
         point.setMatch(this);
+        pointCount += 1;
     }
 }

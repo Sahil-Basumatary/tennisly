@@ -11,6 +11,7 @@ public class MatchEvent extends BaseEvent {
 
     private UUID matchId;
     private String status;
+    private long sequence;
     private Integer pointSequence;
     private UUID winnerId;
     private String summary;
@@ -64,6 +65,14 @@ public class MatchEvent extends BaseEvent {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public long getSequence() {
+        return sequence;
+    }
+
+    public void setSequence(long sequence) {
+        this.sequence = sequence;
     }
 
     public Integer getPointSequence() {

@@ -7,11 +7,16 @@ import java.util.Map;
 import java.util.UUID;
 
 public record MatchEventLogResponse(
-        UUID id, MatchEventType eventType, Map<String, Object> payload, Instant createdAt) {
+        UUID id,
+        long sequence,
+        MatchEventType eventType,
+        Map<String, Object> payload,
+        Instant createdAt) {
 
     public static MatchEventLogResponse from(MatchEventLog eventLog) {
         return new MatchEventLogResponse(
                 eventLog.getId(),
+                eventLog.getSequenceNumber(),
                 eventLog.getEventType(),
                 eventLog.getPayload(),
                 eventLog.getCreatedAt());

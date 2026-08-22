@@ -1,9 +1,6 @@
 package dev.sahilbasumatary.matchservice.service;
 
 import dev.sahilbasumatary.common.event.MatchEvent;
-import dev.sahilbasumatary.common.kafka.EventPublisher;
-import dev.sahilbasumatary.common.kafka.TopicNames;
-import dev.sahilbasumatary.matchservice.client.MatchEventFanout;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.ResolvedPlayerDto;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.UpstreamMatchDto;
@@ -44,9 +41,7 @@ public class MatchIngestionService {
     private final MatchRepository matchRepository;
     private final MatchPointRepository pointRepository;
     private final MatchEventLogService eventLogService;
-    private final MatchRealtimeNotifier realtimeNotifier;
-    private final EventPublisher eventPublisher;
-    private final MatchEventFanout matchEventFanout;
+    private final MatchEventDispatch eventDispatch;
     private final int pageSize;
 
     public MatchIngestionService(
@@ -54,17 +49,13 @@ public class MatchIngestionService {
             MatchRepository matchRepository,
             MatchPointRepository pointRepository,
             MatchEventLogService eventLogService,
-            MatchRealtimeNotifier realtimeNotifier,
-            EventPublisher eventPublisher,
-            MatchEventFanout matchEventFanout,
+            MatchEventDispatch eventDispatch,
             @Value("${tennisly.ingest.page-size:50}") int pageSize) {
         this.matchClient = matchClient;
         this.matchRepository = matchRepository;
         this.pointRepository = pointRepository;
         this.eventLogService = eventLogService;
-        this.realtimeNotifier = realtimeNotifier;
-        this.eventPublisher = eventPublisher;
-        this.matchEventFanout = matchEventFanout;
+        this.eventDispatch = eventDispatch;
         this.pageSize = Math.max(1, Math.min(pageSize, 100));
     }
 
@@ -159,17 +150,23 @@ public class MatchIngestionService {
             replacePoints(match, dto.providerMatchId(), home.get().id(), away.get().id());
         }
 
-        Match saved = matchRepository.save(match);
+        Match saved =
+                created ? matchRepository.saveAndFlush(match) : matchRepository.save(match);
         if (created) {
-            eventLogService.append(saved, MatchEventType.CREATED, Map.of("status", nextStatus));
-            publish(saved, MatchEvent.created(saved.getId(), nextStatus.name()));
+            long sequence =
+                    eventLogService.append(
+                            saved, MatchEventType.CREATED, Map.of("status", nextStatus));
+            publish(saved, MatchEvent.created(saved.getId(), nextStatus.name()), sequence);
         } else if (previousStatus != nextStatus) {
-            eventLogService.append(
-                    saved, MatchEventType.STATUS_CHANGED, Map.of("status", nextStatus));
-            publish(saved, MatchEvent.statusChanged(saved.getId(), nextStatus.name()));
+            long sequence =
+                    eventLogService.append(
+                            saved, MatchEventType.STATUS_CHANGED, Map.of("status", nextStatus));
+            publish(saved, MatchEvent.statusChanged(saved.getId(), nextStatus.name()), sequence);
         } else {
-            eventLogService.append(saved, MatchEventType.UPDATED, Map.of("status", nextStatus));
-            publish(saved, MatchEvent.updated(saved.getId(), nextStatus.name()));
+            long sequence =
+                    eventLogService.append(
+                            saved, MatchEventType.UPDATED, Map.of("status", nextStatus));
+            publish(saved, MatchEvent.updated(saved.getId(), nextStatus.name()), sequence);
         }
         return true;
     }
@@ -183,6 +180,7 @@ public class MatchIngestionService {
             pointRepository.deleteByMatchId(match.getId());
         }
         match.getPoints().clear();
+        match.setPointCount(0);
         MatchPoint last = null;
         for (UpstreamPointDto row : tape) {
             MatchPoint point = new MatchPoint();
@@ -202,11 +200,9 @@ public class MatchIngestionService {
         }
     }
 
-    private void publish(Match match, MatchEvent event) {
-        MatchResponse response = MatchResponse.from(match);
-        realtimeNotifier.publishSnapshot(response);
-        eventPublisher.publish(TopicNames.MATCH_EVENTS, match.getId().toString(), event);
-        matchEventFanout.relay(event);
+    private void publish(Match match, MatchEvent event, long sequence) {
+        event.setSequence(sequence);
+        eventDispatch.publish(match.getId(), event, MatchResponse.from(match));
     }
 
     private static MatchPlayer toPlayer(ResolvedPlayerDto player, PlayerSide side) {

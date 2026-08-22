@@ -16,18 +16,23 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     List<Match> findByStatusAndIdGreaterThanOrderByIdAsc(
             MatchStatus status, UUID cursor, Pageable pageable);
 
+    @EntityGraph(attributePaths = "players")
     Optional<Match> findByExternalId(String externalId);
 
     @EntityGraph(attributePaths = "players")
-    List<Match> findAllByOrderByScheduledAtAsc();
+    @Override
+    Optional<Match> findById(UUID id);
 
     @EntityGraph(attributePaths = "players")
-    List<Match> findByStatusOrderByScheduledAtAsc(MatchStatus status);
+    List<Match> findAllByOrderByScheduledAtAsc(Pageable pageable);
 
     @EntityGraph(attributePaths = "players")
-    List<Match> findByTournamentIdOrderByScheduledAtAsc(UUID tournamentId);
+    List<Match> findByStatusOrderByScheduledAtAsc(MatchStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "players")
+    List<Match> findByTournamentIdOrderByScheduledAtAsc(UUID tournamentId, Pageable pageable);
 
     @EntityGraph(attributePaths = "players")
     List<Match> findByTournamentIdAndStatusOrderByScheduledAtAsc(
-            UUID tournamentId, MatchStatus status);
+            UUID tournamentId, MatchStatus status, Pageable pageable);
 }

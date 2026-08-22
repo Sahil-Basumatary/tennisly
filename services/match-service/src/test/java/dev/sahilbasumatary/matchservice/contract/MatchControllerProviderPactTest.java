@@ -62,7 +62,8 @@ class MatchControllerProviderPactTest {
 
     @State("matches exist")
     void matchesExist() {
-        when(matchService.listMatches(isNull(), isNull())).thenReturn(List.of(sampleMatch()));
+        when(matchService.listMatches(isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(List.of(sampleMatch()));
     }
 
     @State("match exists")
@@ -91,6 +92,7 @@ class MatchControllerProviderPactTest {
                                 "Novak Djokovic",
                                 PlayerSide.HOME,
                                 1)),
+                0,
                 0,
                 created,
                 created);
