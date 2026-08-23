@@ -1,9 +1,9 @@
-import { CompetitionsBand } from "@/components/home/CompetitionsBand";
 import { EditorialCarousel } from "@/components/home/EditorialCarousel";
 import { FeaturedBand } from "@/components/home/FeaturedBand";
 import { HomeHero } from "@/components/home/HomeHero";
 import { HomeScoreboard } from "@/components/home/HomeScoreboard";
 import { LatestGrid } from "@/components/home/LatestGrid";
+import { TourPulse } from "@/components/home/TourPulse";
 import { getHomeContent } from "@/services/home";
 import { getScoreboardDay } from "@/services/scaffolds";
 
@@ -13,12 +13,14 @@ export default async function HomePage() {
     <main id="main-content">
       <HomeHero {...content.hero} />
       <HomeScoreboard day={day} />
-      <CompetitionsBand />
-      {content.editorsPicks.length > 0 ? (
-        <EditorialCarousel title="Editor’s picks" stories={content.editorsPicks} />
+      {content.tourPulse ? <TourPulse pulse={content.tourPulse} /> : null}
+      {content.onCourt.length > 0 ? (
+        <EditorialCarousel title="On court" stories={content.onCourt} />
       ) : null}
       {content.featured ? <FeaturedBand {...content.featured} /> : null}
-      {content.latest.length > 0 ? <LatestGrid title="Latest" stories={content.latest} /> : null}
+      {content.playerProfiles.length > 0 ? (
+        <LatestGrid title="Player profiles" stories={content.playerProfiles} />
+      ) : null}
     </main>
   );
 }

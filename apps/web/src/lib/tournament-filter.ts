@@ -81,3 +81,15 @@ export function surfaceLabel(surface?: string): string {
   if (!surface) return "—";
   return surface.charAt(0) + surface.slice(1).toLowerCase();
 }
+
+export type CircuitId = "slams" | "atp" | "wta" | "davis" | "bjk";
+
+export function classifyTournamentName(name: string): CircuitId | null {
+  const text = name.toLowerCase();
+  if (SLAM.test(text)) return "slams";
+  if (DAVIS.test(text)) return "davis";
+  if (BJK.test(text)) return "bjk";
+  if (WTA_ONLY.test(text)) return "wta";
+  if (ATP_ONLY.test(text)) return "atp";
+  return null;
+}
