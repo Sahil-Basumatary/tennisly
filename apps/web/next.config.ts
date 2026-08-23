@@ -26,7 +26,7 @@ const contentSecurityPolicy = [
   ]
     .filter(Boolean)
     .join(" "),
-  "img-src 'self' data: blob: https://images.unsplash.com https://*.clerk.com https://img.clerk.com https://clerk.tennisly.tv",
+  "img-src 'self' data: blob: https://images.unsplash.com https://upload.wikimedia.org https://*.clerk.com https://img.clerk.com https://clerk.tennisly.tv",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   `frame-src https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com ${clerkSatellite}`,
@@ -57,6 +57,11 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+        pathname: "/wikipedia/**",
       },
     ],
   },
