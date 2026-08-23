@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHero } from "@/components/layout/PageHero";
 import { SectionSubnav } from "@/components/layout/SectionSubnav";
 import { getScoresFeed } from "@/services/scores";
 
@@ -9,17 +10,15 @@ const subnav = [
 
 export default async function MatchesIndexPage() {
   const feed = await getScoresFeed();
-
   return (
     <>
+      <PageHero
+        eyebrow="Matches"
+        title="Live Centre"
+        description="Open any match for the scorebug, tape, and court replay."
+      />
       <SectionSubnav items={subnav} activeId="live" />
-      <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <p className="mb-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-          Matches
-        </p>
-        <h1 className="mb-6 font-display text-2xl font-semibold text-foreground sm:text-3xl">
-          Live Centre
-        </h1>
+      <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
         <ul className="divide-y divide-hairline border border-hairline bg-white">
           {feed.items.length === 0 ? (
             <li className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
@@ -41,7 +40,7 @@ export default async function MatchesIndexPage() {
                       {match.status === "live" ? " · LIVE" : ""}
                     </p>
                   </div>
-                  <span className="font-data text-[12px] font-bold uppercase tracking-wide text-primary">
+                  <span className="font-data text-[12px] font-bold uppercase tracking-wide text-chrome">
                     Open
                   </span>
                 </Link>

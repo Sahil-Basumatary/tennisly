@@ -253,15 +253,19 @@ export function GlobalNav() {
               <SearchIcon className="h-5 w-5" />
             </button>
             {searchOpen ? (
-              <label className="hidden items-center sm:flex">
-                <span className="sr-only">Search</span>
+              <form action="/players" method="get" className="hidden items-center sm:flex">
+                <label className="sr-only" htmlFor="nav-search">
+                  Search players
+                </label>
                 <input
+                  id="nav-search"
                   autoFocus
                   type="search"
-                  placeholder="Search players, tournaments..."
+                  name="q"
+                  placeholder="Search players"
                   className="h-8 w-[220px] border-0 bg-white/10 px-3 font-sans text-[13px] text-white outline-none placeholder:text-white/50 focus:bg-white/15"
                 />
-              </label>
+              </form>
             ) : null}
             <SignedOut>
               <Link

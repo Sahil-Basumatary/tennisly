@@ -1,17 +1,33 @@
+import type { ReactNode } from "react";
+import { PageHero } from "@/components/layout/PageHero";
+
 type LegalPageProps = {
+  eyebrow?: string;
   title: string;
   summary: string;
+  children?: ReactNode;
 };
 
-export function LegalPage({ title, summary }: LegalPageProps) {
+export function LegalPage({
+  eyebrow = "Tennisly",
+  title,
+  summary,
+  children,
+}: LegalPageProps) {
   return (
-    <main id="main-content" className="mx-auto max-w-3xl px-6 py-12">
-      <h1 className="mb-4 font-display text-2xl font-semibold text-foreground">
-        {title}
-      </h1>
-      <p className="font-sans text-sm leading-relaxed text-muted-foreground">
-        {summary}
-      </p>
-    </main>
+    <>
+      <PageHero eyebrow={eyebrow} title={title} description={summary} />
+      <main id="main-content" className="mx-auto max-w-[800px] px-4 py-10 sm:px-6">
+        {children ? (
+          <div className="space-y-4 font-sans text-[15px] leading-relaxed text-foreground">
+            {children}
+          </div>
+        ) : (
+          <p className="font-sans text-[15px] leading-relaxed text-muted-foreground">
+            {summary}
+          </p>
+        )}
+      </main>
+    </>
   );
 }
