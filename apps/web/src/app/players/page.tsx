@@ -4,23 +4,82 @@ import { PlayersSkeleton } from "@/components/scaffolds/PlayersSkeleton";
 import { getPlayersBoard } from "@/services/scaffolds";
 
 type PageProps = {
-  searchParams: Promise<{ tour?: string; q?: string; view?: string }>;
+  searchParams: Promise<{
+    tour?: string;
+    q?: string;
+    view?: string;
+    page?: string;
+    size?: string;
+  }>;
 };
 
+const DEFAULT_SIZE = 50;
+const MAX_SIZE = 100;
+
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(raw ?? "", 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function rankingsHref(opts: {
+  tour: string;
+  view?: string;
+  q?: string;
+  page: number;
+  size: number;
+}): string {
+  const params = new URLSearchParams();
+  params.set("tour", opts.tour);
+  if (opts.view === "rankings" || opts.view === "search") {
+    params.set("view", opts.view);
+  }
+  if (opts.q) params.set("q", opts.q);
+  if (opts.page > 1) params.set("page", String(opts.page));
+  if (opts.size !== DEFAULT_SIZE) params.set("size", String(opts.size));
+  return `/players?${params.toString()}`;
+}
+
 export default async function PlayersPage({ searchParams }: PageProps) {
-  const { tour: tourParam, q, view } = await searchParams;
+  const { tour: tourParam, q, view, page: pageParam, size: sizeParam } = await searchParams;
   const tour = tourParam === "wta" ? "wta" : "atp";
   const query = q?.trim() ?? "";
   const searching = view === "search" || query.length > 0;
+  const rankingsView = view === "rankings" || !searching;
+  const size = Math.min(MAX_SIZE, parsePositiveInt(sizeParam, DEFAULT_SIZE));
   const board = await getPlayersBoard(tour);
-  const rows = query
+  const filtered = query
     ? board.rows.filter((row) => row.name.toLowerCase().includes(query.toLowerCase()))
     : searching
       ? []
       : board.rows;
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / size) || 1);
+  const page = Math.min(parsePositiveInt(pageParam, 1), pageCount);
+  const pagedRows = filtered.slice((page - 1) * size, page * size);
+  const viewKey = searching ? "search" : rankingsView && view === "rankings" ? "rankings" : undefined;
+  const rankJumps =
+    searching || total === 0
+      ? []
+      : Array.from({ length: pageCount }, (_, index) => {
+          const start = index * size + 1;
+          const end = Math.min((index + 1) * size, total);
+          return {
+            label: `${start}–${end}`,
+            href: rankingsHref({ tour, view: viewKey, q: query || undefined, page: index + 1, size }),
+            current: index + 1 === page,
+          };
+        });
   const subnav = [
-    { id: "atp", label: "ATP Singles", href: "/players?tour=atp" },
-    { id: "wta", label: "WTA Singles", href: "/players?tour=wta" },
+    {
+      id: "atp",
+      label: "ATP Singles",
+      href: rankingsHref({ tour: "atp", view: viewKey, page: 1, size }),
+    },
+    {
+      id: "wta",
+      label: "WTA Singles",
+      href: rankingsHref({ tour: "wta", view: viewKey, page: 1, size }),
+    },
     { id: "search", label: "Search", href: `/players?view=search&tour=${tour}` },
   ];
   return (
@@ -63,7 +122,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         </div>
       ) : null}
       <PlayersSkeleton
-        board={{ ...board, rows }}
+        board={{ ...board, rows: pagedRows, total, page, size }}
         hideHero={searching}
         emptyLabel={
           board.rows.length === 0
@@ -74,6 +133,17 @@ export default async function PlayersPage({ searchParams }: PageProps) {
                 ? "No ranked players match that name."
                 : undefined
         }
+        prevHref={
+          pagedRows.length > 0 && page > 1
+            ? rankingsHref({ tour, view: viewKey, q: query || undefined, page: page - 1, size })
+            : null
+        }
+        nextHref={
+          pagedRows.length > 0 && page < pageCount
+            ? rankingsHref({ tour, view: viewKey, q: query || undefined, page: page + 1, size })
+            : null
+        }
+        rankJumps={rankJumps}
       />
     </>
   );

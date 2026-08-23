@@ -34,6 +34,9 @@ export type PlayersBoard = {
   tour: "atp" | "wta";
   updatedAt: string;
   rows: PlayerRow[];
+  total?: number;
+  page?: number;
+  size?: number;
 };
 
 export type StandingRow = {
