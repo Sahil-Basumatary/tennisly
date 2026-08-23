@@ -23,8 +23,7 @@ public record UpstreamMatchData(
             Long providerPlayerId, String firstName, String lastName, String displayName) {}
 
     public record UpstreamScoreSnapshot(
-            List<Integer> setsP1,
-            List<Integer> setsP2,
+            List<Integer> sets,
             List<List<Integer>> games,
             List<String> points,
             Integer serverSide,

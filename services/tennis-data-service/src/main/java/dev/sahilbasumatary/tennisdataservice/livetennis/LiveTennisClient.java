@@ -158,12 +158,10 @@ public class LiveTennisClient {
         if (score == null) {
             return null;
         }
-        List<Integer> sets = score.sets() == null ? List.of() : score.sets();
         return new UpstreamMatchData.UpstreamScoreSnapshot(
-                sets,
-                sets,
-                score.games(),
-                score.points(),
+                score.sets() == null ? List.of() : score.sets(),
+                score.games() == null ? List.of() : score.games(),
+                score.points() == null ? List.of() : score.points(),
                 score.server(),
                 Boolean.TRUE.equals(score.tiebreak()));
     }

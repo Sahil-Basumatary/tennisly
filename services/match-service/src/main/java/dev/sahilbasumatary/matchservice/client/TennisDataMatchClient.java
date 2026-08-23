@@ -105,11 +105,20 @@ public class TennisDataMatchClient {
             Instant scheduledAt,
             PlayerSide home,
             PlayerSide away,
-            Integer winnerSide) {}
+            Integer winnerSide,
+            ScoreSnapshot score) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record PlayerSide(
             Long providerPlayerId, String firstName, String lastName, String displayName) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ScoreSnapshot(
+            List<Integer> sets,
+            List<List<Integer>> games,
+            List<String> points,
+            Integer serverSide,
+            Boolean tiebreak) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record UpstreamPointDto(

@@ -30,12 +30,25 @@ function asNumberArray(value: unknown): number[] {
   return value.map((entry) => Number(entry)).filter((n) => Number.isFinite(n));
 }
 
-/** ESPN-style set line: completed sets, plus current games while live. */
+function gamesFromPairs(games: unknown, index: 0 | 1): number[] {
+  if (!Array.isArray(games)) return [];
+  const values: number[] = [];
+  for (const pair of games) {
+    if (!Array.isArray(pair) || pair.length < 2) continue;
+    const n = Number(pair[index]);
+    if (Number.isFinite(n)) values.push(n);
+  }
+  return values;
+}
+
+/** ESPN-style set line: games won in each set, including the current set while live. */
 function scoreLine(match: UpstreamMatch, side: "HOME" | "AWAY"): number[] {
   const score = match.currentScore ?? {};
+  const fromPairs = gamesFromPairs(score.games, side === "HOME" ? 0 : 1);
+  if (fromPairs.length > 0) return fromPairs;
   const setsRoot = score.sets;
   let completed: number[] = [];
-  if (Array.isArray(setsRoot) && setsRoot[0] && typeof setsRoot[0] === "object") {
+  if (Array.isArray(setsRoot) && setsRoot[0] && typeof setsRoot[0] === "object" && !Array.isArray(setsRoot[0])) {
     const bag = setsRoot[0] as Record<string, unknown>;
     completed = asNumberArray(bag[side]);
   }
@@ -49,9 +62,17 @@ function scoreLine(match: UpstreamMatch, side: "HOME" | "AWAY"): number[] {
 }
 
 function pointLabel(match: UpstreamMatch, side: "HOME" | "AWAY"): string {
-  const game = (match.currentScore?.game ?? {}) as Record<string, unknown>;
-  const raw = game[side];
-  return typeof raw === "string" ? raw : "0";
+  const score = match.currentScore ?? {};
+  const game = (score.game ?? {}) as Record<string, unknown>;
+  const fromGame = game[side];
+  if (typeof fromGame === "string" && fromGame.length > 0) return fromGame;
+  const points = score.points;
+  if (Array.isArray(points) && points.length >= 2) {
+    const raw = points[side === "HOME" ? 0 : 1];
+    if (typeof raw === "string" && raw.length > 0) return raw;
+    if (typeof raw === "number" && Number.isFinite(raw)) return String(raw);
+  }
+  return "0";
 }
 
 function startLabel(match: UpstreamMatch): string | undefined {

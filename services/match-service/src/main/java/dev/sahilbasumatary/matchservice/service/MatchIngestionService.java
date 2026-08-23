@@ -3,6 +3,7 @@ package dev.sahilbasumatary.matchservice.service;
 import dev.sahilbasumatary.common.event.MatchEvent;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.ResolvedPlayerDto;
+import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.ScoreSnapshot;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.UpstreamMatchDto;
 import dev.sahilbasumatary.matchservice.client.TennisDataMatchClient.UpstreamPointDto;
 import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
@@ -17,6 +18,7 @@ import dev.sahilbasumatary.matchservice.entity.Surface;
 import dev.sahilbasumatary.matchservice.repository.MatchPointRepository;
 import dev.sahilbasumatary.matchservice.repository.MatchRepository;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -133,7 +135,6 @@ public class MatchIngestionService {
         if (created) {
             match.addPlayer(toPlayer(home.get(), PlayerSide.HOME));
             match.addPlayer(toPlayer(away.get(), PlayerSide.AWAY));
-            match.setCurrentScore(emptyScore(home.get().id(), away.get().id()));
         } else {
             for (MatchPlayer player : match.getPlayers()) {
                 if (player.getSide() == PlayerSide.HOME) {
@@ -144,6 +145,12 @@ public class MatchIngestionService {
                     player.setDisplayName(displayName(away.get()));
                 }
             }
+        }
+
+        if (dto.score() != null) {
+            match.setCurrentScore(toCurrentScore(dto.score(), home.get().id(), away.get().id()));
+        } else if (created) {
+            match.setCurrentScore(emptyScore(home.get().id(), away.get().id()));
         }
 
         if (nextStatus == MatchStatus.COMPLETED) {
@@ -231,6 +238,46 @@ public class MatchIngestionService {
         metadata.put("awayNationality", away.nationality());
         metadata.put("replayReady", dto.status() != null && dto.status().equalsIgnoreCase("completed"));
         return metadata;
+    }
+
+    private static Map<String, Object> toCurrentScore(
+            ScoreSnapshot snapshot, UUID homeId, UUID awayId) {
+        List<List<Integer>> games =
+                snapshot.games() == null ? List.of() : snapshot.games();
+        List<Integer> home = new ArrayList<>();
+        List<Integer> away = new ArrayList<>();
+        for (List<Integer> pair : games) {
+            if (pair == null || pair.size() < 2) {
+                continue;
+            }
+            home.add(pair.get(0));
+            away.add(pair.get(1));
+        }
+        List<String> points =
+                snapshot.points() == null || snapshot.points().size() < 2
+                        ? List.of("0", "0")
+                        : snapshot.points();
+        Map<String, Object> game = new HashMap<>();
+        if (!home.isEmpty()) {
+            game.put("homeGames", home.get(home.size() - 1));
+            game.put("awayGames", away.get(away.size() - 1));
+        }
+        game.put("HOME", points.get(0));
+        game.put("AWAY", points.get(1));
+        Map<String, Object> score = new HashMap<>();
+        score.put("sets", List.of(Map.of("HOME", home, "AWAY", away)));
+        score.put("games", games);
+        score.put("points", points);
+        score.put("game", game);
+        score.put("server", snapshot.serverSide());
+        score.put("tiebreak", Boolean.TRUE.equals(snapshot.tiebreak()));
+        score.put(
+                "serverId",
+                snapshot.serverSide() != null && snapshot.serverSide() == 2
+                        ? awayId.toString()
+                        : homeId.toString());
+        score.put("players", List.of(homeId.toString(), awayId.toString()));
+        return score;
     }
 
     private static Map<String, Object> emptyScore(UUID homeId, UUID awayId) {
