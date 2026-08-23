@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 export function HomeScoreboard({ day }: { day: ScoreboardDay }) {
   const groups = day.groups.slice(0, 4);
   return (
-    <section className="bg-[#f4f1ea]">
+    <section className="bg-surface-muted">
       <div className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 sm:py-12">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <p className="mb-1 font-data text-[11px] font-bold uppercase tracking-[0.16em] text-espn-live">
+            <p className="mb-1 font-data text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Scores
             </p>
             <h2 className="font-display text-[28px] font-bold uppercase tracking-tight text-foreground">
@@ -48,7 +48,7 @@ export function HomeScoreboard({ day }: { day: ScoreboardDay }) {
                           <span
                             className={cn(
                               "mr-2 font-data text-[10px] font-bold uppercase",
-                              match.status === "live" ? "text-espn-live" : "text-muted-foreground",
+                              match.status === "live" ? "text-live" : "text-muted-foreground",
                             )}
                           >
                             {match.status === "live" ? "LIVE" : match.status === "final" ? "F" : match.startLabel}

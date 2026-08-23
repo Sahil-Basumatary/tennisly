@@ -8,7 +8,7 @@ export function PageHero({ eyebrow, title, description }: PageHeroProps) {
   return (
     <div className="bg-chrome text-chrome-foreground">
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 sm:py-10">
-        <p className="mb-2 font-data text-[11px] font-bold uppercase tracking-[0.18em] text-uefa-gold">
+        <p className="mb-2 font-data text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
           {eyebrow}
         </p>
         <h1 className="font-display text-[28px] font-bold uppercase leading-[1.05] tracking-tight sm:text-[36px]">
@@ -20,7 +20,7 @@ export function PageHero({ eyebrow, title, description }: PageHeroProps) {
           </p>
         ) : null}
       </div>
-      <div className="h-[3px] bg-wimbledon-green" />
+      <div className="h-[3px] bg-court-green" />
     </div>
   );
 }

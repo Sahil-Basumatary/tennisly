@@ -29,7 +29,7 @@ function ScoreCardView({ card }: { card: ScoreCard }) {
         <span
           className={cn(
             "font-data text-[10px] font-bold uppercase tracking-wide",
-            card.status === "live" ? "text-espn-live" : "text-white/55",
+            card.status === "live" ? "text-live" : "text-white/55",
           )}
         >
           {statusLabel(card)}
@@ -112,7 +112,7 @@ export function ScoresStrip({ items }: ScoresStripProps) {
     >
       <div className="relative mx-auto flex h-ticker max-w-[1400px] items-stretch">
         <div className="flex w-[88px] shrink-0 flex-col justify-center border-r border-white/10 bg-black px-2 sm:w-[124px] sm:px-3">
-          <span className="font-data text-[10px] font-bold uppercase tracking-[0.14em] text-espn-live sm:text-[11px]">
+          <span className="font-data text-[10px] font-bold uppercase tracking-[0.14em] text-white/70 sm:text-[11px]">
             Tennis
           </span>
           <Link

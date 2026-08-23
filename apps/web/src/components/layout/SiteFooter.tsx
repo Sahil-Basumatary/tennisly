@@ -22,7 +22,7 @@ function SocialButton({ link }: { link: SocialLink }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={link.label}
-      className="inline-flex h-10 w-10 items-center justify-center text-white/80 transition-colors hover:text-uefa-gold"
+      className="inline-flex h-10 w-10 items-center justify-center text-white/80 transition-colors hover:text-court-glow"
     >
       <Icon className="h-5 w-5" />
     </a>
@@ -33,12 +33,12 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
     <footer className="mt-auto bg-chrome text-chrome-foreground">
-      <div className="h-[3px] bg-wimbledon-green" />
+      <div className="h-[3px] bg-court-green" />
       <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {footerColumns.map((column) => (
             <nav key={column.id} aria-label={column.heading}>
-              <p className="mb-3 font-data text-[11px] font-bold uppercase tracking-[0.16em] text-uefa-gold">
+              <p className="mb-3 font-data text-[11px] font-bold uppercase tracking-[0.16em] text-white/70">
                 {column.heading}
               </p>
               <ul className="space-y-2">

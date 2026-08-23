@@ -5,7 +5,7 @@ import type { ScoreCard } from "@/types/scores";
 import { cn } from "@/lib/utils";
 
 function statusTone(status: ScoreCard["status"]) {
-  if (status === "live") return "text-espn-live";
+  if (status === "live") return "text-live";
   if (status === "final") return "text-muted-foreground";
   return "text-foreground";
 }

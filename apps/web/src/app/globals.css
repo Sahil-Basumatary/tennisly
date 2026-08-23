@@ -4,20 +4,17 @@
 
 @layer base {
   :root {
-    /* Wimbledon purple masthead (#540082). ESPN ticker is always black/white. */
-    --chrome: 282 100% 25%;
+    --chrome: 0 0% 12%;
     --chrome-foreground: 0 0% 100%;
     --ticker: 0 0% 7%;
     --ticker-foreground: 0 0% 100%;
-    --espn-live: 351 80% 48%;
-    --uefa-gold: 40 42% 56%;
-    --wimbledon-green: 150 100% 20%;
-    --surface-muted: 216 27% 96%;
-    --hairline: 210 14% 89%;
-    --brand-gold: 40 36% 37%;
-    --brand-sand: 40 10% 68%;
-    --inverse-deep: 150 57% 10%;
-    --inverse-purple: 282 86% 10%;
+    --live: 351 80% 48%;
+    --court-green: 150 100% 20%;
+    --court-glow: 150 48% 58%;
+    --surface-muted: 36 18% 94%;
+    --hairline: 30 10% 86%;
+    --inverse-deep: 0 0% 10%;
+    --chrome-sticky: calc(var(--ticker-height) + var(--nav-height) + 3px + 2.5rem);
 
     --background: 0 0% 100%;
     --foreground: 200 15% 8%;
@@ -27,11 +24,11 @@
     --popover-foreground: 200 15% 8%;
     --primary: 150 100% 20%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 278 100% 25%;
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 216 27% 96%;
+    --muted: 36 18% 94%;
     --muted-foreground: 200 6% 45%;
-    --accent: 40 36% 37%;
+    --accent: 150 100% 20%;
     --accent-foreground: 0 0% 100%;
     --destructive: 356 77% 49%;
     --destructive-foreground: 0 0% 100%;
@@ -54,19 +51,17 @@
   }
 
   .dark {
-    --chrome: 282 100% 18%;
+    --chrome: 0 0% 10%;
     --chrome-foreground: 0 0% 100%;
     --ticker: 0 0% 7%;
     --ticker-foreground: 0 0% 100%;
-    --espn-live: 351 80% 48%;
-    --uefa-gold: 40 42% 56%;
-    --wimbledon-green: 150 100% 20%;
-    --surface-muted: 152 20% 12%;
-    --hairline: 152 12% 20%;
-    --brand-gold: 40 36% 47%;
-    --brand-sand: 40 10% 58%;
-    --inverse-deep: 150 57% 10%;
-    --inverse-purple: 282 86% 10%;
+    --live: 351 80% 48%;
+    --court-green: 150 100% 20%;
+    --court-glow: 150 48% 58%;
+    --surface-muted: 36 10% 16%;
+    --hairline: 30 8% 22%;
+    --inverse-deep: 0 0% 8%;
+    --chrome-sticky: calc(var(--ticker-height) + var(--nav-height) + 3px + 2.5rem);
 
     --background: 152 30% 8%;
     --foreground: 60 10% 93%;
@@ -76,17 +71,17 @@
     --popover-foreground: 60 10% 93%;
     --primary: 152 60% 40%;
     --primary-foreground: 152 30% 8%;
-    --secondary: 278 70% 45%;
+    --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 152 20% 15%;
-    --muted-foreground: 150 10% 60%;
-    --accent: 40 36% 47%;
-    --accent-foreground: 152 30% 8%;
+    --muted: 36 10% 16%;
+    --muted-foreground: 40 8% 70%;
+    --accent: 150 48% 42%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 63% 50%;
     --destructive-foreground: 60 10% 93%;
     --border: 152 20% 18%;
     --input: 152 20% 18%;
-    --ring: 40 36% 47%;
+    --ring: 150 48% 42%;
   }
 }
 

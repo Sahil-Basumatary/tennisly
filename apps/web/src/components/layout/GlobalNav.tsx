@@ -292,7 +292,7 @@ export function GlobalNav() {
             </SignedIn>
           </div>
         </div>
-        <div className="h-[3px] bg-wimbledon-green" />
+        <div className="h-[3px] bg-court-green" />
         <nav
           aria-label="Competitions"
           className="bg-black"
@@ -307,7 +307,7 @@ export function GlobalNav() {
                   className={cn(
                     "inline-flex shrink-0 items-center border-b-2 px-3 font-data text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
                     active
-                      ? "border-uefa-gold text-uefa-gold"
+                      ? "border-court-glow text-court-glow"
                       : "border-transparent text-white/75 hover:text-white",
                   )}
                 >

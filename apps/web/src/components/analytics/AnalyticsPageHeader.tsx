@@ -16,7 +16,7 @@ export function AnalyticsPageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p className="mb-1 font-data text-[11px] font-bold uppercase tracking-[0.16em] text-uefa-gold">
+        <p className="mb-1 font-data text-[11px] font-bold uppercase tracking-[0.16em] text-court-green">
           {eyebrow}
         </p>
         <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground sm:text-3xl">{title}</h1>

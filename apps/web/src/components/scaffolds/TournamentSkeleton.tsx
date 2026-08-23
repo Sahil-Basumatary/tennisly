@@ -59,7 +59,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
                   >
                     <div className="mb-2 flex items-center justify-between gap-2 font-data text-[11px] uppercase tracking-wide text-muted-foreground">
                       <span>{fx.round}</span>
-                      <span className={cn(fx.status === "live" && "font-bold text-espn-live")}>
+                      <span className={cn(fx.status === "live" && "font-bold text-live")}>
                         {fx.startLabel}
                       </span>
                     </div>
