@@ -34,7 +34,11 @@ export default async function AnalyticsPlayersSearchPage({ searchParams }: PageP
           />
         </Suspense>
         <p className="mt-6 font-sans text-[13px] text-muted-foreground">
-          Need a match board instead?{" "}
+          Prefer a name over a UUID?{" "}
+          <Link href="/players" className="font-semibold text-primary hover:underline">
+            Open rankings
+          </Link>
+          , then use Open analytics on the player board.{" "}
           <Link href="/analytics" className="font-semibold text-primary hover:underline">
             Return to overview
           </Link>

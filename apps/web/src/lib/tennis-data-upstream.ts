@@ -20,6 +20,9 @@ export type UpstreamPlayer = {
   firstName: string;
   lastName: string;
   nationality?: string | null;
+  dateOfBirth?: string | null;
+  hand?: string | null;
+  heightCm?: number | null;
   currentRanking?: number | null;
   currentPoints?: number | null;
   gender?: UpstreamGender;
@@ -85,4 +88,35 @@ export async function fetchUpstreamPlayers(options?: {
     throw new TennisDataUpstreamError("tennis-data-service unreachable", 502);
   }
   return readJson<UpstreamPlayer[]>(response);
+}
+
+export async function fetchUpstreamPlayer(id: string): Promise<UpstreamPlayer | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${tennisDataBase()}/api/tennis/players/${encodeURIComponent(id)}`, {
+      headers: upstreamHeaders(),
+      cache: "no-store",
+    });
+  } catch {
+    throw new TennisDataUpstreamError("tennis-data-service unreachable", 502);
+  }
+  if (response.status === 404) return null;
+  return readJson<UpstreamPlayer>(response);
+}
+
+export async function fetchUpstreamPlayerRankings(id: string): Promise<UpstreamRanking[]> {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${tennisDataBase()}/api/tennis/players/${encodeURIComponent(id)}/rankings`,
+      {
+        headers: upstreamHeaders(),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    throw new TennisDataUpstreamError("tennis-data-service unreachable", 502);
+  }
+  if (response.status === 404) return [];
+  return readJson<UpstreamRanking[]>(response);
 }

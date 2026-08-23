@@ -1,4 +1,5 @@
 import type { MatchStatus, ScoreCard } from "@/types/scores";
+import type { Surface } from "@/types/replay";
 
 export type ScoreboardFilter =
   | "all"
@@ -59,12 +60,29 @@ export type TournamentBoard = {
   fixtures: FixtureRow[];
 };
 
+export type PlayerProfile = {
+  id: string;
+  name: string;
+  country: string;
+  tour: "atp" | "wta";
+  rank: number | null;
+  points: number | null;
+  gender?: string;
+  matches: ScoreCard[];
+};
+
+export type PlayerProfileResult =
+  | { status: "ok"; player: PlayerProfile }
+  | { status: "missing" }
+  | { status: "unavailable" };
+
 export type MatchCentrePanel = {
   id: string;
   status: MatchStatus;
   tournament: string;
   round: string;
   court: string;
+  surface: Surface;
   home: { id: string; name: string; country: string; seed?: number };
   away: { id: string; name: string; country: string; seed?: number };
   score: {

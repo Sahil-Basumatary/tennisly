@@ -17,7 +17,7 @@ export function toPlayersBoard(
       name: row.playerName,
       country: nationalityById.get(row.playerId) ?? "—",
       points: row.points,
-      href: `/players#${row.playerId}`,
+      href: `/players/${row.playerId}`,
     }));
   return {
     tour,

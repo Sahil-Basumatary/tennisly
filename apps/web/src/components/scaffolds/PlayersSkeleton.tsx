@@ -2,15 +2,23 @@ import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
 import type { PlayersBoard } from "@/types/scaffolds";
 
-export function PlayersSkeleton({ board }: { board: PlayersBoard }) {
+type PlayersSkeletonProps = {
+  board: PlayersBoard;
+  hideHero?: boolean;
+  emptyLabel?: string;
+};
+
+export function PlayersSkeleton({ board, hideHero, emptyLabel }: PlayersSkeletonProps) {
   const tourLabel = board.tour === "wta" ? "WTA" : "ATP";
   return (
     <>
-      <PageHero
-        eyebrow="Players"
-        title={`${tourLabel} Rankings`}
-        description="Official singles order of play, updated from tennis-data-service."
-      />
+      {hideHero ? null : (
+        <PageHero
+          eyebrow="Players"
+          title={`${tourLabel} Rankings`}
+          description="Official singles order of play, updated from tennis-data-service."
+        />
+      )}
       <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
         <div className="overflow-hidden border border-hairline bg-white">
           <div className="grid grid-cols-[48px_1fr_72px_88px] gap-2 border-b border-hairline bg-chrome px-4 py-2.5 font-data text-[11px] font-semibold uppercase tracking-wide text-white/70 sm:grid-cols-[56px_1fr_96px_112px]">
@@ -21,7 +29,8 @@ export function PlayersSkeleton({ board }: { board: PlayersBoard }) {
           </div>
           {board.rows.length === 0 ? (
             <p className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
-              No rankings yet. Start tennis-data-service with a BallDontLie API key so rankings can sync.
+              {emptyLabel ??
+                "No rankings yet. Start tennis-data-service with a BallDontLie API key so rankings can sync."}
             </p>
           ) : (
             board.rows.map((row) => (

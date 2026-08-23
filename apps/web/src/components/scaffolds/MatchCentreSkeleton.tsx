@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import type { MatchCentrePanel } from "@/types/scaffolds";
 import { MatchShotStatCard } from "@/components/match/MatchShotStatCard";
 import { MatchStatsRail } from "@/components/match/MatchStatsRail";
@@ -57,7 +58,9 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
                   {match.home.seed ? (
                     <span className="mr-1 font-data text-muted-foreground">{match.home.seed}.</span>
                   ) : null}
-                  {match.home.name}
+                  <Link href={`/players/${match.home.id}`} className="hover:underline">
+                    {match.home.name}
+                  </Link>
                 </p>
                 <span className="font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {match.home.country}
@@ -70,7 +73,9 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
                   {match.away.seed ? (
                     <span className="mr-1 font-data text-muted-foreground">{match.away.seed}.</span>
                   ) : null}
-                  {match.away.name}
+                  <Link href={`/players/${match.away.id}`} className="hover:underline">
+                    {match.away.name}
+                  </Link>
                 </p>
                 <span className="font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {match.away.country}
@@ -102,7 +107,7 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
             matchId={match.id}
             homePlayerId={match.home.id}
             awayPlayerId={match.away.id}
-            surface="GRASS"
+            surface={match.surface}
           />
         </section>
         <MatchStatsRail

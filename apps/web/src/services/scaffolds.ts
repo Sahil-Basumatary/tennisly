@@ -1,5 +1,6 @@
 export {
   getMatchCentre,
+  getPlayerProfile,
   getPlayersBoard,
   getScoreboardDay,
   getTournamentBoard,

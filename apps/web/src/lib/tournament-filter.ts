@@ -1,0 +1,83 @@
+import type { UpstreamMatch } from "@/types/match-catalogue";
+
+export type TournamentQuery = {
+  tour?: string;
+  level?: string;
+  name?: string;
+};
+
+const SLAM = /australian open|roland garros|french open|wimbledon|us open|u\.s\. open/;
+const ATP_ONLY = /\batp\b|masters 1000|united cup|next gen|davis/;
+const WTA_ONLY = /\bwta\b|billie jean|bjk|fed cup/;
+const DAVIS = /davis/;
+const BJK = /billie jean|bjk|fed cup/;
+
+function haystack(match: UpstreamMatch): string {
+  const meta = match.metadata ?? {};
+  return [
+    meta.tournamentName,
+    meta.tournamentShortName,
+    meta.tour,
+    meta.circuit,
+    meta.competition,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+}
+
+export function parseTournamentQuery(params: {
+  tour?: string;
+  level?: string;
+  name?: string;
+}): TournamentQuery {
+  return {
+    tour: params.tour === "wta" || params.tour === "atp" ? params.tour : undefined,
+    level: params.level === "grand_slam" ? "grand_slam" : undefined,
+    name: params.name === "davis" || params.name === "bjk" ? params.name : undefined,
+  };
+}
+
+export function filterMatchesForTournament(
+  matches: UpstreamMatch[],
+  query: TournamentQuery,
+): UpstreamMatch[] {
+  if (!query.tour && !query.level && !query.name) return matches;
+  return matches.filter((match) => {
+    const text = haystack(match);
+    if (query.level === "grand_slam" && !SLAM.test(text)) return false;
+    if (query.name === "davis" && !DAVIS.test(text)) return false;
+    if (query.name === "bjk" && !BJK.test(text)) return false;
+    if (query.tour === "atp" && WTA_ONLY.test(text) && !SLAM.test(text)) return false;
+    if (query.tour === "wta" && ATP_ONLY.test(text) && !SLAM.test(text)) return false;
+    return true;
+  });
+}
+
+export function tournamentHeading(query: TournamentQuery): { name: string; location: string } {
+  if (query.name === "davis") return { name: "Davis Cup", location: "National teams" };
+  if (query.name === "bjk") return { name: "Billie Jean King Cup", location: "National teams" };
+  if (query.level === "grand_slam") return { name: "Grand Slams", location: "Majors" };
+  if (query.tour === "wta") return { name: "WTA Tour", location: "Women's tour" };
+  if (query.tour === "atp") return { name: "ATP Tour", location: "Men's tour" };
+  return { name: "All competitions", location: "Tour" };
+}
+
+export function tournamentActiveId(query: TournamentQuery): string {
+  if (query.name === "davis") return "davis";
+  if (query.name === "bjk") return "bjk";
+  if (query.level === "grand_slam") return "slams";
+  if (query.tour === "wta") return "wta";
+  if (query.tour === "atp") return "atp";
+  return "overview";
+}
+
+export function standingsGender(query: TournamentQuery): "MALE" | "FEMALE" {
+  if (query.tour === "wta" || query.name === "bjk") return "FEMALE";
+  return "MALE";
+}
+
+export function surfaceLabel(surface?: string): string {
+  if (!surface) return "—";
+  return surface.charAt(0) + surface.slice(1).toLowerCase();
+}

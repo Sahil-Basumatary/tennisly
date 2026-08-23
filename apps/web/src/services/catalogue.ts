@@ -2,6 +2,7 @@ import type { UpstreamMatchPoint } from "@/lib/match-stats";
 import { isReplayMatchUuid } from "@/lib/replay-index";
 import {
   toMatchCentrePanel,
+  toScoreCard,
   toScoreboardDay,
   toScoresFeed,
   toTournamentBoard,
@@ -14,19 +15,29 @@ import {
 } from "@/lib/match-upstream";
 import { toPlayersBoard, toStandingRows } from "@/lib/rankings-mapper";
 import {
+  fetchUpstreamPlayer,
   fetchUpstreamPlayers,
+  fetchUpstreamPlayerRankings,
   fetchUpstreamRankings,
   TennisDataUpstreamError,
   type UpstreamGender,
 } from "@/lib/tennis-data-upstream";
 import type {
   MatchCentrePanel,
+  PlayerProfile,
+  PlayerProfileResult,
   PlayersBoard,
   ScoreboardDay,
   TournamentBoard,
 } from "@/types/scaffolds";
 import type { ScoresFeed } from "@/types/scores";
 import { toUpstreamStatus } from "@/types/match-catalogue";
+import {
+  filterMatchesForTournament,
+  standingsGender,
+  tournamentHeading,
+  type TournamentQuery,
+} from "@/lib/tournament-filter";
 
 /**
  * Live scores strip / live centre feed from match-service.
@@ -96,15 +107,57 @@ export async function getMatchCentre(id: string): Promise<MatchCentrePanel | nul
   }
 }
 
-export async function getTournamentBoard(): Promise<TournamentBoard> {
+export async function getTournamentBoard(
+  query: TournamentQuery = {},
+): Promise<TournamentBoard> {
+  const heading = tournamentHeading(query);
+  const gender = standingsGender(query);
   try {
     const [matches, rankings] = await Promise.all([
-      fetchUpstreamMatches(),
-      fetchUpstreamRankings({ gender: "MALE" }).catch(() => []),
+      fetchUpstreamMatches({ page: 0, size: 100 }),
+      fetchUpstreamRankings({ gender }).catch(() => []),
     ]);
-    return toTournamentBoard(matches, toStandingRows(rankings, 8));
+    const filtered = filterMatchesForTournament(matches, query);
+    return toTournamentBoard(filtered, toStandingRows(rankings, 8), heading);
   } catch {
-    return toTournamentBoard([]);
+    return toTournamentBoard([], [], heading);
+  }
+}
+
+export async function getPlayerProfile(id: string): Promise<PlayerProfileResult> {
+  try {
+    const player = await fetchUpstreamPlayer(id);
+    if (!player) return { status: "missing" };
+    const gender: UpstreamGender = player.gender === "FEMALE" ? "FEMALE" : "MALE";
+    const [rankings, matches] = await Promise.all([
+      fetchUpstreamPlayerRankings(id).catch(() => []),
+      fetchUpstreamMatches({ page: 0, size: 100 }).catch(() => []),
+    ]);
+    const latest = [...rankings].sort((a, b) => a.rank - b.rank)[0];
+    const name = `${player.firstName} ${player.lastName}`.trim();
+    return {
+      status: "ok",
+      player: {
+        id: player.id,
+        name: name || player.lastName,
+        country: player.nationality?.trim() || "—",
+        tour: gender === "FEMALE" ? "wta" : "atp",
+        rank: player.currentRanking ?? latest?.rank ?? null,
+        points: player.currentPoints ?? latest?.points ?? null,
+        gender: player.gender,
+        matches: matches
+          .filter((match) => match.players.some((entry) => entry.playerId === id))
+          .map(toScoreCard),
+      },
+    };
+  } catch (err) {
+    if (err instanceof TennisDataUpstreamError && err.status === 404) {
+      return { status: "missing" };
+    }
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[player] tennis-data-service unavailable", err);
+    }
+    return { status: "unavailable" };
   }
 }
 

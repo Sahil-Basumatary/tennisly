@@ -9,6 +9,8 @@ import type {
   TournamentBoard,
 } from "@/types/scaffolds";
 import type { ScoreCard, ScoresFeed } from "@/types/scores";
+import type { Surface } from "@/types/replay";
+import { surfaceLabel } from "@/lib/tournament-filter";
 
 function metaString(match: UpstreamMatch, key: string, fallback = ""): string {
   const value = match.metadata?.[key];
@@ -206,6 +208,7 @@ export function toMatchCentrePanel(
     tournament: metaString(match, "tournamentName", metaString(match, "tournamentShortName", "Tour")),
     round: metaString(match, "round", metaString(match, "roundCode", "—")),
     court: metaString(match, "court", "Centre Court"),
+    surface: match.surface as Surface,
     home: {
       id: home.playerId,
       name: home.displayName,
@@ -234,10 +237,9 @@ export function toMatchCentrePanel(
 export function toTournamentBoard(
   matches: UpstreamMatch[],
   standings: StandingRow[] = [],
+  heading?: { name: string; location: string },
 ): TournamentBoard {
-  const primary =
-    matches.find((match) => metaString(match, "tournamentShortName") === "Wimbledon") ??
-    matches[0];
+  const primary = matches[0];
   const fixtures = toScoresFeed(matches).items.map((card) => ({
     id: card.id,
     status: card.status,
@@ -248,11 +250,11 @@ export function toTournamentBoard(
     href: card.href,
   }));
   return {
-    name: primary
-      ? metaString(primary, "tournamentName", "Tour board")
-      : "Tour board",
-    surface: primary?.surface ?? "Grass",
-    location: primary ? metaString(primary, "location", "—") : "—",
+    name: heading?.name
+      ?? (primary ? metaString(primary, "tournamentName", "Tour board") : "Tour board"),
+    surface: surfaceLabel(primary?.surface),
+    location: heading?.location
+      ?? (primary ? metaString(primary, "location", "—") : "—"),
     standings,
     fixtures,
   };

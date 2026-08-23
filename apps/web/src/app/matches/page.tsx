@@ -4,25 +4,41 @@ import { SectionSubnav } from "@/components/layout/SectionSubnav";
 import { getScoresFeed } from "@/services/scores";
 
 const subnav = [
-  { id: "live", label: "Live Centre", href: "/matches" },
+  { id: "live", label: "Live Centre", href: "/matches?status=live" },
   { id: "replays", label: "Replays", href: "/matches?view=replays" },
 ];
 
-export default async function MatchesIndexPage() {
-  const feed = await getScoresFeed();
+type PageProps = {
+  searchParams: Promise<{ view?: string; status?: string }>;
+};
+
+export default async function MatchesIndexPage({ searchParams }: PageProps) {
+  const { view, status } = await searchParams;
+  const replays = view === "replays";
+  const uiStatus = replays ? "final" : status === "live" ? "live" : undefined;
+  const feed = await getScoresFeed(uiStatus);
+  const activeId = replays ? "replays" : "live";
   return (
     <>
       <PageHero
         eyebrow="Matches"
-        title="Live Centre"
-        description="Open any match for the scorebug, tape, and court replay."
+        title={replays ? "Replays" : "Live Centre"}
+        description={
+          replays
+            ? "Completed matches with tape and court replay."
+            : "Open any match for the scorebug, tape, and court replay."
+        }
       />
-      <SectionSubnav items={subnav} activeId="live" />
+      <SectionSubnav items={subnav} activeId={activeId} />
       <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
         <ul className="divide-y divide-hairline border border-hairline bg-white">
           {feed.items.length === 0 ? (
             <li className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
-              No live-centre matches yet. Ensure match-service is ingesting from Live Tennis API.
+              {replays
+                ? "No completed matches yet. Finish a live match through match-service to materialize a replay."
+                : status === "live"
+                  ? "No live matches right now. Check replays for completed tapes."
+                  : "No live-centre matches yet. Ensure match-service is ingesting from Live Tennis API."}
             </li>
           ) : (
             feed.items.map((match) => (
