@@ -2,7 +2,10 @@ export type WikiPlayerMedia = {
   imageSrc: string | null;
   imageAlt: string;
   extract: string | null;
+  extractFull: string | null;
   credit: string | null;
+  sourceTitle: string | null;
+  sourceUrl: string | null;
 };
 
 const WIKI_UA = "Tennisly/1.0 (https://tennisly.tv; hello@tennisly.dev)";
@@ -10,14 +13,19 @@ const EMPTY: WikiPlayerMedia = {
   imageSrc: null,
   imageAlt: "",
   extract: null,
+  extractFull: null,
   credit: null,
+  sourceTitle: null,
+  sourceUrl: null,
 };
 
 type WikiSummary = {
   type?: string;
   title?: string;
+  description?: string;
   extract?: string;
   thumbnail?: { source?: string };
+  content_urls?: { desktop?: { page?: string } };
 };
 
 type WikiSearch = {
@@ -32,10 +40,10 @@ function wikiHeaders(): HeadersInit {
   };
 }
 
-function clipExtract(text: string): string {
+function clipExtract(text: string, max = 220): string {
   const compact = text.replace(/\s+/g, " ").trim();
-  if (compact.length <= 220) return compact;
-  const cut = compact.slice(0, 220);
+  if (compact.length <= max) return compact;
+  const cut = compact.slice(0, max);
   const lastSpace = cut.lastIndexOf(" ");
   return `${(lastSpace > 80 ? cut.slice(0, lastSpace) : cut).trim()}…`;
 }
@@ -51,12 +59,41 @@ function isCommonsPhoto(url: string): boolean {
   }
 }
 
+function fold(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isAbbreviatedName(name: string): boolean {
+  return /^[A-Za-z]\.\s/.test(name.trim()) || /\s[A-Za-z]\.\s/.test(name.trim());
+}
+
+function looksLikeTennis(summary: WikiSummary): boolean {
+  const blob = `${summary.description ?? ""} ${summary.extract ?? ""}`.toLowerCase();
+  return /\btennis\b|grand slam|\batp\b|\bwta\b|davis cup|wimbledon|roland garros/.test(blob);
+}
+
+function namesAlign(query: string, title: string): boolean {
+  const queryTokens = fold(query).split(" ").filter(Boolean);
+  const titleTokens = fold(title).split(" ").filter(Boolean);
+  const queryLast = queryTokens.at(-1) ?? "";
+  if (!queryLast || queryLast.length < 3 || !titleTokens.includes(queryLast)) return false;
+  if (queryTokens.length < 2) return true;
+  return (queryTokens[0] ?? "").charAt(0) === (titleTokens[0] ?? "").charAt(0);
+}
+
 function searchQueries(name: string): string[] {
   const trimmed = name.trim();
   if (!trimmed) return [];
   const queries = [`${trimmed} tennis`, trimmed];
-  const last = trimmed.split(/\s+/).at(-1);
-  if (last && last.length > 2 && last !== trimmed) queries.push(`${last} tennis`);
+  if (!isAbbreviatedName(trimmed)) {
+    const last = trimmed.split(/\s+/).at(-1);
+    if (last && last.length > 3 && last !== trimmed) queries.push(`${last} tennis`);
+  }
   return queries;
 }
 
@@ -74,16 +111,19 @@ async function wikiGet<T>(url: string): Promise<T | null> {
   }
 }
 
-async function fetchSummary(title: string): Promise<WikiSummary | null> {
-  const path = encodeURIComponent(title.replaceAll(" ", "_"));
+async function fetchSummary(lookupTitle: string, originalName: string): Promise<WikiSummary | null> {
+  const path = encodeURIComponent(lookupTitle.replaceAll(" ", "_"));
   const summary = await wikiGet<WikiSummary>(
     `https://en.wikipedia.org/api/rest_v1/page/summary/${path}`,
   );
   if (!summary || summary.type === "disambiguation") return null;
+  if (!looksLikeTennis(summary) || !namesAlign(originalName, summary.title ?? lookupTitle)) {
+    return null;
+  }
   return summary;
 }
 
-async function searchTitle(query: string): Promise<string | null> {
+async function searchTitle(query: string, originalName: string): Promise<string | null> {
   const params = new URLSearchParams({
     action: "query",
     list: "search",
@@ -93,33 +133,38 @@ async function searchTitle(query: string): Promise<string | null> {
   });
   const data = await wikiGet<WikiSearch>(`https://en.wikipedia.org/w/api.php?${params}`);
   const title = data?.query?.search?.[0]?.title?.trim();
-  return title || null;
+  if (!title || !namesAlign(originalName, title)) return null;
+  return title;
 }
 
 function mediaFromSummary(name: string, summary: WikiSummary): WikiPlayerMedia {
   const thumb = summary.thumbnail?.source?.trim() ?? "";
-  const extract = summary.extract ? clipExtract(summary.extract) : null;
+  const full = summary.extract?.replace(/\s+/g, " ").trim() || null;
   const okPhoto = thumb.length > 0 && isCommonsPhoto(thumb);
+  const sourceUrl = summary.content_urls?.desktop?.page?.trim() || null;
   return {
     imageSrc: okPhoto ? thumb : null,
     imageAlt: okPhoto ? `${summary.title ?? name}` : name,
-    extract,
+    extract: full ? clipExtract(full) : null,
+    extractFull: full ? clipExtract(full, 1200) : null,
     credit: okPhoto ? "Photo: Wikimedia Commons" : null,
+    sourceTitle: summary.title ?? null,
+    sourceUrl,
   };
 }
 
 export async function fetchWikiPlayerMedia(name: string): Promise<WikiPlayerMedia> {
   const trimmed = name.trim();
   if (!trimmed) return EMPTY;
-  const direct = await fetchSummary(trimmed);
-  if (direct?.extract || direct?.thumbnail?.source) return mediaFromSummary(trimmed, direct);
+  if (!isAbbreviatedName(trimmed)) {
+    const direct = await fetchSummary(trimmed, trimmed);
+    if (direct) return mediaFromSummary(trimmed, direct);
+  }
   for (const query of searchQueries(trimmed)) {
-    const title = await searchTitle(query);
+    const title = await searchTitle(query, trimmed);
     if (!title) continue;
-    const summary = await fetchSummary(title);
-    if (summary?.extract || summary?.thumbnail?.source) {
-      return mediaFromSummary(trimmed, summary);
-    }
+    const summary = await fetchSummary(title, trimmed);
+    if (summary) return mediaFromSummary(trimmed, summary);
   }
   return { ...EMPTY, imageAlt: trimmed };
 }
@@ -139,10 +184,4 @@ export function playerInitials(name: string): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
-}
-
-export function readMinutesFromExtract(extract: string | null): number | null {
-  if (!extract) return null;
-  const words = extract.split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / 200));
 }

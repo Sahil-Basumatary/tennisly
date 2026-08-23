@@ -1,8 +1,11 @@
-import { fetchWikiPlayerMediaMap, readMinutesFromExtract } from "@/lib/wikipedia-upstream";
+import { classifyTournamentName, type CircuitId } from "@/lib/tournament-filter";
+import { fetchWikiPlayerMediaMap } from "@/lib/wikipedia-upstream";
 import { getPlayersBoard } from "@/services/catalogue";
 import { getScoresFeed } from "@/services/scores";
+import { matchStoryHref, playerStoryHref } from "@/types/editorial";
+import type { MatchStatus, ScoreCard } from "@/types/scores";
 
-export type StoryTag = "News" | "Feature" | "Analysis" | "Live" | "Profile";
+export type StoryTag = "On court" | "Player profile" | "Live";
 
 export type HomeStory = {
   id: string;
@@ -14,7 +17,25 @@ export type HomeStory = {
   imageCredit: string | null;
   summary: string | null;
   publishedLabel: string;
-  readMinutes: number | null;
+};
+
+export type TourCircuit = {
+  id: CircuitId;
+  label: string;
+  href: string;
+  liveCount: number;
+  upcomingCount: number;
+  sample: string | null;
+};
+
+export type TourPulse = {
+  featured: {
+    href: string;
+    title: string;
+    meta: string;
+    status: MatchStatus;
+  };
+  circuits: TourCircuit[];
 };
 
 export type HomeContent = {
@@ -25,7 +46,8 @@ export type HomeContent = {
     imageSrc: string;
     imageAlt: string;
   };
-  editorsPicks: HomeStory[];
+  tourPulse: TourPulse | null;
+  onCourt: HomeStory[];
   featured: {
     eyebrow: string;
     headline: string;
@@ -34,7 +56,7 @@ export type HomeContent = {
     imageSrc: string;
     imageAlt: string;
   } | null;
-  latest: HomeStory[];
+  playerProfiles: HomeStory[];
   empty: boolean;
 };
 
@@ -42,6 +64,40 @@ const IMG = {
   grassAction:
     "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=2400&q=80",
 } as const;
+
+const CIRCUITS: { id: CircuitId; label: string; href: string }[] = [
+  { id: "slams", label: "Grand Slams", href: "/tournaments?level=grand_slam" },
+  { id: "atp", label: "ATP Tour", href: "/tournaments?tour=atp" },
+  { id: "wta", label: "WTA Tour", href: "/tournaments?tour=wta" },
+  { id: "davis", label: "Davis Cup", href: "/tournaments?name=davis" },
+  { id: "bjk", label: "Billie Jean King Cup", href: "/tournaments?name=bjk" },
+];
+
+function buildTourPulse(items: ScoreCard[]): TourPulse | null {
+  if (items.length === 0) return null;
+  const featuredMatch = items.find((item) => item.status === "live") ?? items[0];
+  const circuits = CIRCUITS.flatMap((circuit) => {
+    const matches = items.filter((item) => classifyTournamentName(item.tournament) === circuit.id);
+    if (matches.length === 0) return [];
+    return [
+      {
+        ...circuit,
+        liveCount: matches.filter((item) => item.status === "live").length,
+        upcomingCount: matches.filter((item) => item.status === "upcoming").length,
+        sample: matches[0]?.tournament ?? null,
+      },
+    ];
+  });
+  return {
+    featured: {
+      href: featuredMatch.href,
+      title: `${featuredMatch.home.name} vs ${featuredMatch.away.name}`,
+      meta: `${featuredMatch.tournament} · ${featuredMatch.round}`,
+      status: featuredMatch.status,
+    },
+    circuits,
+  };
+}
 
 export async function getHomeContent(): Promise<HomeContent> {
   const [feed, atpBoard, wtaBoard] = await Promise.all([
@@ -63,43 +119,39 @@ export async function getHomeContent(): Promise<HomeContent> {
   ];
   const wiki = await fetchWikiPlayerMediaMap(wikiNames);
 
-  const editorsPicks: HomeStory[] = pickSource.map((match) => {
+  const onCourt: HomeStory[] = pickSource.map((match) => {
     const home = wiki.get(match.home.name);
     const away = wiki.get(match.away.name);
     const media = home?.imageSrc ? home : away?.imageSrc ? away : home ?? away;
-    const summary = media?.extract ?? null;
     return {
       id: match.id,
-      tag: match.status === "live" ? "Live" : "News",
+      tag: match.status === "live" ? "Live" : "On court",
       title: `${match.home.name} vs ${match.away.name} · ${match.tournament}`,
-      href: match.href,
+      href: matchStoryHref(match.href),
       imageSrc: media?.imageSrc ?? null,
       imageAlt: media?.imageAlt || `${match.home.name} versus ${match.away.name}`,
       imageCredit: media?.credit ?? null,
-      summary,
+      summary: media?.extract ?? null,
       publishedLabel: match.status === "live" ? "Live now" : match.round,
-      readMinutes: readMinutesFromExtract(summary),
     };
   });
 
-  const latest: HomeStory[] = rankingRows.map(({ row, tour }) => {
+  const playerProfiles: HomeStory[] = rankingRows.map(({ row, tour }) => {
     const media = wiki.get(row.name);
-    const summary = media?.extract ?? null;
     return {
       id: `${tour.toLowerCase()}-${row.id}`,
-      tag: summary ? "Profile" : "Analysis",
+      tag: "Player profile",
       title: `${tour} #${row.rank} ${row.name} · ${row.points} pts`,
-      href: row.href,
+      href: playerStoryHref(row.id),
       imageSrc: media?.imageSrc ?? null,
       imageAlt: media?.imageAlt || row.name,
       imageCredit: media?.credit ?? null,
-      summary,
+      summary: media?.extract ?? null,
       publishedLabel: `${tour} rankings`,
-      readMinutes: readMinutesFromExtract(summary),
     };
   });
 
-  const empty = editorsPicks.length === 0 && latest.length === 0;
+  const empty = onCourt.length === 0 && playerProfiles.length === 0;
   const matchHref = featuredMatch?.href ?? "/matches";
   const matchTitle = featuredMatch
     ? `${featuredMatch.home.name} vs ${featuredMatch.away.name}`
@@ -123,7 +175,8 @@ export async function getHomeContent(): Promise<HomeContent> {
       imageSrc: featuredPhoto,
       imageAlt: featuredAlt,
     },
-    editorsPicks,
+    tourPulse: buildTourPulse(feed.items),
+    onCourt,
     featured: featuredMatch
       ? {
           eyebrow: "Match Centre",
@@ -134,7 +187,7 @@ export async function getHomeContent(): Promise<HomeContent> {
           imageAlt: featuredAlt,
         }
       : null,
-    latest,
+    playerProfiles,
     empty,
   };
 }

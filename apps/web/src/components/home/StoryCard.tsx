@@ -48,17 +48,7 @@ export function StoryCard({ story, className }: StoryCardProps) {
           {story.summary}
         </span>
       ) : null}
-      <span className="mt-2 font-sans text-[14px] text-muted-foreground">
-        {story.publishedLabel}
-        {story.readMinutes != null ? (
-          <>
-            <span className="mx-1.5 text-[12px]" aria-hidden>
-              •
-            </span>
-            {story.readMinutes} min read
-          </>
-        ) : null}
-      </span>
+      <span className="mt-2 font-sans text-[14px] text-muted-foreground">{story.publishedLabel}</span>
     </Link>
   );
 }
