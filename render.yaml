@@ -20,10 +20,12 @@ services:
     name: api-gateway
     runtime: docker
     plan: starter
-    dockerfilePath: ./services/api-gateway/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
+      - key: TENNISLY_SERVICE
+        value: api-gateway
       - key: EUREKA_CLIENT_ENABLED
         value: "false"
       - key: CONFIG_SERVER_ENABLED
@@ -73,10 +75,12 @@ services:
     name: tennis-data-service
     runtime: docker
     plan: starter
-    dockerfilePath: ./services/tennis-data-service/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
+      - key: TENNISLY_SERVICE
+        value: tennis-data-service
       - key: EUREKA_CLIENT_ENABLED
         value: "false"
       - key: CONFIG_SERVER_ENABLED
@@ -128,10 +132,12 @@ services:
     name: match-service
     runtime: docker
     plan: starter
-    dockerfilePath: ./services/match-service/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
+      - key: TENNISLY_SERVICE
+        value: match-service
       - key: EUREKA_CLIENT_ENABLED
         value: "false"
       - key: CONFIG_SERVER_ENABLED
@@ -187,10 +193,12 @@ services:
     name: auth-service
     runtime: docker
     plan: free
-    dockerfilePath: ./services/auth-service/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
+      - key: TENNISLY_SERVICE
+        value: auth-service
       - key: EUREKA_CLIENT_ENABLED
         value: "false"
       - key: CONFIG_SERVER_ENABLED
@@ -228,10 +236,12 @@ services:
     name: user-service
     runtime: docker
     plan: free
-    dockerfilePath: ./services/user-service/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
+      - key: TENNISLY_SERVICE
+        value: user-service
       - key: EUREKA_CLIENT_ENABLED
         value: "false"
       - key: CONFIG_SERVER_ENABLED
@@ -271,10 +281,12 @@ services:
     name: notification-service
     runtime: docker
     plan: free
-    dockerfilePath: ./services/notification-service/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /actuator/health
     envVars:
+      - key: TENNISLY_SERVICE
+        value: notification-service
       - key: EUREKA_CLIENT_ENABLED
         value: "false"
       - key: CONFIG_SERVER_ENABLED

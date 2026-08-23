@@ -2,11 +2,10 @@
 # context is limited to what the reactor needs. Keeps Render builds from shipping
 # the 2.8GB web workspace and node_modules trees over the wire.
 #
-# `*` hides nested files, including services/**/Dockerfile. Remote builders
-# (Render BuildKit) read the Dockerfile from the uploaded context, so parent
-# dirs and their contents must both be re-included or the build dies with
-# "open Dockerfile: no such file or directory".
+# Render's Docker runtime defaults to ./Dockerfile. `*` would hide that file
+# and nested services/**/Dockerfile, which is the 2-byte "open Dockerfile" miss.
 *
+!Dockerfile
 !pom.xml
 !mvnw
 !mvnw.cmd
@@ -16,6 +15,7 @@
 !config/**
 !services
 !services/**
+!services/**/Dockerfile
 !tests
 !tests/**
 
