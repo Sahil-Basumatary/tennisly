@@ -54,13 +54,33 @@ export function filterMatchesForTournament(
   });
 }
 
-export function tournamentHeading(query: TournamentQuery): { name: string; location: string } {
-  if (query.name === "davis") return { name: "Davis Cup", location: "National teams" };
-  if (query.name === "bjk") return { name: "Billie Jean King Cup", location: "National teams" };
-  if (query.level === "grand_slam") return { name: "Grand Slams", location: "Majors" };
-  if (query.tour === "wta") return { name: "WTA Tour", location: "Women's tour" };
-  if (query.tour === "atp") return { name: "ATP Tour", location: "Men's tour" };
-  return { name: "All competitions", location: "Tour" };
+export type TournamentHeading = {
+  name: string;
+  location: string;
+  standingsLabel: string;
+};
+
+export function tournamentHeading(query: TournamentQuery): TournamentHeading {
+  if (query.name === "davis") {
+    return { name: "Davis Cup", location: "National teams", standingsLabel: "ATP rankings" };
+  }
+  if (query.name === "bjk") {
+    return {
+      name: "Billie Jean King Cup",
+      location: "National teams",
+      standingsLabel: "WTA rankings",
+    };
+  }
+  if (query.level === "grand_slam") {
+    return { name: "Grand Slams", location: "Majors", standingsLabel: "Rankings" };
+  }
+  if (query.tour === "wta") {
+    return { name: "WTA Tour", location: "Women's tour", standingsLabel: "WTA rankings" };
+  }
+  if (query.tour === "atp") {
+    return { name: "ATP Tour", location: "Men's tour", standingsLabel: "ATP rankings" };
+  }
+  return { name: "All competitions", location: "Tour", standingsLabel: "Rankings" };
 }
 
 export function tournamentActiveId(query: TournamentQuery): string {

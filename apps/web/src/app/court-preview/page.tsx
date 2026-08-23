@@ -144,7 +144,7 @@ function CourtPreviewInner() {
         {replayUnavailable ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60 px-6">
             <p className="max-w-md text-center font-sans text-sm font-semibold text-white">
-              Replay unavailable for this matchId. Ensure the match is completed and materialized.
+              Replay is not available for this match yet.
             </p>
           </div>
         ) : (

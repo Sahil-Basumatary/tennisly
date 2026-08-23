@@ -135,8 +135,7 @@ export function MatchCourtPanel({
             {replayUnavailable ? (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 px-6">
                 <p className="max-w-sm text-center font-sans text-sm font-semibold text-white">
-                  Replay unavailable. Materialize a completed match through replay-service, then
-                  reload.
+                  Replay is not available for this match yet.
                 </p>
               </div>
             ) : (

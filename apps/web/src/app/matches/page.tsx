@@ -35,10 +35,10 @@ export default async function MatchesIndexPage({ searchParams }: PageProps) {
           {feed.items.length === 0 ? (
             <li className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
               {replays
-                ? "No completed matches yet. Finish a live match through match-service to materialize a replay."
+                ? "No completed matches on the board right now."
                 : status === "live"
                   ? "No live matches right now. Check replays for completed tapes."
-                  : "No live-centre matches yet. Ensure match-service is ingesting from Live Tennis API."}
+                  : "No live-centre matches on the board right now."}
             </li>
           ) : (
             feed.items.map((match) => (

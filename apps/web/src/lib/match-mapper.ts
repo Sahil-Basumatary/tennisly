@@ -1,4 +1,4 @@
-import { playerCountry, playerShortName } from "@/lib/player-directory";
+import { playerCountry, playerShortName, publicPlayerName } from "@/lib/player-directory";
 import { aggregateMatchStats, type UpstreamMatchPoint } from "@/lib/match-stats";
 import type { UpstreamMatch, UpstreamMatchPlayer } from "@/types/match-catalogue";
 import { toUiMatchStatus } from "@/types/match-catalogue";
@@ -94,8 +94,9 @@ function hrefFor(match: UpstreamMatch): string {
 }
 
 function shortDisplayName(displayName: string): string {
-  const parts = displayName.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0] ?? displayName;
+  const name = publicPlayerName(displayName);
+  const parts = name.split(/\s+/);
+  if (parts.length === 1) return parts[0] ?? name;
   const first = parts[0]?.[0] ?? "";
   return `${first}. ${parts[parts.length - 1]}`;
 }
@@ -232,13 +233,13 @@ export function toMatchCentrePanel(
     surface: match.surface as Surface,
     home: {
       id: home.playerId,
-      name: home.displayName,
+      name: publicPlayerName(home.displayName),
       country: playerCountry(metaString(match, "homeNationality") || undefined),
       seed: home.seedNumber ?? undefined,
     },
     away: {
       id: away.playerId,
-      name: away.displayName,
+      name: publicPlayerName(away.displayName),
       country: playerCountry(metaString(match, "awayNationality") || undefined),
       seed: away.seedNumber ?? undefined,
     },
@@ -258,7 +259,7 @@ export function toMatchCentrePanel(
 export function toTournamentBoard(
   matches: UpstreamMatch[],
   standings: StandingRow[] = [],
-  heading?: { name: string; location: string },
+  heading?: { name: string; location: string; standingsLabel?: string },
 ): TournamentBoard {
   const primary = matches[0];
   const fixtures = toScoresFeed(matches).items.map((card) => ({
@@ -276,6 +277,7 @@ export function toTournamentBoard(
     surface: surfaceLabel(primary?.surface),
     location: heading?.location
       ?? (primary ? metaString(primary, "location", "—") : "—"),
+    standingsLabel: heading?.standingsLabel ?? "Rankings",
     standings,
     fixtures,
   };

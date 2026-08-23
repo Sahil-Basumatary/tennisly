@@ -221,7 +221,20 @@ public class MatchIngestionService {
     }
 
     private static String displayName(ResolvedPlayerDto player) {
-        return (nullToEmpty(player.firstName()) + " " + nullToEmpty(player.lastName())).trim();
+        String first = nullToEmpty(player.firstName());
+        String last = nullToEmpty(player.lastName());
+        boolean skipFirst = first.isBlank() || first.equalsIgnoreCase("Unknown");
+        boolean skipLast = last.isBlank() || last.equalsIgnoreCase("Unknown");
+        if (skipFirst && skipLast) {
+            return "TBD";
+        }
+        if (skipFirst) {
+            return last;
+        }
+        if (skipLast) {
+            return first;
+        }
+        return (first + " " + last).trim();
     }
 
     private static Map<String, Object> buildMetadata(

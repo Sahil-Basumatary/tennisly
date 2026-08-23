@@ -30,12 +30,12 @@ export default async function StoryPage({ params }: PageProps) {
       <>
         <PageHero
           eyebrow="Stories"
-          title="Directory unavailable"
-          description="Live player data is unreachable, so this is not a missing profile."
+          title="Story unavailable"
+          description="This story is temporarily unavailable."
         />
         <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
           <p className="font-sans text-sm text-muted-foreground">
-            Start tennis-data-service, then reload this story.
+            This story is temporarily unavailable. Try again shortly.
           </p>
           <p className="mt-4 font-sans text-[13px]">
             <Link href="/" className="font-semibold text-chrome underline">

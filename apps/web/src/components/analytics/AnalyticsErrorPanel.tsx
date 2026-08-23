@@ -3,7 +3,7 @@ type AnalyticsErrorPanelProps = {
 };
 
 export function AnalyticsErrorPanel({
-  message = "Analytics service is unavailable. Check that analytics-service is running.",
+  message = "Analytics is temporarily unavailable. Try again shortly.",
 }: AnalyticsErrorPanelProps) {
   return (
     <div className="border border-destructive/30 bg-white px-6 py-8" role="alert">

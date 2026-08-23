@@ -15,7 +15,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <section>
             <h2 className="mb-3 font-data text-[12px] font-bold uppercase tracking-[0.14em] text-chrome">
-              Standings
+              {board.standingsLabel ?? "Rankings"}
             </h2>
             <div className="overflow-hidden border border-hairline bg-white">
               <div className="grid grid-cols-[40px_1fr_56px] gap-2 border-b border-hairline bg-chrome px-3 py-2 font-data text-[11px] font-semibold uppercase tracking-wide text-white/70">
@@ -25,7 +25,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
               </div>
               {board.standings.length === 0 ? (
                 <p className="px-3 py-6 font-sans text-sm text-muted-foreground">
-                  Rankings unavailable — start tennis-data-service with a BallDontLie API key.
+                  Rankings are not available right now.
                 </p>
               ) : (
                 board.standings.map((row) => (
@@ -48,7 +48,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
             <div className="space-y-2">
               {board.fixtures.length === 0 ? (
                 <p className="border border-hairline bg-white px-4 py-8 text-center font-sans text-sm text-muted-foreground">
-                  No fixtures yet — start match-service with Live Tennis API ingestion enabled.
+                  No {board.name} fixtures on the current board.
                 </p>
               ) : (
                 board.fixtures.map((fx) => (

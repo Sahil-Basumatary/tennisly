@@ -143,7 +143,7 @@ public class LiveTennisClient {
 
     private UpstreamMatchData.UpstreamPlayerRef mapPlayer(LiveTennisModels.PlayerPayload player) {
         if (player == null) {
-            return new UpstreamMatchData.UpstreamPlayerRef(null, "", "", "Unknown");
+            return new UpstreamMatchData.UpstreamPlayerRef(null, "", "", "");
         }
         String display = firstNonBlank(player.name(), joinName(player.firstName(), player.lastName()));
         String[] parts = splitDisplayName(display);

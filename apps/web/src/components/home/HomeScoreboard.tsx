@@ -25,7 +25,7 @@ export function HomeScoreboard({ day }: { day: ScoreboardDay }) {
         </div>
         {groups.length === 0 ? (
           <p className="border border-hairline bg-white px-4 py-8 font-sans text-sm text-muted-foreground">
-            No matches on the board yet. Open Scores once match-service is ingesting.
+            No matches on the board right now.
           </p>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">

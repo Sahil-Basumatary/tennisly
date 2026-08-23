@@ -59,6 +59,7 @@ export type TournamentBoard = {
   name: string;
   surface: string;
   location: string;
+  standingsLabel?: string;
   standings: StandingRow[];
   fixtures: FixtureRow[];
 };

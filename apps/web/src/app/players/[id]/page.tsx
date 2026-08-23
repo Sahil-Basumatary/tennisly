@@ -17,11 +17,11 @@ export default async function PlayerPage({ params }: PageProps) {
         <PageHero
           eyebrow="Players"
           title="Directory unavailable"
-          description="tennis-data-service is unreachable, so this is not a missing player."
+          description="The player directory is temporarily unavailable."
         />
         <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
           <p className="font-sans text-sm text-muted-foreground">
-            Start tennis-data-service with a BallDontLie API key, then reload this board.
+            The player directory is temporarily unavailable. Try again shortly.
           </p>
           <p className="mt-4 font-sans text-[13px]">
             <Link href="/players" className="font-semibold text-chrome underline">

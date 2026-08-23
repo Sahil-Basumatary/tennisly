@@ -127,8 +127,8 @@ public class PlayerIdentityService {
                         ? "lta-name-" + normalize(ref.displayName()).replace(' ', '-')
                         : "lta-" + ref.providerPlayerId();
         player.setExternalId(externalId);
-        player.setFirstName(blankToUnknown(ref.firstName()));
-        player.setLastName(blankToUnknown(ref.lastName().isBlank() ? ref.displayName() : ref.lastName()));
+        player.setFirstName(firstNameOrEmpty(ref.firstName()));
+        player.setLastName(lastNameOrTbd(ref));
         player.setGender(gender);
         player.setActive(true);
         return playerRepository.save(player);
@@ -169,7 +169,20 @@ public class PlayerIdentityService {
         return stripped;
     }
 
-    private static String blankToUnknown(String value) {
-        return value == null || value.isBlank() ? "Unknown" : value.trim();
+    private static String firstNameOrEmpty(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        return trimmed.isBlank() || trimmed.equalsIgnoreCase("Unknown") ? "" : trimmed;
+    }
+
+    private static String lastNameOrTbd(UpstreamMatchData.UpstreamPlayerRef ref) {
+        String last = ref.lastName() == null ? "" : ref.lastName().trim();
+        if (!last.isBlank() && !last.equalsIgnoreCase("Unknown")) {
+            return last;
+        }
+        String display = ref.displayName() == null ? "" : ref.displayName().trim();
+        if (!display.isBlank() && !display.equalsIgnoreCase("Unknown")) {
+            return display;
+        }
+        return "TBD";
     }
 }

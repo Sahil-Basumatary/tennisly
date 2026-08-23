@@ -50,7 +50,7 @@ export function PlayersSkeleton({
         <PageHero
           eyebrow="Players"
           title={`${tourLabel} Rankings`}
-          description="Official singles order of play, updated from tennis-data-service."
+          description="Official singles rankings."
         />
       )}
       <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
@@ -93,7 +93,7 @@ export function PlayersSkeleton({
           {board.rows.length === 0 ? (
             <p className="px-4 py-10 text-center font-sans text-sm text-muted-foreground">
               {emptyLabel ??
-                "No rankings yet. Start tennis-data-service with a BallDontLie API key so rankings can sync."}
+                "No rankings on this board right now."}
             </p>
           ) : (
             board.rows.map((row) => (
