@@ -60,25 +60,4 @@ export const footerColumns: FooterColumn[] = [
 
 export const footerLinks: FooterLink[] = footerColumns.flatMap((column) => column.links);
 
-export const socialLinks: SocialLink[] = [
-  {
-    id: "facebook",
-    label: "Tennisly on Facebook",
-    href: "https://www.facebook.com/",
-  },
-  {
-    id: "x",
-    label: "Tennisly on X",
-    href: "https://x.com/",
-  },
-  {
-    id: "instagram",
-    label: "Tennisly on Instagram",
-    href: "https://www.instagram.com/",
-  },
-  {
-    id: "youtube",
-    label: "Tennisly on YouTube",
-    href: "https://www.youtube.com/",
-  },
-];
+export const socialLinks: SocialLink[] = [];

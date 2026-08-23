@@ -19,13 +19,13 @@ export function CompetitionsBand() {
               className="bg-black px-5 py-6 transition-colors hover:bg-white/5"
             >
               <span className="font-data text-[11px] font-bold uppercase tracking-[0.14em] text-uefa-gold">
-                Draw
+                Tour
               </span>
               <span className="mt-2 block font-display text-[20px] font-semibold uppercase tracking-tight">
                 {item.label}
               </span>
               <span className="mt-3 inline-block font-sans text-[13px] text-white/70">
-                Scores, draws and replays →
+                Scores, rankings and replays →
               </span>
             </Link>
           ))}

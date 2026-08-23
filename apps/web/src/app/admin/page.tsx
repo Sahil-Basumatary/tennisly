@@ -10,13 +10,17 @@ export default function AdminOverviewPage() {
       <main id="main-content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <AdminPageHeader
           title="Platform console"
-          description="Operate organizations, user profiles, and service health from one admin shell. API keys, audit trails, and usage metering arrive in the next milestone."
+          description="Operate organizations, users, keys, webhooks, audit, usage, and service health from this shell."
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { label: "Organizations", href: "/admin/organizations", hint: "Search, filter, edit plans" },
             { label: "Users", href: "/admin/users", hint: "Search profiles, deactivate access" },
             { label: "Health", href: "/admin/health", hint: "Best-effort service status strips" },
+            { label: "Keys", href: "/admin/keys", hint: "Issue and revoke API keys" },
+            { label: "Webhooks", href: "/admin/webhooks", hint: "Partner endpoints and deliveries" },
+            { label: "Audit", href: "/admin/audit", hint: "Operator actions on this console" },
+            { label: "Usage", href: "/admin/usage", hint: "Metered request volume" },
           ].map((card) => (
             <Link
               key={card.label}
