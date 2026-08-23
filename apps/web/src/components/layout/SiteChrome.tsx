@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { GlobalNav } from "@/components/layout/GlobalNav";
 import { ScoresStrip } from "@/components/layout/ScoresStrip";
@@ -9,8 +10,14 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
     <>
       <SkipToContent />
       <AppShell
-        ticker={<ScoresStrip />}
-        nav={<GlobalNav />}
+        nav={
+          <div className="sticky top-0 z-50">
+            <ScoresStrip />
+            <Suspense fallback={<div className="h-nav bg-chrome" />}>
+              <GlobalNav />
+            </Suspense>
+          </div>
+        }
         footer={<SiteFooter />}
       >
         {children}

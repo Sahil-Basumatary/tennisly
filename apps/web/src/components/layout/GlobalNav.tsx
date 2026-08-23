@@ -2,7 +2,7 @@
 
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ChevronDownIcon,
@@ -10,7 +10,12 @@ import {
   MenuIcon,
   SearchIcon,
 } from "@/components/ui/brandIcons";
-import { primaryNav, utilityNav, type NavItem } from "@/config/navigation";
+import {
+  competitionRail,
+  primaryNav,
+  utilityNav,
+  type NavItem,
+} from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
 function NavDropdown({
@@ -68,10 +73,8 @@ function NavDropdown({
       <div
         role="menu"
         className={cn(
-          "absolute left-0 top-full z-50 min-w-[180px] border border-hairline bg-white py-1 shadow-lg transition",
-          open
-            ? "visible opacity-100"
-            : "invisible pointer-events-none opacity-0",
+          "absolute left-0 top-full z-50 min-w-[200px] border border-hairline bg-white py-1 shadow-lg transition",
+          open ? "visible opacity-100" : "invisible pointer-events-none opacity-0",
         )}
       >
         {item.children.map((child) => (
@@ -88,6 +91,14 @@ function NavDropdown({
       </div>
     </div>
   );
+}
+
+function railItemActive(href: string, pathname: string, query: string) {
+  const url = new URL(href, "https://tennisly.tv");
+  if (pathname !== url.pathname) return false;
+  const want = url.searchParams.toString();
+  if (!want) return query === "";
+  return query === want;
 }
 
 function MobileDrawer({
@@ -133,8 +144,21 @@ function MobileDrawer({
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
+          <p className="px-4 pb-1 pt-3 font-data text-[10px] font-bold uppercase tracking-[0.14em] text-white/50">
+            Competitions
+          </p>
+          {competitionRail.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={onClose}
+              className="block px-4 py-2 font-sans text-sm text-chrome-foreground/90 hover:bg-white/10"
+            >
+              {item.label}
+            </Link>
+          ))}
           {[...primaryNav, ...utilityNav].map((item) => (
-            <div key={item.id} className="border-b border-white/10">
+            <div key={item.id} className="border-t border-white/10">
               <Link
                 href={item.href}
                 onClick={onClose}
@@ -162,13 +186,13 @@ function MobileDrawer({
 
 export function GlobalNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [navigatedFrom, setNavigatedFrom] = useState(pathname);
 
-  // Adjusting during render rather than in an effect avoids a frame where the
-  // menu is still open on the newly navigated page.
   if (pathname !== navigatedFrom) {
     setNavigatedFrom(pathname);
     setOpenDropdownId(null);
@@ -186,7 +210,7 @@ export function GlobalNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-chrome text-chrome-foreground">
+      <header className="bg-chrome text-chrome-foreground">
         <div className="mx-auto flex h-nav max-w-[1400px] items-center gap-1 px-2 sm:px-4">
           <button
             type="button"
@@ -198,7 +222,7 @@ export function GlobalNav() {
           </button>
           <Link
             href="/"
-            className="mr-2 inline-flex h-nav items-center px-2 font-display text-[18px] font-bold tracking-tight text-white"
+            className="mr-3 inline-flex h-nav items-center px-2 font-display text-[20px] font-bold tracking-tight text-white"
           >
             Tennisly
           </Link>
@@ -264,31 +288,31 @@ export function GlobalNav() {
             </SignedIn>
           </div>
         </div>
-        <div className="border-t border-white/10 bg-[#1f2021]">
-          <nav
-            aria-label="Sections"
-            className="mx-auto flex h-9 max-w-[1400px] items-center gap-1 overflow-x-auto px-2 sm:px-4"
-          >
-            {primaryNav.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+        <div className="h-[3px] bg-wimbledon-green" />
+        <nav
+          aria-label="Competitions"
+          className="bg-black"
+        >
+          <div className="mx-auto flex h-10 max-w-[1400px] items-stretch gap-0 overflow-x-auto px-2 sm:px-4">
+            {competitionRail.map((item) => {
+              const active = railItemActive(item.href, pathname, query);
               return (
                 <Link
-                  key={`sub-${item.id}`}
+                  key={item.id}
                   href={item.href}
                   className={cn(
-                    "inline-flex h-9 shrink-0 items-center px-3 font-sans text-[12px] font-semibold uppercase tracking-wide transition-colors",
+                    "inline-flex shrink-0 items-center border-b-2 px-3 font-data text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
                     active
-                      ? "bg-white/10 text-white"
-                      : "text-white/70 hover:bg-white/5 hover:text-white",
+                      ? "border-uefa-gold text-uefa-gold"
+                      : "border-transparent text-white/75 hover:text-white",
                   )}
                 >
                   {item.label}
                 </Link>
               );
             })}
-          </nav>
-        </div>
+          </div>
+        </nav>
       </header>
       <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>

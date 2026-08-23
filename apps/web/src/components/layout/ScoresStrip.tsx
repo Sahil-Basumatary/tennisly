@@ -20,16 +20,16 @@ function ScoreCardView({ card }: { card: ScoreCard }) {
   return (
     <Link
       href={card.href}
-      className="flex h-[65px] min-w-[220px] shrink-0 flex-col justify-center border-r border-hairline bg-white px-3 text-ticker-foreground transition-colors hover:bg-surface-muted"
+      className="flex h-[65px] min-w-[220px] shrink-0 flex-col justify-center border-r border-white/10 bg-ticker px-3 text-ticker-foreground transition-colors hover:bg-white/5"
     >
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="font-data text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+        <span className="font-data text-[10px] font-bold uppercase tracking-wide text-white/55">
           {card.tournament} · {card.round}
         </span>
         <span
           className={cn(
             "font-data text-[10px] font-bold uppercase tracking-wide",
-            card.status === "live" ? "text-destructive" : "text-muted-foreground",
+            card.status === "live" ? "text-espn-live" : "text-white/55",
           )}
         >
           {statusLabel(card)}
@@ -41,12 +41,12 @@ function ScoreCardView({ card }: { card: ScoreCard }) {
             <span
               className={cn(
                 "truncate font-sans text-[13px] leading-tight",
-                side.winner ? "font-bold text-foreground" : "font-medium",
+                side.winner ? "font-bold text-white" : "font-medium text-white/90",
               )}
             >
               {side.name}
             </span>
-            <span className="font-data text-[13px] font-bold tracking-wide tabular-nums">
+            <span className="font-data text-[13px] font-bold tracking-wide tabular-nums text-white">
               {side.sets.length > 0 ? side.sets.join(" ") : "—"}
             </span>
           </div>
@@ -108,16 +108,16 @@ export function ScoresStrip({ items }: ScoresStripProps) {
     <div
       role="region"
       aria-label="Scores"
-      className="border-b border-hairline bg-ticker text-ticker-foreground"
+      className="border-b border-white/10 bg-ticker text-ticker-foreground"
     >
       <div className="relative mx-auto flex h-ticker max-w-[1400px] items-stretch">
-        <div className="flex w-[88px] shrink-0 flex-col justify-center border-r border-hairline bg-[#edeef0] px-2 sm:w-[120px] sm:px-3">
-          <span className="font-data text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
+        <div className="flex w-[88px] shrink-0 flex-col justify-center border-r border-white/10 bg-black px-2 sm:w-[124px] sm:px-3">
+          <span className="font-data text-[10px] font-bold uppercase tracking-[0.14em] text-espn-live sm:text-[11px]">
             Tennis
           </span>
           <Link
             href="/scores"
-            className="font-sans text-[11px] font-semibold text-foreground hover:underline sm:text-[12px]"
+            className="font-sans text-[11px] font-semibold text-white hover:underline sm:text-[12px]"
           >
             All Scores
           </Link>
@@ -127,7 +127,7 @@ export function ScoresStrip({ items }: ScoresStripProps) {
           aria-label="Previous scores"
           disabled={!canPrev}
           onClick={() => scrollByCards(-1)}
-          className="flex w-8 shrink-0 items-center justify-center border-r border-hairline text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
+          className="flex w-8 shrink-0 items-center justify-center border-r border-white/10 text-white/70 transition-colors hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
@@ -145,7 +145,7 @@ export function ScoresStrip({ items }: ScoresStripProps) {
           aria-label="Next scores"
           disabled={!canNext}
           onClick={() => scrollByCards(1)}
-          className="flex w-8 shrink-0 items-center justify-center border-l border-hairline text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
+          className="flex w-8 shrink-0 items-center justify-center border-l border-white/10 text-white/70 transition-colors hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>

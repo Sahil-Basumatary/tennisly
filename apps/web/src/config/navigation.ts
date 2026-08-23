@@ -62,3 +62,12 @@ export const utilityNav: NavItem[] = [
   { id: "settings", label: "Settings", href: "/settings/notifications" },
   { id: "admin", label: "Admin", href: "/admin" },
 ];
+
+export const competitionRail: NavItem[] = [
+  { id: "comp-all", label: "All", href: "/tournaments" },
+  { id: "comp-slams", label: "Grand Slams", href: "/tournaments?level=grand_slam" },
+  { id: "comp-atp", label: "ATP Tour", href: "/tournaments?tour=atp" },
+  { id: "comp-wta", label: "WTA Tour", href: "/tournaments?tour=wta" },
+  { id: "comp-davis", label: "Davis Cup", href: "/tournaments?name=davis" },
+  { id: "comp-bjk", label: "Billie Jean King Cup", href: "/tournaments?name=bjk" },
+];
