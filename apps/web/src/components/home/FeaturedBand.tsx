@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RemotePhoto } from "@/components/media/RemotePhoto";
+import { HEADSHOT_FOCUS } from "@/lib/headshot";
 
 type FeaturedBandProps = {
   eyebrow: string;
@@ -24,7 +25,7 @@ export function FeaturedBand({
         <RemotePhoto
           src={imageSrc}
           alt={imageAlt}
-          className="object-cover object-center"
+          className={HEADSHOT_FOCUS}
           fallback={null}
         />
       </div>

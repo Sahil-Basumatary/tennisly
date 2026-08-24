@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RemotePhoto } from "@/components/media/RemotePhoto";
+import { PORTRAIT_FIT } from "@/lib/headshot";
 import { playerInitials } from "@/lib/wikipedia-upstream";
 import type { EditorialStory } from "@/types/editorial";
 
@@ -35,11 +36,11 @@ export function StoryArticle({ story }: { story: EditorialStory }) {
       </div>
       <div className="mx-auto grid max-w-[1400px] gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.7fr)]">
         <div>
-          <div className="relative aspect-[16/9] overflow-hidden bg-surface-muted">
+          <div className="relative mx-auto aspect-[3/4] w-full max-w-[420px] overflow-hidden bg-surface-muted lg:mx-0">
             <RemotePhoto
               src={story.imageSrc}
               alt={story.imageAlt}
-              className="object-cover object-top"
+              className={PORTRAIT_FIT}
               fallback={
                 <div className="absolute inset-0 flex items-center justify-center bg-chrome">
                   <span className="font-display text-[48px] font-bold tracking-wide text-white">

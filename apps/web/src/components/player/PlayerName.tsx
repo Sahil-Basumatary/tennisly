@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HEADSHOT_FOCUS } from "@/lib/headshot";
 import { playerInitials } from "@/lib/player-directory";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +57,7 @@ export function PlayerName({
             alt=""
             width={px}
             height={px}
-            className="h-full w-full object-cover object-[center_18%]"
+            className={cn("h-full w-full", HEADSHOT_FOCUS)}
             referrerPolicy="no-referrer"
             onError={() => setBroken(true)}
           />
