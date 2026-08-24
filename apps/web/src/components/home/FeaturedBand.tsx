@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { RemotePhoto } from "@/components/media/RemotePhoto";
 
 type FeaturedBandProps = {
   eyebrow: string;
@@ -20,13 +20,14 @@ export function FeaturedBand({
 }: FeaturedBandProps) {
   return (
     <section className="relative isolate min-h-[320px] overflow-hidden bg-inverse-deep md:min-h-[420px]">
-      <Image
-        src={imageSrc}
-        alt={imageAlt}
-        fill
-        sizes="100vw"
-        className="object-cover object-center opacity-35"
-      />
+      <div className="absolute inset-0 opacity-35">
+        <RemotePhoto
+          src={imageSrc}
+          alt={imageAlt}
+          className="object-cover object-center"
+          fallback={null}
+        />
+      </div>
       <div className="absolute inset-0 bg-inverse-deep/75" />
       <Link
         href={href}

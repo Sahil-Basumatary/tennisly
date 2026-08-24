@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { RemotePhoto } from "@/components/media/RemotePhoto";
 import { playerInitials } from "@/lib/wikipedia-upstream";
 import type { EditorialStory } from "@/types/editorial";
 
@@ -36,22 +36,18 @@ export function StoryArticle({ story }: { story: EditorialStory }) {
       <div className="mx-auto grid max-w-[1400px] gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(16rem,0.7fr)]">
         <div>
           <div className="relative aspect-[16/9] overflow-hidden bg-surface-muted">
-            {story.imageSrc ? (
-              <Image
-                src={story.imageSrc}
-                alt={story.imageAlt}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 70vw"
-                className="object-cover object-top"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-chrome">
-                <span className="font-display text-[48px] font-bold tracking-wide text-white">
-                  {playerInitials(story.imageAlt || story.headline)}
-                </span>
-              </div>
-            )}
+            <RemotePhoto
+              src={story.imageSrc}
+              alt={story.imageAlt}
+              className="object-cover object-top"
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center bg-chrome">
+                  <span className="font-display text-[48px] font-bold tracking-wide text-white">
+                    {playerInitials(story.imageAlt || story.headline)}
+                  </span>
+                </div>
+              }
+            />
           </div>
           {story.imageCredit ? (
             <p className="mt-2 font-sans text-[12px] text-muted-foreground">{story.imageCredit}</p>

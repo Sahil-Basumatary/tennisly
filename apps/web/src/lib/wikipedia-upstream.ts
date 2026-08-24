@@ -131,7 +131,7 @@ async function searchTitle(query: string, originalName: string): Promise<string 
 }
 
 function sizedPortrait(url: string): string {
-  return url.replace(/\/\d+px-/, "/160px-");
+  return url.replace(/\/\d+px-/, "/320px-");
 }
 
 function mediaFromSummary(name: string, summary: WikiSummary): WikiPlayerMedia {
