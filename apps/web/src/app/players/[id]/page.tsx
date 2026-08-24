@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHero } from "@/components/layout/PageHero";
+import { PlayerName } from "@/components/player/PlayerName";
 import { getPlayerProfile } from "@/services/scaffolds";
 
 type PageProps = {
@@ -40,6 +41,7 @@ export default async function PlayerPage({ params }: PageProps) {
         eyebrow="Players"
         title={player.name}
         description={`${player.country} · ${tourLabel}${player.rank != null ? ` · Rank ${player.rank}` : ""}`}
+        portraitUrl={player.photoUrl}
       />
       <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
@@ -86,10 +88,11 @@ export default async function PlayerPage({ params }: PageProps) {
                   href={match.href}
                   className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-surface-muted"
                 >
-                  <div>
-                    <p className="font-sans text-[14px] font-semibold">
-                      {match.home.name} vs {match.away.name}
-                    </p>
+                  <div className="min-w-0">
+                    <div className="flex flex-col gap-1.5">
+                      <PlayerName name={match.home.name} photoUrl={match.home.photoUrl} size="sm" />
+                      <PlayerName name={match.away.name} photoUrl={match.away.photoUrl} size="sm" />
+                    </div>
                     <p className="font-sans text-[12px] text-muted-foreground">
                       {match.tournament} · {match.round}
                     </p>

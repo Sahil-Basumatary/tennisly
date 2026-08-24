@@ -137,13 +137,17 @@ async function searchTitle(query: string, originalName: string): Promise<string 
   return title;
 }
 
+function sizedPortrait(url: string): string {
+  return url.replace(/\/\d+px-/, "/160px-");
+}
+
 function mediaFromSummary(name: string, summary: WikiSummary): WikiPlayerMedia {
   const thumb = summary.thumbnail?.source?.trim() ?? "";
   const full = summary.extract?.replace(/\s+/g, " ").trim() || null;
   const okPhoto = thumb.length > 0 && isCommonsPhoto(thumb);
   const sourceUrl = summary.content_urls?.desktop?.page?.trim() || null;
   return {
-    imageSrc: okPhoto ? thumb : null,
+    imageSrc: okPhoto ? sizedPortrait(thumb) : null,
     imageAlt: okPhoto ? `${summary.title ?? name}` : name,
     extract: full ? clipExtract(full) : null,
     extractFull: full ? clipExtract(full, 1200) : null,
@@ -173,10 +177,16 @@ export async function fetchWikiPlayerMediaMap(
   names: string[],
 ): Promise<Map<string, WikiPlayerMedia>> {
   const unique = [...new Set(names.map((name) => name.trim()).filter(Boolean))];
-  const entries = await Promise.all(
-    unique.map(async (name) => [name, await fetchWikiPlayerMedia(name)] as const),
-  );
-  return new Map(entries);
+  const map = new Map<string, WikiPlayerMedia>();
+  const chunkSize = 8;
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize);
+    const entries = await Promise.all(
+      chunk.map(async (name) => [name, await fetchWikiPlayerMedia(name)] as const),
+    );
+    for (const [name, media] of entries) map.set(name, media);
+  }
+  return map;
 }
 
 export function playerInitials(name: string): string {

@@ -1,7 +1,9 @@
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 
 export type ScoreBugSide = {
   name: string;
+  photoUrl?: string | null;
   sets: number[];
   games: number;
   points: string;
@@ -51,9 +53,13 @@ function ScoreBugRow({ side }: { side: ScoreBugSide }) {
           aria-hidden={!side.serving}
           title={side.serving ? "Serving" : undefined}
         />
-        <span className="truncate font-sans text-[12px] font-semibold tracking-wide">
-          {side.name}
-        </span>
+        <PlayerName
+          name={side.name}
+          photoUrl={side.photoUrl}
+          size="xs"
+          tone="dark"
+          nameClassName="text-[12px] font-semibold tracking-wide text-white"
+        />
       </div>
       <span className="flex gap-1 font-data text-[11px] tabular-nums text-white/70">
         {side.sets.map((set, i) => (

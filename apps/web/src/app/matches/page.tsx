@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
+import { PlayerName } from "@/components/player/PlayerName";
 import { SectionSubnav } from "@/components/layout/SectionSubnav";
 import { getScoresFeed } from "@/services/scores";
 
@@ -48,9 +49,10 @@ export default async function MatchesIndexPage({ searchParams }: PageProps) {
                   className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-surface-muted"
                 >
                   <div>
-                    <p className="font-sans text-[14px] font-semibold">
-                      {match.home.name} vs {match.away.name}
-                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      <PlayerName name={match.home.name} photoUrl={match.home.photoUrl} size="sm" />
+                      <PlayerName name={match.away.name} photoUrl={match.away.photoUrl} size="sm" />
+                    </div>
                     <p className="font-sans text-[12px] text-muted-foreground">
                       {match.tournament} · {match.round}
                       {match.status === "live" ? " · LIVE" : ""}

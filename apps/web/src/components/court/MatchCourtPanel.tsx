@@ -53,6 +53,8 @@ const OVERLAY_OPTIONS = [
 type MatchCourtPanelProps = {
   homeName: string;
   awayName: string;
+  homePhotoUrl?: string | null;
+  awayPhotoUrl?: string | null;
   score: MatchCentrePanel["score"];
   status: MatchCentrePanel["status"];
   surface?: Surface;
@@ -65,6 +67,8 @@ type MatchCourtPanelProps = {
 export function MatchCourtPanel({
   homeName,
   awayName,
+  homePhotoUrl,
+  awayPhotoUrl,
   score,
   status,
   surface = "GRASS",
@@ -165,6 +169,7 @@ export function MatchCourtPanel({
                   status={status}
                   home={{
                     name: homeName,
+                    photoUrl: homePhotoUrl,
                     sets: score.homeSets,
                     games: score.homeGames,
                     points: score.homePoints,
@@ -172,6 +177,7 @@ export function MatchCourtPanel({
                   }}
                   away={{
                     name: awayName,
+                    photoUrl: awayPhotoUrl,
                     sets: score.awaySets,
                     games: score.awayGames,
                     points: score.awayPoints,

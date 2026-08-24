@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 import type { PlayersBoard } from "@/types/scaffolds";
 
@@ -110,9 +111,12 @@ export function PlayersSkeleton({
                 >
                   {row.rank}
                 </span>
-                <span className="truncate font-sans text-[14px] font-semibold text-foreground">
-                  {row.name}
-                </span>
+                <PlayerName
+                  name={row.name}
+                  photoUrl={row.photoUrl}
+                  size="md"
+                  nameClassName="text-[14px] text-foreground"
+                />
                 <span className="font-data text-[13px] text-muted-foreground">{row.country}</span>
                 <span className="text-right font-data text-[14px] tabular-nums">
                   {row.points.toLocaleString()}

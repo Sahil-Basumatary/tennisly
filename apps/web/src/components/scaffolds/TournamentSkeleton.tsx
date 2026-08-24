@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
 import type { TournamentBoard } from "@/types/scaffolds";
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 
 export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
@@ -34,7 +35,7 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
                     className="grid grid-cols-[40px_1fr_56px] gap-2 border-b border-hairline px-3 py-2.5"
                   >
                     <span className="font-data text-[13px] text-muted-foreground">{row.position}</span>
-                    <span className="truncate font-sans text-[14px] font-medium">{row.player}</span>
+                    <PlayerName name={row.player} photoUrl={row.photoUrl} size="sm" />
                     <span className="text-right font-data text-[13px] font-semibold">{row.points}</span>
                   </div>
                 ))
@@ -64,9 +65,9 @@ export function TournamentSkeleton({ board }: { board: TournamentBoard }) {
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3 font-sans text-[14px]">
-                      <span className="font-semibold">{fx.home}</span>
+                      <PlayerName name={fx.home} photoUrl={fx.homePhotoUrl} size="sm" />
                       <span className="text-muted-foreground">vs</span>
-                      <span className="font-semibold">{fx.away}</span>
+                      <PlayerName name={fx.away} photoUrl={fx.awayPhotoUrl} size="sm" />
                     </div>
                   </Link>
                 ))

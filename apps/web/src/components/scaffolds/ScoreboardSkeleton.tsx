@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
 import type { ScoreboardDay } from "@/types/scaffolds";
 import type { ScoreCard } from "@/types/scores";
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 
 function statusTone(status: ScoreCard["status"]) {
@@ -28,17 +29,25 @@ function MatchRow({ match }: { match: ScoreCard }) {
           <span>{match.round}</span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <p className={cn("truncate font-sans text-[14px]", match.home.winner && "font-bold")}>
-            {match.home.name}
-          </p>
+          <PlayerName
+            name={match.home.name}
+            photoUrl={match.home.photoUrl}
+            size="sm"
+            bold={match.home.winner}
+            nameClassName="text-[14px]"
+          />
           <p className="font-data text-[14px] tabular-nums tracking-wide">
             {match.home.sets.join(" ") || "—"}
           </p>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <p className={cn("truncate font-sans text-[14px]", match.away.winner && "font-bold")}>
-            {match.away.name}
-          </p>
+          <PlayerName
+            name={match.away.name}
+            photoUrl={match.away.photoUrl}
+            size="sm"
+            bold={match.away.winner}
+            nameClassName="text-[14px]"
+          />
           <p className="font-data text-[14px] tabular-nums tracking-wide">
             {match.away.sets.join(" ") || "—"}
           </p>

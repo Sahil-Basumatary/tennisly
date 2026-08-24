@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/brandIcons";
 import type { ScoreCard, ScoresFeed } from "@/types/scores";
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 
 type ScoresStripProps = {
@@ -20,7 +21,7 @@ function ScoreCardView({ card }: { card: ScoreCard }) {
   return (
     <Link
       href={card.href}
-      className="flex h-[65px] min-w-[220px] shrink-0 flex-col justify-center border-r border-white/10 bg-ticker px-3 text-ticker-foreground transition-colors hover:bg-white/5"
+      className="flex h-[65px] min-w-[248px] shrink-0 flex-col justify-center border-r border-white/10 bg-ticker px-3 text-ticker-foreground transition-colors hover:bg-white/5"
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="font-data text-[10px] font-bold uppercase tracking-wide text-white/55">
@@ -38,14 +39,14 @@ function ScoreCardView({ card }: { card: ScoreCard }) {
       <div className="space-y-0.5">
         {[card.home, card.away].map((side) => (
           <div key={side.shortName} className="flex items-center justify-between gap-3">
-            <span
-              className={cn(
-                "truncate font-sans text-[13px] leading-tight",
-                side.winner ? "font-bold text-white" : "font-medium text-white/90",
-              )}
-            >
-              {side.name}
-            </span>
+            <PlayerName
+              name={side.name}
+              photoUrl={side.photoUrl}
+              size="xs"
+              tone="dark"
+              bold={side.winner}
+              nameClassName={side.winner ? "text-white" : "text-white/90"}
+            />
             <span className="font-data text-[13px] font-bold tracking-wide tabular-nums text-white">
               {side.sets.length > 0 ? side.sets.join(" ") : "—"}
             </span>

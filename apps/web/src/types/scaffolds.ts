@@ -25,6 +25,7 @@ export type PlayerRow = {
   id: string;
   rank: number;
   name: string;
+  photoUrl?: string | null;
   country: string;
   points: number;
   href: string;
@@ -42,6 +43,7 @@ export type PlayersBoard = {
 export type StandingRow = {
   position: number;
   player: string;
+  photoUrl?: string | null;
   points: number;
 };
 
@@ -52,6 +54,8 @@ export type FixtureRow = {
   round: string;
   home: string;
   away: string;
+  homePhotoUrl?: string | null;
+  awayPhotoUrl?: string | null;
   href: string;
 };
 
@@ -67,6 +71,7 @@ export type TournamentBoard = {
 export type PlayerProfile = {
   id: string;
   name: string;
+  photoUrl?: string | null;
   country: string;
   tour: "atp" | "wta";
   rank: number | null;
@@ -87,8 +92,8 @@ export type MatchCentrePanel = {
   round: string;
   court: string;
   surface: Surface;
-  home: { id: string; name: string; country: string; seed?: number };
-  away: { id: string; name: string; country: string; seed?: number };
+  home: { id: string; name: string; photoUrl?: string | null; country: string; seed?: number };
+  away: { id: string; name: string; photoUrl?: string | null; country: string; seed?: number };
   score: {
     homeSets: number[];
     awaySets: number[];

@@ -15,6 +15,14 @@ import {
 } from "@/lib/match-upstream";
 import { toPlayersBoard, toStandingRows } from "@/lib/rankings-mapper";
 import {
+  withMatchCentreHeadshots,
+  withPlayerProfileHeadshots,
+  withPlayersBoardHeadshots,
+  withScoreboardHeadshots,
+  withScoresFeedHeadshots,
+  withTournamentHeadshots,
+} from "@/lib/player-photos";
+import {
   fetchUpstreamPlayer,
   fetchUpstreamPlayers,
   fetchUpstreamPlayerRankings,
@@ -24,7 +32,6 @@ import {
 } from "@/lib/tennis-data-upstream";
 import type {
   MatchCentrePanel,
-  PlayerProfile,
   PlayerProfileResult,
   PlayersBoard,
   ScoreboardDay,
@@ -50,7 +57,7 @@ export async function getScoresFeed(uiStatus?: string): Promise<ScoresFeed> {
       page: 0,
       size: 50,
     });
-    return toScoresFeed(matches);
+    return withScoresFeedHeadshots(toScoresFeed(matches));
   } catch (err) {
     if (process.env.NODE_ENV === "development") {
       console.warn("[scores] match-service unavailable", err);
@@ -66,7 +73,7 @@ export async function getScoreboardDay(uiStatus?: string): Promise<ScoreboardDay
       page: 0,
       size: 50,
     });
-    return toScoreboardDay(matches);
+    return withScoreboardHeadshots(toScoreboardDay(matches));
   } catch (err) {
     if (err instanceof MatchUpstreamError && process.env.NODE_ENV === "development") {
       console.warn("[scoreboard] match-service unavailable", err);
@@ -88,7 +95,7 @@ export async function getMatchCentre(id: string): Promise<MatchCentrePanel | nul
         }),
       ]);
       if (!match) return null;
-      return toMatchCentrePanel(match, points);
+      return withMatchCentreHeadshots(toMatchCentrePanel(match, points));
     }
     const match = await fetchUpstreamMatch(id);
     if (!match) return null;
@@ -98,7 +105,7 @@ export async function getMatchCentre(id: string): Promise<MatchCentrePanel | nul
       }
       return [] as UpstreamMatchPoint[];
     });
-    return toMatchCentrePanel(match, points);
+    return withMatchCentreHeadshots(toMatchCentrePanel(match, points));
   } catch (err) {
     if (process.env.NODE_ENV === "development") {
       console.warn("[match-centre] match-service unavailable", err);
@@ -118,9 +125,11 @@ export async function getTournamentBoard(
       fetchUpstreamRankings({ gender }).catch(() => []),
     ]);
     const filtered = filterMatchesForTournament(matches, query);
-    return toTournamentBoard(filtered, toStandingRows(rankings, 8), heading);
+    return withTournamentHeadshots(
+      toTournamentBoard(filtered, toStandingRows(rankings, 8), heading),
+    );
   } catch {
-    return toTournamentBoard([], [], heading);
+    return withTournamentHeadshots(toTournamentBoard([], [], heading));
   }
 }
 
@@ -137,7 +146,7 @@ export async function getPlayerProfile(id: string): Promise<PlayerProfileResult>
     const name = `${player.firstName} ${player.lastName}`.trim();
     return {
       status: "ok",
-      player: {
+      player: await withPlayerProfileHeadshots({
         id: player.id,
         name: name || player.lastName,
         country: player.nationality?.trim() || "—",
@@ -148,7 +157,7 @@ export async function getPlayerProfile(id: string): Promise<PlayerProfileResult>
         matches: matches
           .filter((match) => match.players.some((entry) => entry.playerId === id))
           .map(toScoreCard),
-      },
+      }),
     };
   } catch (err) {
     if (err instanceof TennisDataUpstreamError && err.status === 404) {
@@ -168,7 +177,7 @@ export async function getPlayersBoard(tour: "atp" | "wta" = "atp"): Promise<Play
       fetchUpstreamRankings({ gender }),
       fetchUpstreamPlayers({ gender }),
     ]);
-    return toPlayersBoard(rankings, players, tour);
+    return withPlayersBoardHeadshots(toPlayersBoard(rankings, players, tour));
   } catch (err) {
     if (err instanceof TennisDataUpstreamError && process.env.NODE_ENV === "development") {
       console.warn("[players] tennis-data-service unavailable", err);

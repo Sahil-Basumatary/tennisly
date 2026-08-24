@@ -5,6 +5,7 @@ import { AnalyticsEmptyState } from "@/components/analytics/AnalyticsEmptyState"
 import { AnalyticsErrorPanel } from "@/components/analytics/AnalyticsErrorPanel";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 import { AnalyticsPageHeader } from "@/components/analytics/AnalyticsPageHeader";
+import { PlayerName } from "@/components/player/PlayerName";
 import { SurfaceBreakdownChart } from "@/components/analytics/SurfaceBreakdownChart";
 import { SectionSubnav } from "@/components/layout/SectionSubnav";
 import { analyticsSubnav } from "@/config/analytics-subnav";
@@ -100,7 +101,7 @@ export default async function TournamentAnalyticsPage({ searchParams }: PageProp
                               href={`/analytics/players/${player.playerId}`}
                               className="font-sans text-[14px] font-semibold hover:text-primary"
                             >
-                              {player.displayName}
+                              <PlayerName name={player.displayName} size="sm" />
                             </Link>
                             <p className="font-data text-[11px] text-muted-foreground">
                               {player.playerId.slice(0, 8)}…

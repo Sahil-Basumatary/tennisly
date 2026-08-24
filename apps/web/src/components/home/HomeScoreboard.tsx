@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ScoreboardDay } from "@/types/scaffolds";
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 
 export function HomeScoreboard({ day }: { day: ScoreboardDay }) {
@@ -47,14 +48,25 @@ export function HomeScoreboard({ day }: { day: ScoreboardDay }) {
                         <span className="min-w-0">
                           <span
                             className={cn(
-                              "mr-2 font-data text-[10px] font-bold uppercase",
+                              "mb-1 block font-data text-[10px] font-bold uppercase",
                               match.status === "live" ? "text-live" : "text-muted-foreground",
                             )}
                           >
                             {match.status === "live" ? "LIVE" : match.status === "final" ? "F" : match.startLabel}
                           </span>
-                          <span className="font-sans text-[13px] font-semibold">
-                            {match.home.name} vs {match.away.name}
+                          <span className="flex flex-col gap-1">
+                            <PlayerName
+                              name={match.home.name}
+                              photoUrl={match.home.photoUrl}
+                              size="xs"
+                              nameClassName="text-[13px]"
+                            />
+                            <PlayerName
+                              name={match.away.name}
+                              photoUrl={match.away.photoUrl}
+                              size="xs"
+                              nameClassName="text-[13px]"
+                            />
                           </span>
                         </span>
                         <span className="shrink-0 font-data text-[12px] tabular-nums">

@@ -6,6 +6,7 @@ import type { MatchCentrePanel } from "@/types/scaffolds";
 import { MatchShotStatCard } from "@/components/match/MatchShotStatCard";
 import { MatchStatsRail } from "@/components/match/MatchStatsRail";
 import { MatchLiveBridge } from "@/components/match/MatchLiveBridge";
+import { PlayerName } from "@/components/player/PlayerName";
 import { cn } from "@/lib/utils";
 
 const MatchCourtPanel = dynamic(
@@ -30,8 +31,10 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
           <p className="mb-1 font-sans text-xs font-semibold uppercase tracking-[0.16em] text-primary">
             Match centre
           </p>
-          <h1 className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
-            {match.home.name} vs {match.away.name}
+          <h1 className="flex flex-wrap items-center gap-x-3 gap-y-2 font-display text-2xl font-semibold text-foreground sm:text-3xl">
+            <PlayerName name={match.home.name} photoUrl={match.home.photoUrl} size="lg" />
+            <span className="font-sans text-lg font-medium text-muted-foreground">vs</span>
+            <PlayerName name={match.away.name} photoUrl={match.away.photoUrl} size="lg" />
           </h1>
           <p className="mt-1 font-sans text-sm text-muted-foreground">
             {match.tournament} · {match.round} · {match.court}
@@ -54,12 +57,12 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
           <div className="space-y-4">
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <p className="font-sans text-[14px] font-semibold">
+                <p className="flex min-w-0 items-center gap-2 font-sans text-[14px] font-semibold">
                   {match.home.seed ? (
-                    <span className="mr-1 font-data text-muted-foreground">{match.home.seed}.</span>
+                    <span className="font-data text-muted-foreground">{match.home.seed}.</span>
                   ) : null}
-                  <Link href={`/players/${match.home.id}`} className="hover:underline">
-                    {match.home.name}
+                  <Link href={`/players/${match.home.id}`} className="min-w-0 hover:underline">
+                    <PlayerName name={match.home.name} photoUrl={match.home.photoUrl} size="md" />
                   </Link>
                 </p>
                 <span className="font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -69,12 +72,12 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
             </div>
             <div className="border-t border-hairline pt-4">
               <div className="flex items-baseline justify-between gap-2">
-                <p className="font-sans text-[14px] font-semibold">
+                <p className="flex min-w-0 items-center gap-2 font-sans text-[14px] font-semibold">
                   {match.away.seed ? (
-                    <span className="mr-1 font-data text-muted-foreground">{match.away.seed}.</span>
+                    <span className="font-data text-muted-foreground">{match.away.seed}.</span>
                   ) : null}
-                  <Link href={`/players/${match.away.id}`} className="hover:underline">
-                    {match.away.name}
+                  <Link href={`/players/${match.away.id}`} className="min-w-0 hover:underline">
+                    <PlayerName name={match.away.name} photoUrl={match.away.photoUrl} size="md" />
                   </Link>
                 </p>
                 <span className="font-data text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -87,13 +90,13 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
         <section className="order-1 flex min-h-[320px] flex-col border border-hairline bg-white lg:order-2">
           <div className="border-b border-hairline px-4 py-3">
             <div className="flex items-center justify-between gap-4 font-sans text-[15px] font-semibold">
-              <span className="min-w-0 truncate">{match.home.name}</span>
+              <PlayerName name={match.home.name} photoUrl={match.home.photoUrl} size="md" />
               <span className="shrink-0 font-data tabular-nums tracking-wide">
                 {[...match.score.homeSets, match.score.homeGames].filter((n) => n !== undefined).join(" ") || "—"}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between gap-4 font-sans text-[15px] font-semibold">
-              <span className="min-w-0 truncate">{match.away.name}</span>
+              <PlayerName name={match.away.name} photoUrl={match.away.photoUrl} size="md" />
               <span className="shrink-0 font-data tabular-nums tracking-wide">
                 {[...match.score.awaySets, match.score.awayGames].filter((n) => n !== undefined).join(" ") || "—"}
               </span>
@@ -102,6 +105,8 @@ export function MatchCentreSkeleton({ match }: { match: MatchCentrePanel }) {
           <MatchCourtPanel
             homeName={match.home.name}
             awayName={match.away.name}
+            homePhotoUrl={match.home.photoUrl}
+            awayPhotoUrl={match.away.photoUrl}
             score={match.score}
             status={match.status}
             matchId={match.id}

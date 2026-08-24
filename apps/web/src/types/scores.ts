@@ -3,6 +3,7 @@ export type MatchStatus = "live" | "upcoming" | "final";
 export type ScoreSide = {
   name: string;
   shortName: string;
+  photoUrl?: string | null;
   sets: number[];
   winner?: boolean;
 };
