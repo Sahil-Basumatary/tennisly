@@ -1,6 +1,7 @@
 import { PageHero } from "@/components/layout/PageHero";
 import { SectionSubnav } from "@/components/layout/SectionSubnav";
 import { PlayersSkeleton } from "@/components/scaffolds/PlayersSkeleton";
+import { withPlayersBoardHeadshots } from "@/lib/player-photos";
 import { getPlayersBoard } from "@/services/scaffolds";
 
 type PageProps = {
@@ -56,6 +57,13 @@ export default async function PlayersPage({ searchParams }: PageProps) {
   const pageCount = Math.max(1, Math.ceil(total / size) || 1);
   const page = Math.min(parsePositiveInt(pageParam, 1), pageCount);
   const pagedRows = filtered.slice((page - 1) * size, page * size);
+  const pagedBoard = await withPlayersBoardHeadshots({
+    ...board,
+    rows: pagedRows,
+    total,
+    page,
+    size,
+  });
   const viewKey = searching ? "search" : rankingsView && view === "rankings" ? "rankings" : undefined;
   const rankJumps =
     searching || total === 0
@@ -122,7 +130,7 @@ export default async function PlayersPage({ searchParams }: PageProps) {
         </div>
       ) : null}
       <PlayersSkeleton
-        board={{ ...board, rows: pagedRows, total, page, size }}
+        board={pagedBoard}
         hideHero={searching}
         emptyLabel={
           board.rows.length === 0

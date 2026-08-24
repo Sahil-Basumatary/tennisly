@@ -17,14 +17,12 @@ import { toPlayersBoard, toStandingRows } from "@/lib/rankings-mapper";
 import {
   withMatchCentreHeadshots,
   withPlayerProfileHeadshots,
-  withPlayersBoardHeadshots,
   withScoreboardHeadshots,
   withScoresFeedHeadshots,
   withTournamentHeadshots,
 } from "@/lib/player-photos";
 import {
   fetchUpstreamPlayer,
-  fetchUpstreamPlayers,
   fetchUpstreamPlayerRankings,
   fetchUpstreamRankings,
   TennisDataUpstreamError,
@@ -173,11 +171,8 @@ export async function getPlayerProfile(id: string): Promise<PlayerProfileResult>
 export async function getPlayersBoard(tour: "atp" | "wta" = "atp"): Promise<PlayersBoard> {
   const gender: UpstreamGender = tour === "wta" ? "FEMALE" : "MALE";
   try {
-    const [rankings, players] = await Promise.all([
-      fetchUpstreamRankings({ gender }),
-      fetchUpstreamPlayers({ gender }),
-    ]);
-    return withPlayersBoardHeadshots(toPlayersBoard(rankings, players, tour));
+    const rankings = await fetchUpstreamRankings({ gender });
+    return toPlayersBoard(rankings, tour);
   } catch (err) {
     if (err instanceof TennisDataUpstreamError && process.env.NODE_ENV === "development") {
       console.warn("[players] tennis-data-service unavailable", err);

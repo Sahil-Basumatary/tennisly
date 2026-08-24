@@ -7,6 +7,7 @@ export type UpstreamRanking = {
   id: string;
   playerId: string;
   playerName: string;
+  nationality?: string | null;
   rank: number;
   points: number;
   rankingDate?: string;

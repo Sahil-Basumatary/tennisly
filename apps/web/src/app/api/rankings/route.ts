@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  fetchUpstreamPlayers,
   fetchUpstreamRankings,
   TennisDataUpstreamError,
   type UpstreamGender,
@@ -16,11 +15,8 @@ export async function GET(request: Request) {
   const tour = tourParam === "wta" ? "wta" : "atp";
   const gender: UpstreamGender = tour === "wta" ? "FEMALE" : "MALE";
   try {
-    const [rankings, players] = await Promise.all([
-      fetchUpstreamRankings({ gender }),
-      fetchUpstreamPlayers({ gender }),
-    ]);
-    return NextResponse.json(toPlayersBoard(rankings, players, tour), {
+    const rankings = await fetchUpstreamRankings({ gender });
+    return NextResponse.json(toPlayersBoard(rankings, tour), {
       headers: {
         "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
       },

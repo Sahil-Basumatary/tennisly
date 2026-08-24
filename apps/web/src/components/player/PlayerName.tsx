@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import { playerInitials } from "@/lib/player-directory";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,11 @@ export function PlayerName({
 }: PlayerNameProps) {
   const px = SIZES[size];
   const dark = tone === "dark";
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    setBroken(false);
+  }, [photoUrl]);
+  const showPhoto = Boolean(photoUrl) && !broken;
   return (
     <span className={cn("inline-flex min-w-0 max-w-full items-center gap-2", className)}>
       <span
@@ -44,13 +49,16 @@ export function PlayerName({
         )}
         style={{ width: px, height: px }}
       >
-        {photoUrl ? (
-          <Image
-            src={photoUrl}
+        {showPhoto ? (
+          // Native img: Next's optimizer fetches Wikimedia without the required User-Agent and 403s.
+          <img
+            src={photoUrl ?? ""}
             alt=""
-            fill
-            sizes={`${px}px`}
-            className="object-cover object-[center_18%]"
+            width={px}
+            height={px}
+            className="h-full w-full object-cover object-[center_18%]"
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
           />
         ) : (
           <span

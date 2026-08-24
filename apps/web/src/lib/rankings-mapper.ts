@@ -1,21 +1,18 @@
-import type { UpstreamPlayer, UpstreamRanking } from "@/lib/tennis-data-upstream";
+import { playerCountry } from "@/lib/player-directory";
+import type { UpstreamRanking } from "@/lib/tennis-data-upstream";
 import type { PlayersBoard, StandingRow } from "@/types/scaffolds";
 
 export function toPlayersBoard(
   rankings: UpstreamRanking[],
-  players: UpstreamPlayer[],
   tour: "atp" | "wta",
 ): PlayersBoard {
-  const nationalityById = new Map(
-    players.map((player) => [player.id, player.nationality?.trim() || "—"] as const),
-  );
   const rows = [...rankings]
     .sort((a, b) => a.rank - b.rank)
     .map((row) => ({
       id: row.playerId,
       rank: row.rank,
       name: row.playerName,
-      country: nationalityById.get(row.playerId) ?? "—",
+      country: playerCountry(row.nationality),
       points: row.points,
       href: `/players/${row.playerId}`,
     }));

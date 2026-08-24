@@ -1,3 +1,5 @@
+import { parseCommonsPhotoUrl, proxiedCommonsSrc, WIKIMEDIA_USER_AGENT } from "@/lib/commons-photo";
+
 export type WikiPlayerMedia = {
   imageSrc: string | null;
   imageAlt: string;
@@ -7,8 +9,6 @@ export type WikiPlayerMedia = {
   sourceTitle: string | null;
   sourceUrl: string | null;
 };
-
-const WIKI_UA = "Tennisly/1.0 (https://tennisly.tv; hello@tennisly.dev)";
 const EMPTY: WikiPlayerMedia = {
   imageSrc: null,
   imageAlt: "",
@@ -35,8 +35,8 @@ type WikiSearch = {
 function wikiHeaders(): HeadersInit {
   return {
     Accept: "application/json",
-    "User-Agent": WIKI_UA,
-    "Api-User-Agent": WIKI_UA,
+    "User-Agent": WIKIMEDIA_USER_AGENT,
+    "Api-User-Agent": WIKIMEDIA_USER_AGENT,
   };
 }
 
@@ -49,14 +49,7 @@ function clipExtract(text: string, max = 220): string {
 }
 
 function isCommonsPhoto(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return false;
-    if (parsed.hostname !== "upload.wikimedia.org") return false;
-    return /\/wikipedia\/.+\.(jpe?g|png|webp)(\/|$)/i.test(parsed.pathname);
-  } catch {
-    return false;
-  }
+  return parseCommonsPhotoUrl(url) !== null;
 }
 
 function fold(value: string): string {
@@ -147,7 +140,7 @@ function mediaFromSummary(name: string, summary: WikiSummary): WikiPlayerMedia {
   const okPhoto = thumb.length > 0 && isCommonsPhoto(thumb);
   const sourceUrl = summary.content_urls?.desktop?.page?.trim() || null;
   return {
-    imageSrc: okPhoto ? sizedPortrait(thumb) : null,
+    imageSrc: okPhoto ? proxiedCommonsSrc(sizedPortrait(thumb)) : null,
     imageAlt: okPhoto ? `${summary.title ?? name}` : name,
     extract: full ? clipExtract(full) : null,
     extractFull: full ? clipExtract(full, 1200) : null,
@@ -157,20 +150,35 @@ function mediaFromSummary(name: string, summary: WikiSummary): WikiPlayerMedia {
   };
 }
 
+const MEDIA_TTL_MS = 24 * 60 * 60 * 1000;
+const mediaMemo = new Map<string, { media: WikiPlayerMedia; exp: number }>();
+
 export async function fetchWikiPlayerMedia(name: string): Promise<WikiPlayerMedia> {
   const trimmed = name.trim();
   if (!trimmed) return EMPTY;
+  const cached = mediaMemo.get(trimmed);
+  if (cached && cached.exp > Date.now()) return cached.media;
+  let media: WikiPlayerMedia = { ...EMPTY, imageAlt: trimmed };
   if (!isAbbreviatedName(trimmed)) {
     const direct = await fetchSummary(trimmed, trimmed);
-    if (direct) return mediaFromSummary(trimmed, direct);
+    if (direct) media = mediaFromSummary(trimmed, direct);
   }
-  for (const query of searchQueries(trimmed)) {
-    const title = await searchTitle(query, trimmed);
-    if (!title) continue;
-    const summary = await fetchSummary(title, trimmed);
-    if (summary) return mediaFromSummary(trimmed, summary);
+  if (!media.imageSrc && !media.extract) {
+    for (const query of searchQueries(trimmed)) {
+      const title = await searchTitle(query, trimmed);
+      if (!title) continue;
+      const summary = await fetchSummary(title, trimmed);
+      if (summary) {
+        media = mediaFromSummary(trimmed, summary);
+        break;
+      }
+    }
   }
-  return { ...EMPTY, imageAlt: trimmed };
+  mediaMemo.set(trimmed, {
+    media,
+    exp: Date.now() + (media.imageSrc ? MEDIA_TTL_MS : 15 * 60 * 1000),
+  });
+  return media;
 }
 
 export async function fetchWikiPlayerMediaMap(
