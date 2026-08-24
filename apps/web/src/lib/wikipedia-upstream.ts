@@ -131,7 +131,8 @@ async function searchTitle(query: string, originalName: string): Promise<string 
 }
 
 function sizedPortrait(url: string): string {
-  return url.replace(/\/\d+px-/, "/320px-");
+  // Commons rejects nonstandard hotlink widths; 330px is the smallest suitable profile-card step.
+  return url.replace(/\/\d+px-/, "/330px-");
 }
 
 function mediaFromSummary(name: string, summary: WikiSummary): WikiPlayerMedia {
