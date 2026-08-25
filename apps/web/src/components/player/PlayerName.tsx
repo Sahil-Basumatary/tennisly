@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { HEADSHOT_FOCUS } from "@/lib/headshot";
-import { playerInitials } from "@/lib/player-directory";
+import { playerInitials, publicPlayerName } from "@/lib/player-directory";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
@@ -36,6 +36,7 @@ export function PlayerName({
 }: PlayerNameProps) {
   const px = SIZES[size];
   const dark = tone === "dark";
+  const label = publicPlayerName(name);
   const [broken, setBroken] = useState(false);
   useEffect(() => {
     setBroken(false);
@@ -69,12 +70,12 @@ export function PlayerName({
             )}
             style={{ fontSize: Math.max(8, Math.round(px * 0.36)) }}
           >
-            {playerInitials(name)}
+            {playerInitials(label)}
           </span>
         )}
       </span>
       {hideName ? (
-        <span className="sr-only">{name}</span>
+        <span className="sr-only">{label}</span>
       ) : (
         <span
           className={cn(
@@ -83,7 +84,7 @@ export function PlayerName({
             nameClassName,
           )}
         >
-          {name}
+          {label}
         </span>
       )}
     </span>

@@ -1,4 +1,5 @@
 import { parseCommonsPhotoUrl, proxiedCommonsSrc, WIKIMEDIA_USER_AGENT } from "@/lib/commons-photo";
+import { publicPlayerName } from "@/lib/player-directory";
 
 export type WikiPlayerMedia = {
   imageSrc: string | null;
@@ -155,8 +156,8 @@ const MEDIA_TTL_MS = 24 * 60 * 60 * 1000;
 const mediaMemo = new Map<string, { media: WikiPlayerMedia; exp: number }>();
 
 export async function fetchWikiPlayerMedia(name: string): Promise<WikiPlayerMedia> {
-  const trimmed = name.trim();
-  if (!trimmed) return EMPTY;
+  const trimmed = publicPlayerName(name);
+  if (!trimmed || trimmed === "TBD") return EMPTY;
   const cached = mediaMemo.get(trimmed);
   if (cached && cached.exp > Date.now()) return cached.media;
   let media: WikiPlayerMedia = { ...EMPTY, imageAlt: trimmed };
@@ -199,7 +200,7 @@ export async function fetchWikiPlayerMediaMap(
 }
 
 export function playerInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const parts = publicPlayerName(name).split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();

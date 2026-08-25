@@ -4,9 +4,25 @@ export function playerCountry(nationality?: string | null): string {
   return value && value.length > 0 ? value.toUpperCase() : "—";
 }
 
+/** Live Tennis sometimes percent-encodes spaces inside a first name (`Aditya%20Vishal`). */
+function decodeDisplayName(value: string): string {
+  let current = value;
+  for (let i = 0; i < 3; i++) {
+    if (!/%[0-9A-Fa-f]{2}/.test(current)) break;
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) break;
+      current = next;
+    } catch {
+      break;
+    }
+  }
+  return current.replace(/\s+/g, " ").trim();
+}
+
 /** Drop identity placeholders so Davis Cup nations are not shown as "Unknown Burundi". */
 export function publicPlayerName(displayName: string): string {
-  const trimmed = displayName.trim();
+  const trimmed = decodeDisplayName(displayName.trim());
   if (!trimmed || /^unknown$/i.test(trimmed)) return "TBD";
   const stripped = trimmed.replace(/^unknown\s+/i, "").trim();
   return stripped || "TBD";

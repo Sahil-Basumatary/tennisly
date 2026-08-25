@@ -1,4 +1,4 @@
-import { playerCountry } from "@/lib/player-directory";
+import { playerCountry, publicPlayerName } from "@/lib/player-directory";
 import type { UpstreamRanking } from "@/lib/tennis-data-upstream";
 import type { PlayersBoard, StandingRow } from "@/types/scaffolds";
 
@@ -11,7 +11,7 @@ export function toPlayersBoard(
     .map((row) => ({
       id: row.playerId,
       rank: row.rank,
-      name: row.playerName,
+      name: publicPlayerName(row.playerName),
       country: playerCountry(row.nationality),
       points: row.points,
       href: `/players/${row.playerId}`,
@@ -29,7 +29,7 @@ export function toStandingRows(rankings: UpstreamRanking[], limit = 8): Standing
     .slice(0, limit)
     .map((row) => ({
       position: row.rank,
-      player: row.playerName,
+      player: publicPlayerName(row.playerName),
       points: row.points,
     }));
 }

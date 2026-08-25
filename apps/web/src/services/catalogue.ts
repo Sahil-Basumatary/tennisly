@@ -1,5 +1,6 @@
 import type { UpstreamMatchPoint } from "@/lib/match-stats";
 import { isReplayMatchUuid } from "@/lib/replay-index";
+import { publicPlayerName } from "@/lib/player-directory";
 import {
   toMatchCentrePanel,
   toScoreCard,
@@ -141,12 +142,12 @@ export async function getPlayerProfile(id: string): Promise<PlayerProfileResult>
       fetchUpstreamMatches({ page: 0, size: 100 }).catch(() => []),
     ]);
     const latest = [...rankings].sort((a, b) => a.rank - b.rank)[0];
-    const name = `${player.firstName} ${player.lastName}`.trim();
+    const name = publicPlayerName(`${player.firstName} ${player.lastName}`);
     return {
       status: "ok",
       player: await withPlayerProfileHeadshots({
         id: player.id,
-        name: name || player.lastName,
+        name,
         country: player.nationality?.trim() || "—",
         tour: gender === "FEMALE" ? "wta" : "atp",
         rank: player.currentRanking ?? latest?.rank ?? null,
