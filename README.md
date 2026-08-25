@@ -1,73 +1,101 @@
 # Tennisly
 
-Interactive tennis match visualization and data analytics platform.
+[tennisly.tv](https://tennisly.tv) is a live tennis platform for scores, rankings, match replays, and point-level analytics.
 
-## About
+## What it includes
 
-A tool for visualizing tennis matches with real-time tracking, replays, and statistics.
+- Live, upcoming, and completed matches with major tournaments shown first
+- ATP and WTA rankings, player profiles, schedules, and results
+- Interactive 2D court replays with an optional 3D view
+- Match and player analytics built from point history
+- Saved analytics views, account settings, API keys, and webhooks
 
-## Data provenance
 
-Tennisly does not invent match results, rankings, or player identity.
+## Stack
 
-| Surface | Source | Notes |
-|---------|--------|-------|
-| Players, rankings, tournaments | [BallDontLie](https://www.balldontlie.io/) Free (`TENNIS_BALLDONTLIE_API_KEY`) | Synced into `tennis-data-service` |
-| Live / upcoming / completed matches + point tape | [Live Tennis API](https://livetennisapi.com/) BASIC (`TENNIS_LIVETENNIS_API_KEY`) | Normalized in `tennis-data-service`, ingested by `match-service` |
-| Point ledger (server, winner, sequence, score snapshot) | Derived from Live Tennis score rows | Outcome is `UNKNOWN`; rally length is null until synthesis |
-| Ball flight / shot frames | Physics synthesizer in `replay-service` | Built from the real ledger + surface shot-distribution priors |
+- Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, and Babylon.js
+- Java 21 and Spring Boot services for tennis data, matches, replays, analytics, users, and notifications
+- PostgreSQL for match, account, and delivery state
+- Redis for caching and live match updates
+- Kafka for events between services
+- Elasticsearch for match and player analytics
+- MinIO locally and S3-compatible storage for replay files
+- Clerk for authentication
+- Vitest, Playwright, JUnit, Testcontainers, Pact, and k6 for verification
 
-Both API keys are required for `tennis-data-service` to start. Without them the process fails fast instead of falling back to fabricated data. The web app shows empty states when upstreams are down and never serves a silent mock rally.
+## Architecture
 
-### Trajectory synthesis
+```text
+Next.js web app
+  -> API gateway
+     -> tennis-data service
+     -> match service
+     -> replay service
+     -> analytics service
+     -> user and notification services
 
-Shot-level tracking (Hawkeye / Tennis Data Innovations) is separately licensed. Tennisly therefore synthesizes ball trajectories from:
-
-1. The real point-by-point ledger (who served, who won, score after the point)
-2. Surface shot-distribution priors (`V2__seed_shot_distributions.sql` in replay-service) — model parameters, not observed shots
-
-The court UI labels this with a **Synthesized trajectory** badge. Match stats only show tape-provable metrics (points won, service points, breaks) — not aces / winners / unforced errors invented from thin air.
-
-### Analytics
-
-Phase 5 indexes that same tape into Elasticsearch (`tennisly-match-analytics` / `tennisly-player-match` aliases) via `analytics-service`. Public reads power `/analytics` in the web app; saved views require Clerk. Operations, rebuild, and API notes: [docs/analytics.md](docs/analytics.md).
-
-## Local configuration
-
-See `apps/web/.env.local.example` and service `application.yml` files. Required secrets:
-
-```bash
-TENNIS_BALLDONTLIE_API_KEY=...
-TENNIS_LIVETENNIS_API_KEY=...
+BallDontLie + Live Tennis API -> tennis data -> matches
+matches -> Kafka -> replays, analytics, and notifications
+live match updates -> Redis and WebSocket -> web app
 ```
 
-Optional BallDontLie knobs (useful after downgrading to Free): `TENNIS_BALLDONTLIE_PER_PAGE` (default `100`), `TENNIS_BALLDONTLIE_REQUESTS_PER_MINUTE` (default `5`), `TENNIS_BALLDONTLIE_MAX_PAGES`.
+## Run locally
 
-### Local ports
+Requirements:
 
-Tennisly uses its own host port block (e.g. postgres `15432`, redis `16379`, web `13000`) so it can run beside other Docker stacks. `make up` runs `scripts/allocate-ports.sh`: if a preferred port is busy it walks upward to the next free port and writes `.run/ports.env`. Inspect with `make ports-print`.
+- Java 21
+- Node.js 22
+- pnpm 9
+- Docker
+- GNU Make
 
-Optional ingest toggles on match-service: `MATCH_INGEST_ENABLED`, `MATCH_INGEST_LIVE_DELAY_MS`, `MATCH_INGEST_COMPLETED_DELAY_MS`.
+```bash
+git clone https://github.com/Sahil-Basumatary/tennisly.git
+cd tennisly
 
-## Status
+corepack enable
+pnpm install
 
-Work in progress — Phase 8 cloud cut targets **Vercel** (web) + **Render** (API). See [docs/deploy.md](docs/deploy.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+cp infrastructure/docker/.env.example infrastructure/docker/.env
+cp apps/web/.env.local.example apps/web/.env.local
+```
 
-## Deploy (Phase 8a)
+Set `TENNIS_BALLDONTLIE_API_KEY` and `TENNIS_LIVETENNIS_API_KEY` in `infrastructure/docker/.env`. Set the Clerk keys in `apps/web/.env.local` for signed-in features.
 
-| Layer | Host | Config |
-|---|---|---|
-| Next.js web | Vercel | `vercel.json`, `apps/web/.env.production.example` |
-| tennis-data + match | Render | `render.yaml`, `infrastructure/render/.env.example` |
-| Postgres + Redis | Render | Blueprint-managed |
+Start the platform:
 
-Day-1 demo is catalogue HTTP (no Eureka, Kafka deferred). Expand per `docs/deploy.md` 8b/8c.
+```bash
+make up
+make ports-print
+```
+
+The web app uses [http://localhost:13000](http://localhost:13000) by default. Run `make ports-print` if that port was already in use.
+
+Stop everything with:
+
+```bash
+make down
+```
+
+## Checks
+
+```bash
+make test
+pnpm lint
+pnpm --filter @tennisly/web type-check
+pnpm --filter @tennisly/web test
+make e2e
+```
+
+Deployment, analytics, and contribution notes live in [`docs/`](docs/) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contact
 
-- Email: sahil@sahilbasumatary.dev
+- Email: [sahil@sahilbasumatary.dev](mailto:sahil@sahilbasumatary.dev)
+- Website: [sahilbzy.com](https://sahilbzy.com)
+- GitHub: [Sahil-Basumatary](https://github.com/Sahil-Basumatary)
 - LinkedIn: [Sahil Basumatary](https://www.linkedin.com/in/sahil-basumatary/)
 
 ## License
 
-MIT
+Tennisly is open source under the [MIT License](LICENSE).
