@@ -14,8 +14,11 @@ type PlaybackState = {
   toggle: () => void;
   seek: (timeSeconds: number) => void;
   setSpeed: (speed: PlaybackSpeed) => void;
+  setLoop: (loop: boolean) => void;
   setDuration: (durationSeconds: number) => void;
-  /** Advance clock by wall-clock dt; call from the render loop. */
+  /** Grow the tape without scrubbing the viewer back to 0. */
+  extendDuration: (durationSeconds: number) => void;
+  /** Advance clock by wall-clock dt; call from the shared replay driver. */
   tick: (deltaSeconds: number) => void;
 };
 
@@ -34,7 +37,13 @@ export const usePlayback = create<PlaybackState>((set, get) => ({
     set({ timeSeconds: clamped });
   },
   setSpeed: (speed) => set({ speed }),
+  setLoop: (loop) => set({ loop }),
   setDuration: (durationSeconds) => set({ durationSeconds, timeSeconds: 0, playing: false }),
+  extendDuration: (durationSeconds) =>
+    set((s) => ({
+      durationSeconds: Math.max(0, durationSeconds),
+      timeSeconds: Math.min(s.timeSeconds, Math.max(0, durationSeconds)),
+    })),
   tick: (deltaSeconds) => {
     const { playing, timeSeconds, durationSeconds, speed, loop } = get();
     if (!playing || durationSeconds <= 0) return;

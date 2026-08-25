@@ -1,4 +1,8 @@
 import { classifyTournamentName, editorialCircuitRank, type CircuitId } from "@/lib/tournament-filter";
+import { pickHomeReplayCandidate, type HomeReplayFeature } from "@/lib/home-replay";
+import { toMatchCentrePanel } from "@/lib/match-mapper";
+import { fetchUpstreamMatch, fetchUpstreamMatches } from "@/lib/match-upstream";
+import { withMatchCentreHeadshots } from "@/lib/player-photos";
 import { fetchWikiPlayerMediaMap, type WikiPlayerMedia } from "@/lib/wikipedia-upstream";
 import { getPlayersBoard } from "@/services/catalogue";
 import { getScoresFeed } from "@/services/scores";
@@ -68,6 +72,7 @@ export type HomeContent = {
   } | null;
   playerProfiles: HomeStory[];
   empty: boolean;
+  replay: HomeReplayFeature | null;
 };
 
 const IMG = {
@@ -143,11 +148,95 @@ function pickRankedPortraits(atp: RankedRow[], wta: RankedRow[], wiki: Map<strin
   return [...picked, ...rest].slice(0, 4);
 }
 
+function tournamentNameOf(match: { metadata?: Record<string, unknown> }): string {
+  const meta = match.metadata ?? {};
+  if (typeof meta.tournamentName === "string" && meta.tournamentName) return meta.tournamentName;
+  if (typeof meta.tournamentShortName === "string" && meta.tournamentShortName) {
+    return meta.tournamentShortName;
+  }
+  return "";
+}
+
+async function resolveHomeReplay(): Promise<HomeReplayFeature | null> {
+  let matches: Awaited<ReturnType<typeof fetchUpstreamMatches>> = [];
+  try {
+    matches = await fetchUpstreamMatches({ page: 0, size: 50 });
+  } catch {
+    matches = [];
+  }
+  const picked = pickHomeReplayCandidate(
+    matches.map((match) => ({
+      id: match.id,
+      status: match.status,
+      pointsPlayed: match.pointsPlayed,
+      tournament: tournamentNameOf(match),
+      endedAt: match.endedAt,
+      scheduledAt: match.scheduledAt,
+    })),
+    process.env.HOME_FALLBACK_REPLAY_MATCH_ID,
+  );
+  if (!picked) return null;
+  let match = matches.find((row) => row.id === picked.id) ?? null;
+  if (!match) {
+    try {
+      match = await fetchUpstreamMatch(picked.id);
+    } catch {
+      match = null;
+    }
+  }
+  if (!match) {
+    return {
+      matchId: picked.id,
+      href: `/matches/${picked.id}`,
+      kind: picked.kind,
+      homeName: "Home",
+      awayName: "Away",
+      homePlayerId: "",
+      awayPlayerId: "",
+      tournament: "Tour",
+      round: "—",
+      surface: "HARD",
+      status: picked.kind === "live" ? "live" : "final",
+      score: {
+        homeSets: [],
+        awaySets: [],
+        homeGames: 0,
+        awayGames: 0,
+        homePoints: "0",
+        awayPoints: "0",
+        server: "HOME",
+      },
+    };
+  }
+  try {
+    const panel = await withMatchCentreHeadshots(toMatchCentrePanel(match));
+    return {
+      matchId: match.id,
+      href: `/matches/${match.externalId?.trim() || match.id}`,
+      kind: picked.kind,
+      homeName: panel.home.name,
+      awayName: panel.away.name,
+      homePhotoUrl: panel.home.photoUrl,
+      awayPhotoUrl: panel.away.photoUrl,
+      homePlayerId: panel.home.id,
+      awayPlayerId: panel.away.id,
+      tournament: panel.tournament,
+      round: panel.round,
+      surface: panel.surface,
+      status: panel.status,
+      score: panel.score,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getHomeContent(): Promise<HomeContent> {
-  const [feed, atpBoard, wtaBoard] = await Promise.all([
+  const [feed, atpBoard, wtaBoard, replay] = await Promise.all([
     getScoresFeed(),
     getPlayersBoard("atp").catch(() => ({ tour: "atp" as const, updatedAt: "", rows: [] })),
     getPlayersBoard("wta").catch(() => ({ tour: "wta" as const, updatedAt: "", rows: [] })),
+    resolveHomeReplay(),
   ]);
   const ordered = [...feed.items].sort(compareEditorial);
   const photoMatches = ordered.filter(hasPortrait).slice(0, 8);
@@ -232,5 +321,6 @@ export async function getHomeContent(): Promise<HomeContent> {
       : null,
     playerProfiles,
     empty,
+    replay,
   };
 }

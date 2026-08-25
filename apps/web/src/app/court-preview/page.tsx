@@ -8,7 +8,7 @@ import {
   CAMERA_PRESET_LABELS,
   type CameraPresetId,
   DEFAULT_CAMERA_PRESET,
-} from "@/components/court/scene/cameraPresets";
+} from "@/components/court/cameraPresetIds";
 import { CallStamp } from "@/components/court/controls/CallStamp";
 import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
 import { ScoreBug } from "@/components/court/controls/ScoreBug";
@@ -16,6 +16,7 @@ import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
 import { SynthesizedBadge } from "@/components/court/controls/SynthesizedBadge";
 import { TransportBar } from "@/components/court/controls/TransportBar";
 import type { PlayerGender } from "@/components/court/scene/loadPlayer";
+import { useReplayDriver } from "@/hooks/useReplayDriver";
 import { useReplayHotkeys } from "@/hooks/useReplayHotkeys";
 import { bounceCallAtTime } from "@/lib/bounce-call";
 import { formatShotType } from "@/lib/shot-labels";
@@ -73,7 +74,11 @@ function CourtPreviewInner() {
   const [surface, setSurface] = useState<Surface>("GRASS");
   const [cameraPreset, setCameraPreset] = useState<CameraPresetId>(DEFAULT_CAMERA_PRESET);
   const [tour, setTour] = useState<TourLine>("men");
-  const [replayUnavailable, setReplayUnavailable] = useState(false);
+  const { status: replayStatus } = useReplayDriver({
+    matchId,
+    enabled: Boolean(matchId),
+  });
+  const replayUnavailable = replayStatus === "unavailable";
   const genders = useMemo(() => TOUR_GENDERS[tour], [tour]);
   const shots = useReplaySession((s) => s.shots);
   const points = useReplaySession((s) => s.points);
@@ -136,10 +141,8 @@ function CourtPreviewInner() {
           cameraPreset={cameraPreset}
           homeGender={genders.home}
           awayGender={genders.away}
-          matchId={matchId}
           className="min-h-[70vh] aspect-video"
           label={`${surface.toLowerCase()} tennis court in 3D`}
-          onReplayUnavailable={() => setReplayUnavailable(true)}
         />
         {replayUnavailable ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/60 px-6">

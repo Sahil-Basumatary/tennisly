@@ -12,13 +12,10 @@ type CourtVizProps = {
   cameraPreset?: CameraPresetId;
   homeGender?: PlayerGender;
   awayGender?: PlayerGender;
-  /** UUID → live replay-service via BFF. */
-  matchId?: string;
   animatePresets?: boolean;
   className?: string;
   label?: string;
   onError?: (message: string) => void;
-  onReplayUnavailable?: () => void;
 };
 
 export function CourtViz({
@@ -26,20 +23,16 @@ export function CourtViz({
   cameraPreset = "tv",
   homeGender = "male",
   awayGender = "male",
-  matchId,
   animatePresets = true,
   className,
   label = "3D court visualization",
   onError,
-  onReplayUnavailable,
 }: CourtVizProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<CourtScene | null>(null);
   const skipPresetAnim = useRef(true);
   const onErrorRef = useRef(onError);
-  const onReplayUnavailableRef = useRef(onReplayUnavailable);
   onErrorRef.current = onError;
-  onReplayUnavailableRef.current = onReplayUnavailable;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -60,8 +53,6 @@ export function CourtViz({
           cameraPreset,
           homeGender,
           awayGender,
-          matchId,
-          onReplayUnavailable: () => onReplayUnavailableRef.current?.(),
         });
         sceneRef.current = instance;
         setReady(true);
@@ -83,7 +74,7 @@ export function CourtViz({
       sceneRef.current = null;
       setReady(false);
     };
-  }, [surface, homeGender, awayGender, matchId]);
+  }, [surface, homeGender, awayGender]);
 
   useEffect(() => {
     if (!ready || !sceneRef.current) return;

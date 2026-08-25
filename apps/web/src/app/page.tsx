@@ -1,6 +1,6 @@
 import { EditorialCarousel } from "@/components/home/EditorialCarousel";
 import { FeaturedBand } from "@/components/home/FeaturedBand";
-import { HomeHero } from "@/components/home/HomeHero";
+import { HomeLiveReplay } from "@/components/home/HomeLiveReplay";
 import { HomeScoreboard } from "@/components/home/HomeScoreboard";
 import { LatestGrid } from "@/components/home/LatestGrid";
 import { TourPulse } from "@/components/home/TourPulse";
@@ -11,7 +11,7 @@ export default async function HomePage() {
   const [content, day] = await Promise.all([getHomeContent(), getScoreboardDay()]);
   return (
     <main id="main-content">
-      <HomeHero {...content.hero} />
+      <HomeLiveReplay feature={content.replay} />
       <HomeScoreboard day={day} />
       {content.tourPulse ? <TourPulse pulse={content.tourPulse} /> : null}
       {content.onCourt.length > 0 || content.onCourtMore.length > 0 ? (

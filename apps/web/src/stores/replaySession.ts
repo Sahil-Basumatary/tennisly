@@ -1,5 +1,13 @@
 import { create } from "zustand";
-import type { PointSummary, ShotSummary } from "@/types/replay";
+import { indexPointStartTimes, indexShotStartTimes } from "@/lib/replay-index";
+import {
+  appendPointToTape,
+  prepareHydratedTape,
+  tapeDurationSeconds,
+  type ReplayTape,
+} from "@/lib/replay-tape";
+import { usePlayback } from "@/stores/playback";
+import type { PointReplay, PointSummary, ReplayFrame, ShotSummary } from "@/types/replay";
 
 type OverlayFlags = {
   arcs: boolean;
@@ -10,6 +18,8 @@ type OverlayFlags = {
 };
 
 type ReplaySessionState = {
+  /** Dense samples shared by every renderer so Babylon does not own the tape. */
+  frames: ReplayFrame[];
   shots: ShotSummary[];
   points: PointSummary[];
   /** First-frame clock time for each shotIndex, for transport stepping. */
@@ -18,6 +28,8 @@ type ReplaySessionState = {
   pointStartTimes: number[];
   activeShotIndex: number;
   overlays: OverlayFlags;
+  hydrateReplay: (replay: ReplayTape, maxPoints?: number) => void;
+  appendPointReplay: (point: PointReplay) => boolean;
   setShots: (shots: ShotSummary[]) => void;
   setPoints: (points: PointSummary[]) => void;
   setShotStartTimes: (times: number[]) => void;
@@ -36,13 +48,47 @@ const DEFAULT_OVERLAYS: OverlayFlags = {
   heatmapAway: false,
 };
 
+function applyTape(tape: ReplayTape) {
+  return {
+    frames: tape.frames,
+    shots: tape.shots,
+    points: tape.points,
+    shotStartTimes: indexShotStartTimes(tape.frames),
+    pointStartTimes: indexPointStartTimes(tape.frames, tape.points),
+  };
+}
+
 export const useReplaySession = create<ReplaySessionState>((set, get) => ({
+  frames: [],
   shots: [],
   points: [],
   shotStartTimes: [],
   pointStartTimes: [],
   activeShotIndex: 0,
   overlays: { ...DEFAULT_OVERLAYS },
+  hydrateReplay: (replay, maxPoints) => {
+    const tape = prepareHydratedTape(replay, maxPoints);
+    set({ ...applyTape(tape), activeShotIndex: 0 });
+  },
+  appendPointReplay: (point) => {
+    const next = appendPointToTape(
+      { frames: get().frames, shots: get().shots, points: get().points },
+      point,
+    );
+    if (!next) return false;
+    const previousFirst = get().frames[0]?.timeSeconds ?? 0;
+    const nextFirst = next.frames[0]?.timeSeconds ?? 0;
+    set((s) => ({
+      ...applyTape(next),
+      activeShotIndex: Math.min(s.activeShotIndex, Math.max(0, next.shots.length - 1)),
+    }));
+    usePlayback.getState().extendDuration(tapeDurationSeconds(next));
+    if (nextFirst < previousFirst - 1e-6) {
+      const playback = usePlayback.getState();
+      if (playback.timeSeconds < nextFirst) playback.seek(nextFirst);
+    }
+    return true;
+  },
   setShots: (shots) => set({ shots, activeShotIndex: 0 }),
   setPoints: (points) => set({ points }),
   setShotStartTimes: (shotStartTimes) => set({ shotStartTimes }),
@@ -57,6 +103,7 @@ export const useReplaySession = create<ReplaySessionState>((set, get) => ({
     set((s) => ({ overlays: { ...s.overlays, [key]: !s.overlays[key] } })),
   reset: () =>
     set({
+      frames: [],
       shots: [],
       points: [],
       shotStartTimes: [],

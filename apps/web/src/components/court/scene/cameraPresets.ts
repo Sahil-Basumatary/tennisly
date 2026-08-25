@@ -1,7 +1,9 @@
+import type { CameraPresetId } from "@/components/court/cameraPresetIds";
 import { HALF_LENGTH_METRES } from "@/lib/court-geometry";
 import { Vector3 } from "@babylonjs/core";
 
-export type CameraPresetId = "tv" | "baseline" | "birdsEye";
+export type { CameraPresetId };
+export { CAMERA_PRESET_LABELS, DEFAULT_CAMERA_PRESET } from "@/components/court/cameraPresetIds";
 
 export type CameraPose = {
   alpha: number;
@@ -31,11 +33,3 @@ export const CAMERA_PRESETS: Record<CameraPresetId, CameraPose> = {
     target: new Vector3(0, 0, 0),
   },
 };
-
-export const CAMERA_PRESET_LABELS: Record<CameraPresetId, string> = {
-  tv: "TV",
-  baseline: "Baseline",
-  birdsEye: "Bird's eye",
-};
-
-export const DEFAULT_CAMERA_PRESET: CameraPresetId = "tv";

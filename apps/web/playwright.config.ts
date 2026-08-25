@@ -37,7 +37,7 @@ export default defineConfig({
     },
     {
       name: "chromium",
-      testMatch: /smoke\.spec\.ts/,
+      testMatch: /(smoke|live-replay)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
     },

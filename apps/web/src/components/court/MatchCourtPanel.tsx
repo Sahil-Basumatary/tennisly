@@ -6,10 +6,10 @@ import type { Surface } from "@/types/replay";
 import type { MatchCentrePanel } from "@/types/scaffolds";
 import {
   CAMERA_PRESET_LABELS,
-  type CameraPresetId,
   DEFAULT_CAMERA_PRESET,
-} from "@/components/court/scene/cameraPresets";
-import { CourtTopDownFallback } from "@/components/court/CourtTopDownFallback";
+  type CameraPresetId,
+} from "@/components/court/cameraPresetIds";
+import { CourtReplay2D } from "@/components/court/CourtReplay2D";
 import { CallStamp } from "@/components/court/controls/CallStamp";
 import { OverlayChipGroup } from "@/components/court/controls/OverlayChipGroup";
 import { ReplayStatsOverlay } from "@/components/court/controls/ReplayStatsOverlay";
@@ -18,8 +18,11 @@ import { SegmentedControl } from "@/components/court/controls/SegmentedControl";
 import { SynthesizedBadge } from "@/components/court/controls/SynthesizedBadge";
 import { TransportBar } from "@/components/court/controls/TransportBar";
 import { useReducedMotion, useWebGLSupport } from "@/hooks/useClientCapabilities";
+import { useReplayDriver } from "@/hooks/useReplayDriver";
 import { useReplayHotkeys } from "@/hooks/useReplayHotkeys";
 import { bounceCallAtTime } from "@/lib/bounce-call";
+import { indexAtOrBefore } from "@/lib/replay-transport";
+import { scoreFromSnapshot } from "@/lib/score-snapshot";
 import { formatShotType } from "@/lib/shot-labels";
 import { cn } from "@/lib/utils";
 import { usePlayback } from "@/stores/playback";
@@ -77,34 +80,45 @@ export function MatchCourtPanel({
   awayPlayerId,
   className,
 }: MatchCourtPanelProps) {
-  const [forceFallback, setForceFallback] = useState(false);
-  const [replayUnavailable, setReplayUnavailable] = useState(false);
+  const [view, setView] = useState<"2d" | "3d">("2d");
   const [cameraPreset, setCameraPreset] = useState<CameraPresetId>(DEFAULT_CAMERA_PRESET);
+  const live = status === "live";
+  const { status: replayStatus, connection } = useReplayDriver({
+    matchId,
+    enabled: Boolean(matchId),
+    live,
+    loop: !live,
+  });
+  const replayUnavailable = replayStatus === "unavailable";
   const webgl = useWebGLSupport();
   const reducedMotion = useReducedMotion();
   const shots = useReplaySession((s) => s.shots);
+  const points = useReplaySession((s) => s.points);
   const activeShotIndex = useReplaySession((s) => s.activeShotIndex);
   const shotStarts = useReplaySession((s) => s.shotStartTimes);
+  const pointStarts = useReplaySession((s) => s.pointStartTimes);
   const overlays = useReplaySession((s) => s.overlays);
   const toggleOverlay = useReplaySession((s) => s.toggleOverlay);
   const timeSeconds = usePlayback((s) => s.timeSeconds);
   const activeShot = shots[activeShotIndex] ?? null;
-  const onVizError = useCallback(() => setForceFallback(true), []);
-  const onReplayUnavailable = useCallback(() => setReplayUnavailable(true), []);
+  const onVizError = useCallback(() => setView("2d"), []);
   const callStamp = useMemo(
     () => bounceCallAtTime(activeShot, timeSeconds, shotStarts[activeShotIndex] ?? 0),
     [activeShot, activeShotIndex, shotStarts, timeSeconds],
   );
-
-  const use3d = webgl === true && !forceFallback;
-  useReplayHotkeys({ enabled: use3d && !replayUnavailable });
+  const tapeScore = useMemo(() => {
+    const pointIndex = pointStarts.length > 0 ? indexAtOrBefore(pointStarts, timeSeconds) : 0;
+    return scoreFromSnapshot(points[pointIndex]?.scoreSnapshot, score, homePlayerId, awayPlayerId);
+  }, [awayPlayerId, homePlayerId, pointStarts, points, score, timeSeconds]);
+  const use3d = view === "3d" && webgl === true;
+  useReplayHotkeys({ enabled: !replayUnavailable && replayStatus === "ready" });
 
   const liveText = useMemo(() => {
     if (replayUnavailable) {
       return `Replay unavailable for ${homeName} versus ${awayName}.`;
     }
     if (!activeShot) {
-      return `3D court visualization for ${homeName} versus ${awayName}.`;
+      return `Reconstructed live visualization for ${homeName} versus ${awayName}.`;
     }
     return (
       `Current shot ${activeShot.shotIndex + 1}: ${formatShotType(activeShot.shotType)}, ` +
@@ -116,107 +130,140 @@ export function MatchCourtPanel({
   return (
     <div
       className={cn("flex min-h-[320px] flex-1 flex-col", className)}
-      tabIndex={use3d ? 0 : undefined}
+      tabIndex={0}
       aria-keyshortcuts="Space, ArrowLeft, ArrowRight, Shift+ArrowLeft, Shift+ArrowRight, Digit1, Digit2, Digit3, Digit4, KeyJ, KeyL"
     >
       <div className="relative min-h-[280px] flex-1 overflow-hidden">
-        {webgl === null ? (
-          <div className="flex h-full min-h-[280px] items-center justify-center bg-[#0b5c2e] font-sans text-xs font-semibold uppercase tracking-wide text-white/80">
-            Loading court…
-          </div>
-        ) : use3d ? (
-          <>
-            <CourtViz
-              surface={surface}
-              cameraPreset={cameraPreset}
-              matchId={matchId}
-              animatePresets={!reducedMotion}
-              className="min-h-[280px] h-full w-full aspect-video lg:aspect-auto lg:min-h-[420px]"
-              label={liveText}
-              onError={onVizError}
-              onReplayUnavailable={onReplayUnavailable}
-            />
-            {replayUnavailable ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 px-6">
-                <p className="max-w-sm text-center font-sans text-sm font-semibold text-white">
-                  Replay is not available for this match yet.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 via-black/25 to-transparent px-2 pb-8 pt-2">
-                  <div className="pointer-events-auto flex flex-wrap items-start gap-x-5 gap-y-2">
-                    <SegmentedControl
-                      label="Camera"
-                      options={CAMERA_OPTIONS}
-                      value={cameraPreset}
-                      onChange={setCameraPreset}
-                      size="sm"
-                      tone="dark"
-                    />
-                    <OverlayChipGroup
-                      label="Overlays"
-                      options={OVERLAY_OPTIONS}
-                      values={overlays}
-                      onToggle={toggleOverlay}
-                      size="sm"
-                      tone="dark"
-                    />
-                  </div>
-                </div>
-                <SynthesizedBadge />
-                <ScoreBug
-                  status={status}
-                  home={{
-                    name: homeName,
-                    photoUrl: homePhotoUrl,
-                    sets: score.homeSets,
-                    games: score.homeGames,
-                    points: score.homePoints,
-                    serving: score.server === "HOME",
-                  }}
-                  away={{
-                    name: awayName,
-                    photoUrl: awayPhotoUrl,
-                    sets: score.awaySets,
-                    games: score.awayGames,
-                    points: score.awayPoints,
-                    serving: score.server === "AWAY",
-                  }}
-                  className="top-14"
-                />
-                {homePlayerId && awayPlayerId ? (
-                  <ReplayStatsOverlay
-                    homePlayerId={homePlayerId}
-                    awayPlayerId={awayPlayerId}
-                    homeLabel={homeName.slice(0, 3).toUpperCase()}
-                    awayLabel={awayName.slice(0, 3).toUpperCase()}
-                    className="top-32 sm:top-36"
-                  />
-                ) : null}
-                {callStamp ? (
-                  <CallStamp key={`${activeShotIndex}-${callStamp}`} call={callStamp} />
-                ) : null}
-                <TransportBar />
-                {activeShot ? (
-                  <aside className="pointer-events-none absolute right-2 top-14 border-l-2 border-primary bg-black/75 px-2.5 py-1.5 text-white backdrop-blur-sm">
-                    <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
-                      Shot {activeShot.shotIndex + 1}
-                    </p>
-                    <p className="font-display text-xs font-semibold">
-                      {formatShotType(activeShot.shotType)}
-                    </p>
-                    <p className="font-data text-[11px] tabular-nums text-white/80">
-                      {Math.round(activeShot.launchSpeedKmh)} km/h
-                    </p>
-                  </aside>
-                ) : null}
-              </>
-            )}
-          </>
+        {use3d ? (
+          <CourtViz
+            surface={surface}
+            cameraPreset={cameraPreset}
+            animatePresets={!reducedMotion}
+            className="min-h-[280px] h-full w-full aspect-video lg:aspect-auto lg:min-h-[420px]"
+            label={liveText}
+            onError={onVizError}
+          />
         ) : (
-          <CourtTopDownFallback homeName={homeName} awayName={awayName} className="h-full min-h-[280px]" />
+          <CourtReplay2D
+            surface={surface}
+            homeName={homeName}
+            awayName={awayName}
+            className="h-full min-h-[280px]"
+            label={liveText}
+          />
         )}
+        {replayUnavailable ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 px-6">
+            <p className="max-w-sm text-center font-sans text-sm font-semibold text-white">
+              Replay is not available for this match yet.
+            </p>
+          </div>
+        ) : (
+          <>
+            {use3d ? (
+              <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 via-black/25 to-transparent px-2 pb-8 pt-2">
+                <div className="pointer-events-auto flex flex-wrap items-start gap-x-5 gap-y-2">
+                  <SegmentedControl
+                    label="Camera"
+                    options={CAMERA_OPTIONS}
+                    value={cameraPreset}
+                    onChange={setCameraPreset}
+                    size="sm"
+                    tone="dark"
+                  />
+                  <OverlayChipGroup
+                    label="Overlays"
+                    options={OVERLAY_OPTIONS}
+                    values={overlays}
+                    onToggle={toggleOverlay}
+                    size="sm"
+                    tone="dark"
+                  />
+                </div>
+              </div>
+            ) : null}
+            <SynthesizedBadge />
+            {live ? (
+              <p
+                className={cn(
+                  "pointer-events-none absolute right-2 top-8 bg-black/75 px-2 py-0.5 font-sans text-[9px] font-bold uppercase tracking-[0.16em] text-white/85",
+                  connection === "reconnecting" && "text-amber-300",
+                )}
+              >
+                {connection === "reconnecting" ? "Reconnecting" : "Live ledger"}
+              </p>
+            ) : null}
+            <ScoreBug
+              status={status}
+              home={{
+                name: homeName,
+                photoUrl: homePhotoUrl,
+                sets: tapeScore.homeSets,
+                games: tapeScore.homeGames,
+                points: tapeScore.homePoints,
+                serving: tapeScore.server === "HOME",
+              }}
+              away={{
+                name: awayName,
+                photoUrl: awayPhotoUrl,
+                sets: tapeScore.awaySets,
+                games: tapeScore.awayGames,
+                points: tapeScore.awayPoints,
+                serving: tapeScore.server === "AWAY",
+              }}
+              className={use3d ? "top-14" : "top-2"}
+            />
+            {homePlayerId && awayPlayerId ? (
+              <ReplayStatsOverlay
+                homePlayerId={homePlayerId}
+                awayPlayerId={awayPlayerId}
+                homeLabel={homeName.slice(0, 3).toUpperCase()}
+                awayLabel={awayName.slice(0, 3).toUpperCase()}
+                className={use3d ? "top-32 sm:top-36" : "top-24 sm:top-28"}
+              />
+            ) : null}
+            {callStamp ? (
+              <CallStamp key={`${activeShotIndex}-${callStamp}`} call={callStamp} />
+            ) : null}
+            <TransportBar />
+            {activeShot ? (
+              <aside className="pointer-events-none absolute right-2 top-14 border-l-2 border-primary bg-black/75 px-2.5 py-1.5 text-white backdrop-blur-sm">
+                <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-white/60">
+                  Shot {activeShot.shotIndex + 1}
+                </p>
+                <p className="font-display text-xs font-semibold">
+                  {formatShotType(activeShot.shotType)}
+                </p>
+                <p className="font-data text-[11px] tabular-nums text-white/80">
+                  {Math.round(activeShot.launchSpeedKmh)} km/h
+                </p>
+              </aside>
+            ) : null}
+          </>
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-3 border-t border-hairline px-3 py-2">
+        <p className="font-sans text-[11px] text-muted-foreground">
+          Reconstructed live visualization · ball flight is synthesized
+        </p>
+        {webgl === true && view === "2d" ? (
+          <button
+            type="button"
+            className="font-sans text-[11px] font-semibold uppercase tracking-wide text-foreground hover:underline"
+            onClick={() => setView("3d")}
+          >
+            Open 3D court
+          </button>
+        ) : null}
+        {view === "3d" ? (
+          <button
+            type="button"
+            className="font-sans text-[11px] font-semibold uppercase tracking-wide text-foreground hover:underline"
+            onClick={() => setView("2d")}
+          >
+            Use 2D court
+          </button>
+        ) : null}
       </div>
       <p className="sr-only" aria-live="polite">
         {liveText}
@@ -226,15 +273,6 @@ export function MatchCourtPanel({
         Keyboard: Space play or pause. Left and right arrows step shots. Shift plus arrows step
         points. Keys 1 to 4 set speed. J and L seek one second.
       </p>
-      {webgl === false || forceFallback ? null : (
-        <button
-          type="button"
-          className="sr-only focus:not-sr-only focus:absolute focus:bottom-2 focus:left-2 focus:z-10 focus:border focus:border-foreground focus:bg-white focus:px-2 focus:py-1 focus:font-sans focus:text-[11px]"
-          onClick={() => setForceFallback(true)}
-        >
-          Use 2D court instead
-        </button>
-      )}
     </div>
   );
 }

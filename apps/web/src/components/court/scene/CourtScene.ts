@@ -1,7 +1,5 @@
-import type { ReplayFrame, Surface } from "@/types/replay";
-import { indexPointStartTimes, indexShotStartTimes } from "@/lib/replay-index";
+import type { ReplayFrame, ShotSummary, Surface } from "@/types/replay";
 import { interpolateAtTime } from "@/lib/replay-space";
-import { getMatchReplay } from "@/services/replay";
 import { usePlayback } from "@/stores/playback";
 import { useReplaySession } from "@/stores/replaySession";
 import {
@@ -34,10 +32,7 @@ export type CourtSceneOptions = {
   cameraPreset?: CameraPresetId;
   homeGender?: PlayerGender;
   awayGender?: PlayerGender;
-  /** When a UUID, loads live replay-service via BFF. */
-  matchId?: string;
   onReady?: () => void;
-  onReplayUnavailable?: () => void;
 };
 
 export class CourtScene {
@@ -54,6 +49,7 @@ export class CourtScene {
   private overlays: ShotOverlays | null = null;
   private heatmaps: PositioningHeatmaps | null = null;
   private frames: ReplayFrame[] = [];
+  private boundShots: ShotSummary[] | null = null;
   private lastShotIndex = -1;
   private lastOverlayKey = "";
 
@@ -94,36 +90,6 @@ export class CourtScene {
       homeGender: options.homeGender,
       awayGender: options.awayGender,
       shadows: this.lighting.shadows,
-    });
-
-    void getMatchReplay(options.matchId).then((replay) => {
-      if (this.disposed) return;
-      if (!replay) {
-        usePlayback.getState().setDuration(0);
-        useReplaySession.getState().reset();
-        options.onReplayUnavailable?.();
-        return;
-      }
-      this.frames = replay.frames;
-      usePlayback.getState().setDuration(replay.durationSeconds);
-      const session = useReplaySession.getState();
-      session.setShots(replay.shots);
-      session.setPoints(replay.points);
-      session.setShotStartTimes(indexShotStartTimes(replay.frames));
-      session.setPointStartTimes(indexPointStartTimes(replay.frames, replay.points));
-      this.overlays?.dispose();
-      this.overlays = new ShotOverlays(this.scene, replay.shots);
-      this.heatmaps?.dispose();
-      this.heatmaps = new PositioningHeatmaps(this.scene, replay.frames);
-      this.heatmaps.setVisibility(session.overlays);
-      this.actors?.setSwingCues(buildSwingCues(replay.frames, replay.shots));
-      const first = interpolateAtTime(this.frames, 0);
-      if (first) {
-        this.actors?.apply(first);
-        this.overlays.setActiveShot(first.shotIndex);
-        this.lastShotIndex = first.shotIndex;
-      }
-      options.onReady?.();
     });
 
     if (hasStadiumModel(surface)) {
@@ -181,8 +147,8 @@ export class CourtScene {
 
     this.engine.runRenderLoop(() => {
       if (this.disposed) return;
+      this.bindReplayIfChanged();
       const dt = Math.min(this.engine.getDeltaTime() / 1000, 0.1);
-      usePlayback.getState().tick(dt);
       const session = useReplaySession.getState();
       const overlayKey =
         `${session.overlays.arcs}|${session.overlays.landings}|${session.overlays.serveBox}|` +
@@ -200,7 +166,6 @@ export class CourtScene {
           if (framePose.shotIndex !== this.lastShotIndex) {
             this.lastShotIndex = framePose.shotIndex;
             this.overlays?.setActiveShot(framePose.shotIndex);
-            session.setActiveShotIndex(framePose.shotIndex);
           }
         }
       }
@@ -219,6 +184,34 @@ export class CourtScene {
       if (box.maximumWorld.y < 1.5) {
         mesh.receiveShadows = true;
       }
+    }
+  }
+
+  private bindReplayIfChanged(): void {
+    const session = useReplaySession.getState();
+    if (session.frames === this.frames && session.shots === this.boundShots) return;
+    this.frames = session.frames;
+    this.boundShots = session.shots;
+    this.overlays?.dispose();
+    this.heatmaps?.dispose();
+    this.overlays = null;
+    this.heatmaps = null;
+    this.lastShotIndex = -1;
+    this.lastOverlayKey = "";
+    if (session.shots.length === 0 && session.frames.length === 0) {
+      this.actors?.setSwingCues([]);
+      return;
+    }
+    this.overlays = session.shots.length > 0 ? new ShotOverlays(this.scene, session.shots) : null;
+    this.heatmaps =
+      session.frames.length > 0 ? new PositioningHeatmaps(this.scene, session.frames) : null;
+    this.heatmaps?.setVisibility(session.overlays);
+    this.actors?.setSwingCues(buildSwingCues(session.frames, session.shots));
+    const first = interpolateAtTime(this.frames, usePlayback.getState().timeSeconds);
+    if (first) {
+      this.actors?.apply(first);
+      this.overlays?.setActiveShot(first.shotIndex);
+      this.lastShotIndex = first.shotIndex;
     }
   }
 
@@ -242,8 +235,6 @@ export class CourtScene {
     this.digiboards?.dispose();
     this.digiboards = null;
     this.postProcess.dispose();
-    usePlayback.getState().pause();
-    useReplaySession.getState().reset();
     this.engine.stopRenderLoop();
     this.scene.dispose();
     this.engine.dispose();
