@@ -206,13 +206,9 @@ export async function getHomeContent(): Promise<HomeContent> {
   const matchTitle = featuredMatch
     ? `${featuredMatch.home.name} vs ${featuredMatch.away.name}`
     : "Live Centre";
-  const featuredWiki = featuredMatch ? matchMedia(wiki, featuredMatch) : null;
-  const featuredPhoto =
-    featuredWiki?.imageSrc ||
-    featuredMatch?.home.photoUrl ||
-    featuredMatch?.away.photoUrl ||
-    IMG.grassAction;
-  const featuredAlt = featuredWiki?.imageAlt || "Tennis player celebrating on a grass court";
+  // Wiki infoboxes are headshots — they look wrong as a full-bleed cinema plate.
+  const featuredPhoto = IMG.grassAction;
+  const featuredAlt = "Tennis player celebrating on a grass court";
   return {
     hero: {
       headline: empty ? "Waiting on live tennis data" : "Replay every point from centre court",

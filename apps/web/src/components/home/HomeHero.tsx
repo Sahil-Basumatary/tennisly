@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { RemotePhoto } from "@/components/media/RemotePhoto";
-import { HEADSHOT_FOCUS } from "@/lib/headshot";
 import { ArrowRightIcon } from "@/components/ui/brandIcons";
 
 type HomeHeroProps = {
@@ -24,7 +23,7 @@ export function HomeHero({
         <RemotePhoto
           src={imageSrc}
           alt={imageAlt}
-          className={HEADSHOT_FOCUS}
+          className="object-cover object-center"
           fallback={null}
         />
       </div>

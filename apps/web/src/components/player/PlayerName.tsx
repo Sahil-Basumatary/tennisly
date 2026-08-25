@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { HEADSHOT_FOCUS } from "@/lib/headshot";
-import { publicPlayerName } from "@/lib/player-directory";
+import { playerInitials, publicPlayerName } from "@/lib/player-directory";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
@@ -44,15 +44,14 @@ export function PlayerName({
   const showPhoto = Boolean(photoUrl) && !broken;
   return (
     <span className={cn("inline-flex min-w-0 max-w-full items-center gap-2", className)}>
-      {showPhoto ? (
-        <span
-          className={cn(
-            "relative shrink-0 overflow-hidden rounded-full",
-            dark ? "bg-white/15 ring-1 ring-white/25" : "bg-chrome text-white ring-1 ring-hairline",
-          )}
-          style={{ width: px, height: px }}
-        >
-          {/* Native img: Next optimizer fetches Wikimedia without the required User-Agent and 403s. */}
+      <span
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-full",
+          dark ? "bg-white/15 ring-1 ring-white/25" : "bg-chrome text-white ring-1 ring-hairline",
+        )}
+        style={{ width: px, height: px }}
+      >
+        {showPhoto ? (
           <img
             src={photoUrl ?? ""}
             alt=""
@@ -62,8 +61,15 @@ export function PlayerName({
             referrerPolicy="no-referrer"
             onError={() => setBroken(true)}
           />
-        </span>
-      ) : null}
+        ) : (
+          <span
+            className="flex h-full w-full items-center justify-center font-data font-bold leading-none text-white"
+            style={{ fontSize: Math.max(8, Math.round(px * 0.36)) }}
+          >
+            {playerInitials(label)}
+          </span>
+        )}
+      </span>
       {hideName ? (
         <span className="sr-only">{label}</span>
       ) : (
