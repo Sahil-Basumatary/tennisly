@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
-import { fetchUpstreamMatches, MatchUpstreamError } from "@/lib/match-upstream";
+import { MatchUpstreamError } from "@/lib/match-upstream";
 import { toScoresFeed } from "@/lib/match-mapper";
+import { fetchOrderedMatches } from "@/lib/ordered-matches";
 import { withScoresFeedHeadshots } from "@/lib/player-photos";
 
 export async function GET() {
   try {
-    const live = await fetchUpstreamMatches({ status: "IN_PROGRESS", page: 0, size: 12 });
+    const live = await fetchOrderedMatches("live", 12);
     const feed =
       live.length > 0
         ? await withScoresFeedHeadshots(toScoresFeed(live))
-        : await withScoresFeedHeadshots(
-            toScoresFeed(await fetchUpstreamMatches({ page: 0, size: 12 })),
-          );
+        : await withScoresFeedHeadshots(toScoresFeed(await fetchOrderedMatches(undefined, 12)));
     return NextResponse.json(feed, {
       headers: {
         "Cache-Control": "private, max-age=5, stale-while-revalidate=15",

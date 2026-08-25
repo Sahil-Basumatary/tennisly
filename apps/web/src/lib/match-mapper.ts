@@ -1,5 +1,6 @@
 import { playerCountry, playerShortName, publicPlayerName } from "@/lib/player-directory";
 import { aggregateMatchStats, type UpstreamMatchPoint } from "@/lib/match-stats";
+import { compareMatchesByPriority, matchCircuitRank } from "@/lib/match-order";
 import type { UpstreamMatch, UpstreamMatchPlayer } from "@/types/match-catalogue";
 import { toUiMatchStatus } from "@/types/match-catalogue";
 import type {
@@ -125,6 +126,7 @@ export function toScoreCard(match: UpstreamMatch): ScoreCard {
   return {
     id: match.id,
     status,
+    circuitRank: matchCircuitRank(match),
     tournament: metaString(match, "tournamentShortName", metaString(match, "tournamentName", "Tour")),
     round: metaString(match, "roundCode", metaString(match, "round", "—")),
     startLabel: startLabel(match),
@@ -147,16 +149,7 @@ export function toScoreCard(match: UpstreamMatch): ScoreCard {
 }
 
 export function toScoresFeed(matches: UpstreamMatch[]): ScoresFeed {
-  const sorted = [...matches].sort((a, b) => {
-    const rank = (status: UpstreamMatch["status"]) => {
-      if (status === "IN_PROGRESS" || status === "SUSPENDED") return 0;
-      if (status === "SCHEDULED") return 1;
-      return 2;
-    };
-    const byStatus = rank(a.status) - rank(b.status);
-    if (byStatus !== 0) return byStatus;
-    return (a.scheduledAt ?? "").localeCompare(b.scheduledAt ?? "");
-  });
+  const sorted = [...matches].sort(compareMatchesByPriority);
   return {
     updatedAt: new Date().toISOString(),
     items: sorted.map(toScoreCard),
@@ -165,9 +158,10 @@ export function toScoresFeed(matches: UpstreamMatch[]): ScoresFeed {
 
 export function toScoreboardDay(matches: UpstreamMatch[], date = new Date()): ScoreboardDay {
   const feed = toScoresFeed(matches);
+  const cardsById = new Map(feed.items.map((card) => [card.id, card]));
   const groupsMap = new Map<string, { tournamentId: string; tournamentName: string; location: string; matches: ScoreCard[] }>();
-  for (const match of matches) {
-    const card = feed.items.find((item) => item.id === match.id);
+  for (const match of [...matches].sort(compareMatchesByPriority)) {
+    const card = cardsById.get(match.id);
     if (!card) continue;
     const tournamentId = match.tournamentId ?? metaString(match, "tournamentShortName", "tour");
     const existing = groupsMap.get(tournamentId);

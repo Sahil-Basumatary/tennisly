@@ -2,6 +2,7 @@ package dev.sahilbasumatary.matchservice.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,5 +68,26 @@ class MatchListQueryTest {
         verify(matchRepository).findAllByOrderByScheduledAtAsc(any(Pageable.class));
         verify(pointRepository, never()).countByMatchId(any());
         verify(pointRepository, never()).countGroupedByMatchIds(any());
+    }
+
+    @Test
+    void liveListStartsWithTheNewestMatches() {
+        Match match = new Match();
+        match.setId(UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        match.setSurface(Surface.HARD);
+        match.setStatus(MatchStatus.IN_PROGRESS);
+        when(matchRepository.findByStatusOrderByScheduledAtDesc(
+                        eq(MatchStatus.IN_PROGRESS), any(Pageable.class)))
+                .thenReturn(List.of(match));
+
+        var rows = matchService.listMatches(MatchStatus.IN_PROGRESS, null, 0, 20);
+
+        assertEquals(1, rows.size());
+        verify(matchRepository)
+                .findByStatusOrderByScheduledAtDesc(
+                        eq(MatchStatus.IN_PROGRESS), any(Pageable.class));
+        verify(matchRepository, never())
+                .findByStatusOrderByScheduledAtAsc(
+                        eq(MatchStatus.IN_PROGRESS), any(Pageable.class));
     }
 }

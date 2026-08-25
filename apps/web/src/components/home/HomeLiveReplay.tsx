@@ -20,9 +20,10 @@ type HomeLiveReplayProps = {
 };
 
 function kindLabel(feature: HomeReplayFeature | null, unavailable: boolean): string {
-  if (!feature || unavailable) return "Replay unavailable";
+  if (!feature) return "NO LIVE MATCH";
+  if (unavailable) return "NO REPLAY YET";
   if (feature.kind === "live") return "LIVE";
-  return "LATEST REPLAY";
+  return "REPLAY";
 }
 
 export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
@@ -67,14 +68,14 @@ export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
 
   const homeName = feature?.homeName ?? "Home";
   const awayName = feature?.awayName ?? "Away";
-  const title = feature ? `${homeName} vs ${awayName}` : "Waiting on live tennis data";
+  const title = feature ? `${homeName} vs ${awayName}` : "No live court right now";
   const showTransport = armed && status === "ready";
 
   return (
     <section ref={rootRef} className="relative isolate w-full bg-inverse-deep">
       <div className="mx-auto max-w-[1400px] px-6 pb-10 pt-8 md:px-10 md:pb-14 md:pt-12">
         <p className="font-sans text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">
-          Reconstructed live visualization
+          {feature?.kind === "replay" ? "Match replay" : "Live court"}
         </p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <h1 className="max-w-[22ch] font-display text-[28px] font-bold uppercase leading-[1.1] tracking-tight text-white md:text-[40px]">
@@ -91,8 +92,10 @@ export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
         </div>
         <p className="mt-2 max-w-2xl font-sans text-sm text-white/70">
           {feature
-            ? `${feature.tournament} · ${feature.round}. Scores and point order are live. Ball flight is synthesized — this is not Hawk-Eye.`
-            : "When a match with a point ledger is on, the reconstructed court plays here. Nothing is invented."}
+            ? `${feature.tournament} · ${feature.round}. ${
+                feature.kind === "live" ? "Scores update live." : "Final score."
+              } The court view is an estimate.`
+            : "A live ATP, WTA or Grand Slam match will appear here when its court replay is ready."}
         </p>
         <div className="relative mt-5 overflow-hidden border border-white/10 bg-black aspect-[3/4] sm:aspect-video">
           <CourtReplay2D
@@ -100,14 +103,14 @@ export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
             homeName={homeName}
             awayName={awayName}
             className="h-full min-h-[320px]"
-            label={`Reconstructed live visualization. ${homeName} versus ${awayName}.`}
+            label={`Court replay. ${homeName} versus ${awayName}.`}
           />
           {feature && !armed ? (
             <button
               type="button"
               onClick={() => setArmed(true)}
               className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/45 text-white"
-              aria-label="Play reconstructed rally"
+              aria-label="Play match"
             >
               <span className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-white bg-black/50">
                 <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
@@ -115,18 +118,18 @@ export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
                 </svg>
               </span>
               <span className="mt-3 font-sans text-[12px] font-semibold uppercase tracking-[0.16em]">
-                Play reconstructed rally
+                Play match
               </span>
             </button>
           ) : null}
           {armed && status === "loading" ? (
             <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40 font-sans text-xs font-semibold uppercase tracking-wide text-white">
-              Loading replay…
+              Loading match…
             </p>
           ) : null}
           {armed && status === "unavailable" ? (
             <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/55 px-6 text-center font-sans text-sm font-semibold text-white">
-              Replay is not available for this match yet.
+              The court replay is not ready for this match.
             </p>
           ) : null}
           {showTransport ? (
@@ -139,7 +142,7 @@ export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
                     connection === "reconnecting" && "text-amber-300",
                   )}
                 >
-                  {connection === "reconnecting" ? "Reconnecting" : "Live ledger"}
+                  {connection === "reconnecting" ? "Reconnecting" : "Live updates"}
                 </p>
               ) : null}
               <ScoreBug
@@ -190,7 +193,7 @@ export function HomeLiveReplay({ feature }: HomeLiveReplayProps) {
             href={feature.href}
             className="mt-4 inline-flex font-sans text-[13px] font-semibold text-white/90 underline-offset-4 hover:underline"
           >
-            Open 3D Match Centre
+            Open Match Centre
           </Link>
         ) : null}
       </div>

@@ -12,6 +12,7 @@ export type ScoreSide = {
 export type ScoreCard = {
   id: string;
   status: MatchStatus;
+  circuitRank: number;
   tournament: string;
   round: string;
   startLabel?: string;

@@ -13,13 +13,13 @@ export default function TermsPage() {
       </p>
       <p>
         You must be allowed to create a Clerk account to use signed-in features (settings, saved
-        analytics views, admin). Do not attempt to access another organisation's keys, webhooks, or
+        analytics views, admin). Do not attempt to access another organisation&apos;s keys, webhooks, or
         audit logs.
       </p>
       <p>
-        Content on the site is for information and visualisation. It is not betting advice. Replay
-        geometry is reconstructed from stored points; overlays marked as synthesised are labelled
-        in the court UI.
+        Content on the site is for information and visualisation. It is not betting advice. Match
+        scores and point order come from the live feed. Player and ball movement shown on court is
+        an estimate.
       </p>
       <p>
         We may suspend accounts that abuse the APIs or impersonate operators. Questions:

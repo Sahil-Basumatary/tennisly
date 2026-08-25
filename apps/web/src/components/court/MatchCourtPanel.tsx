@@ -115,10 +115,10 @@ export function MatchCourtPanel({
 
   const liveText = useMemo(() => {
     if (replayUnavailable) {
-      return `Replay unavailable for ${homeName} versus ${awayName}.`;
+      return `The court replay is not ready for ${homeName} versus ${awayName}.`;
     }
     if (!activeShot) {
-      return `Reconstructed live visualization for ${homeName} versus ${awayName}.`;
+      return `Court replay for ${homeName} versus ${awayName}.`;
     }
     return (
       `Current shot ${activeShot.shotIndex + 1}: ${formatShotType(activeShot.shotType)}, ` +
@@ -155,7 +155,7 @@ export function MatchCourtPanel({
         {replayUnavailable ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/55 px-6">
             <p className="max-w-sm text-center font-sans text-sm font-semibold text-white">
-              Replay is not available for this match yet.
+              The court replay is not ready for this match.
             </p>
           </div>
         ) : (
@@ -190,7 +190,7 @@ export function MatchCourtPanel({
                   connection === "reconnecting" && "text-amber-300",
                 )}
               >
-                {connection === "reconnecting" ? "Reconnecting" : "Live ledger"}
+                {connection === "reconnecting" ? "Reconnecting" : "Live updates"}
               </p>
             ) : null}
             <ScoreBug
@@ -244,7 +244,7 @@ export function MatchCourtPanel({
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-hairline px-3 py-2">
         <p className="font-sans text-[11px] text-muted-foreground">
-          Reconstructed live visualization · ball flight is synthesized
+          The score is real. The court view is an estimate.
         </p>
         {webgl === true && view === "2d" ? (
           <button

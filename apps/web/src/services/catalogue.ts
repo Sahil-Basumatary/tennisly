@@ -1,4 +1,5 @@
 import type { UpstreamMatchPoint } from "@/lib/match-stats";
+import { compareMatchesByPriority } from "@/lib/match-order";
 import { isReplayMatchUuid } from "@/lib/replay-index";
 import { publicPlayerName } from "@/lib/player-directory";
 import {
@@ -11,9 +12,9 @@ import {
 import {
   fetchUpstreamMatch,
   fetchUpstreamMatchPoints,
-  fetchUpstreamMatches,
   MatchUpstreamError,
 } from "@/lib/match-upstream";
+import { fetchOrderedMatches } from "@/lib/ordered-matches";
 import { toPlayersBoard, toStandingRows } from "@/lib/rankings-mapper";
 import {
   withMatchCentreHeadshots,
@@ -37,7 +38,6 @@ import type {
   TournamentBoard,
 } from "@/types/scaffolds";
 import type { ScoresFeed } from "@/types/scores";
-import { toUpstreamStatus } from "@/types/match-catalogue";
 import {
   filterMatchesForTournament,
   standingsGender,
@@ -51,11 +51,7 @@ import {
  */
 export async function getScoresFeed(uiStatus?: string): Promise<ScoresFeed> {
   try {
-    const matches = await fetchUpstreamMatches({
-      status: toUpstreamStatus(uiStatus),
-      page: 0,
-      size: 50,
-    });
+    const matches = await fetchOrderedMatches(uiStatus, 50);
     return withScoresFeedHeadshots(toScoresFeed(matches));
   } catch (err) {
     if (process.env.NODE_ENV === "development") {
@@ -67,11 +63,7 @@ export async function getScoresFeed(uiStatus?: string): Promise<ScoresFeed> {
 
 export async function getScoreboardDay(uiStatus?: string): Promise<ScoreboardDay> {
   try {
-    const matches = await fetchUpstreamMatches({
-      status: toUpstreamStatus(uiStatus),
-      page: 0,
-      size: 50,
-    });
+    const matches = await fetchOrderedMatches(uiStatus, 50);
     return withScoreboardHeadshots(toScoreboardDay(matches));
   } catch (err) {
     if (err instanceof MatchUpstreamError && process.env.NODE_ENV === "development") {
@@ -120,7 +112,7 @@ export async function getTournamentBoard(
   const gender = standingsGender(query);
   try {
     const [matches, rankings] = await Promise.all([
-      fetchUpstreamMatches({ page: 0, size: 100 }),
+      fetchOrderedMatches(undefined, 100),
       fetchUpstreamRankings({ gender }).catch(() => []),
     ]);
     const filtered = filterMatchesForTournament(matches, query);
@@ -139,7 +131,7 @@ export async function getPlayerProfile(id: string): Promise<PlayerProfileResult>
     const gender: UpstreamGender = player.gender === "FEMALE" ? "FEMALE" : "MALE";
     const [rankings, matches] = await Promise.all([
       fetchUpstreamPlayerRankings(id).catch(() => []),
-      fetchUpstreamMatches({ page: 0, size: 100 }).catch(() => []),
+      fetchOrderedMatches(undefined, 100).catch(() => []),
     ]);
     const latest = [...rankings].sort((a, b) => a.rank - b.rank)[0];
     const name = publicPlayerName(`${player.firstName} ${player.lastName}`);
@@ -155,6 +147,7 @@ export async function getPlayerProfile(id: string): Promise<PlayerProfileResult>
         gender: player.gender,
         matches: matches
           .filter((match) => match.players.some((entry) => entry.playerId === id))
+          .sort(compareMatchesByPriority)
           .map(toScoreCard),
       }),
     };

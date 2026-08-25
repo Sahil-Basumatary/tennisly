@@ -27,13 +27,21 @@ public class TennisDataMatchClient {
     }
 
     public List<UpstreamMatchDto> listMatches(String status, int limit, int offset) {
+        return listMatches(status, null, limit, offset);
+    }
+
+    public List<UpstreamMatchDto> listMatches(
+            String status, String tour, int limit, int offset) {
         try {
-            String uri =
+            UriComponentsBuilder builder =
                     UriComponentsBuilder.fromPath("/api/tennis/matches")
                             .queryParam("status", status)
                             .queryParam("limit", limit)
-                            .queryParam("offset", offset)
-                            .toUriString();
+                            .queryParam("offset", offset);
+            if (tour != null && !tour.isBlank()) {
+                builder.queryParam("tour", tour);
+            }
+            String uri = builder.toUriString();
             UpstreamMatchDto[] body =
                     restClient.get().uri(uri).retrieve().body(UpstreamMatchDto[].class);
             if (body == null) {
@@ -41,7 +49,11 @@ public class TennisDataMatchClient {
             }
             return List.of(body);
         } catch (RestClientException ex) {
-            log.warn("Failed to list upstream matches status={}: {}", status, ex.getMessage());
+            log.warn(
+                    "Failed to list upstream matches status={} tour={}: {}",
+                    status,
+                    tour,
+                    ex.getMessage());
             return List.of();
         }
     }

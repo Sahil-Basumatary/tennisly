@@ -244,7 +244,7 @@ export function CourtReplay2D({
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
         role="img"
-        aria-label={label ?? `Top-down reconstructed court. ${homeName} versus ${awayName}.`}
+        aria-label={label ?? `Court replay. ${homeName} versus ${awayName}.`}
       />
     </div>
   );

@@ -5,14 +5,14 @@ test.beforeEach(async ({ page }) => {
   await setupClerkTestingToken({ page });
 });
 
-test.describe("homepage reconstructed replay", () => {
-  test("renders the reconstructed court first and keeps an h1", async ({ page }) => {
+test.describe("homepage court replay", () => {
+  test("renders the court first and keeps an h1", async ({ page }) => {
     const response = await page.goto("/", { waitUntil: "domcontentloaded" });
     expect(response, "home should respond").not.toBeNull();
     expect(response!.status()).toBeLessThan(500);
     await expect(page.locator("#main-content")).toBeVisible();
     await expect(page.locator("#main-content h1")).toBeVisible();
-    await expect(page.getByText("Reconstructed live visualization").first()).toBeVisible();
+    await expect(page.getByText(/Live court|Match replay/).first()).toBeVisible();
     await expect(page.locator("#main-content canvas[role='img']")).toBeVisible();
   });
 
@@ -29,7 +29,7 @@ test.describe("homepage reconstructed replay", () => {
     page,
   }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const play = page.getByRole("button", { name: "Play reconstructed rally" });
+    const play = page.getByRole("button", { name: "Play match" });
     if ((await play.count()) === 0) {
       await expect(page.locator("#main-content h1")).toBeVisible();
       return;
@@ -64,6 +64,6 @@ test.describe("homepage reconstructed replay", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page.locator("#main-content h1")).toBeVisible();
-    await expect(page.getByText("Reconstructed live visualization").first()).toBeVisible();
+    await expect(page.getByText(/Live court|Match replay/).first()).toBeVisible();
   });
 });

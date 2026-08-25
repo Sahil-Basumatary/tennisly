@@ -20,10 +20,13 @@ import dev.sahilbasumatary.matchservice.repository.MatchRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnProperty(name = "tennisly.ingest.enabled", havingValue = "true", matchIfMissing = true)
 public class MatchIngestionService {
 
+    private static final int LIVE_POINT_TAPE_BUDGET = 8;
     private static final Logger log = LoggerFactory.getLogger(MatchIngestionService.class);
 
     private final TennisDataMatchClient matchClient;
@@ -63,7 +67,7 @@ public class MatchIngestionService {
 
     @Scheduled(fixedDelayString = "${tennisly.ingest.live-fixed-delay-ms:60000}")
     public void ingestLiveBoard() {
-        ingestStatus("live");
+        ingestFeaturedLive();
         ingestStatus("upcoming");
     }
 
@@ -74,13 +78,43 @@ public class MatchIngestionService {
 
     public int ingestStatus(String status) {
         List<UpstreamMatchDto> upstream = matchClient.listMatches(status, pageSize, 0);
+        return ingestRows(status, upstream, Set.of(), Map.of());
+    }
+
+    private int ingestFeaturedLive() {
+        Map<Long, UpstreamMatchDto> upstream = new LinkedHashMap<>();
+        Map<Long, String> sourceTours = new HashMap<>();
+        Set<Long> pointTapeIds = new LinkedHashSet<>();
+        for (String tour : List.of("atp", "wta")) {
+            for (UpstreamMatchDto dto : matchClient.listMatches("live", tour, pageSize, 0)) {
+                upstream.putIfAbsent(dto.providerMatchId(), dto);
+                sourceTours.putIfAbsent(dto.providerMatchId(), tour);
+                if (!dto.doubles() && pointTapeIds.size() < LIVE_POINT_TAPE_BUDGET) {
+                    pointTapeIds.add(dto.providerMatchId());
+                }
+            }
+        }
+        for (UpstreamMatchDto dto : matchClient.listMatches("live", pageSize, 0)) {
+            upstream.putIfAbsent(dto.providerMatchId(), dto);
+        }
+        return ingestRows("live", List.copyOf(upstream.values()), pointTapeIds, sourceTours);
+    }
+
+    private int ingestRows(
+            String status,
+            List<UpstreamMatchDto> upstream,
+            Set<Long> pointTapeIds,
+            Map<Long, String> sourceTours) {
         int upserted = 0;
         for (UpstreamMatchDto dto : upstream) {
             if (dto.doubles()) {
                 continue;
             }
             try {
-                if (upsertMatch(dto)) {
+                if (upsertMatch(
+                        dto,
+                        pointTapeIds.contains(dto.providerMatchId()),
+                        sourceTours.get(dto.providerMatchId()))) {
                     upserted += 1;
                 }
             } catch (RuntimeException ex) {
@@ -97,6 +131,11 @@ public class MatchIngestionService {
 
     @Transactional
     public boolean upsertMatch(UpstreamMatchDto dto) {
+        return upsertMatch(dto, false, null);
+    }
+
+    @Transactional
+    boolean upsertMatch(UpstreamMatchDto dto, boolean refreshPointTape, String sourceTour) {
         Optional<ResolvedPlayerDto> home =
                 matchClient.resolvePlayer(
                         dto.home() == null ? null : dto.home().providerPlayerId(),
@@ -128,7 +167,12 @@ public class MatchIngestionService {
         match.setSurface(mapSurface(dto.surface()));
         match.setBestOfSets(mapBestOf(dto.format()));
         match.setScheduledAt(dto.scheduledAt());
-        match.setMetadata(buildMetadata(dto, home.get(), away.get()));
+        String knownTour = sourceTour;
+        if ((knownTour == null || knownTour.isBlank())
+                && match.getMetadata().get("tour") instanceof String storedTour) {
+            knownTour = storedTour;
+        }
+        match.setMetadata(buildMetadata(dto, home.get(), away.get(), knownTour));
         applyStatusTimestamps(match, nextStatus);
         match.setStatus(nextStatus);
 
@@ -153,7 +197,7 @@ public class MatchIngestionService {
             match.setCurrentScore(emptyScore(home.get().id(), away.get().id()));
         }
 
-        if (nextStatus == MatchStatus.COMPLETED) {
+        if (nextStatus == MatchStatus.COMPLETED || refreshPointTape) {
             replacePoints(match, dto.providerMatchId(), home.get().id(), away.get().id());
         }
 
@@ -238,13 +282,19 @@ public class MatchIngestionService {
     }
 
     private static Map<String, Object> buildMetadata(
-            UpstreamMatchDto dto, ResolvedPlayerDto home, ResolvedPlayerDto away) {
+            UpstreamMatchDto dto,
+            ResolvedPlayerDto home,
+            ResolvedPlayerDto away,
+            String sourceTour) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("tournamentName", dto.tournamentName());
         metadata.put("round", dto.round());
         metadata.put("indoor", dto.indoor());
         metadata.put("provider", "livetennis");
         metadata.put("providerMatchId", dto.providerMatchId());
+        if (sourceTour != null && !sourceTour.isBlank()) {
+            metadata.put("tour", sourceTour);
+        }
         metadata.put("homeExternalId", home.externalId());
         metadata.put("awayExternalId", away.externalId());
         metadata.put("homeNationality", home.nationality());

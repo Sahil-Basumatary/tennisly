@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { pickHomeReplayCandidate, type HomeReplayMatch } from "@/lib/home-replay";
+import {
+  pickHomeReplayCandidate,
+  rankHomeReplayCandidates,
+  type HomeReplayMatch,
+} from "@/lib/home-replay";
+import { editorialCircuitRank } from "@/lib/tournament-filter";
 
 const fallback = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
 
 function match(over: Partial<HomeReplayMatch> & Pick<HomeReplayMatch, "id" | "status">): HomeReplayMatch {
+  const tournament = over.tournament ?? "ITF M15";
   return {
     pointsPlayed: 0,
-    tournament: "ITF M15",
+    circuitRank: editorialCircuitRank(tournament),
+    tournament,
     ...over,
   };
 }
@@ -60,5 +67,34 @@ describe("pickHomeReplayCandidate", () => {
     expect(completed?.kind).toBe("replay");
     expect(pickHomeReplayCandidate([], fallback)).toEqual({ id: fallback, kind: "replay" });
     expect(pickHomeReplayCandidate([], "not-a-uuid")).toBeNull();
+  });
+
+  it("places lower-tier and junior matches after tour matches", () => {
+    const candidates = rankHomeReplayCandidates([
+      match({
+        id: "11111111-1111-4111-8111-111111111111",
+        status: "IN_PROGRESS",
+        pointsPlayed: 20,
+        tournament: "W15 Bielsko Biala",
+      }),
+      match({
+        id: "22222222-2222-4222-8222-222222222222",
+        status: "IN_PROGRESS",
+        pointsPlayed: 15,
+        tournament: "Pardubicka juniorka",
+      }),
+      match({
+        id: "33333333-3333-4333-8333-333333333333",
+        status: "IN_PROGRESS",
+        pointsPlayed: 10,
+        circuitRank: 1,
+        tournament: "Winston-Salem Open",
+      }),
+    ]);
+    expect(candidates).toEqual([
+      { id: "33333333-3333-4333-8333-333333333333", kind: "live" },
+      { id: "11111111-1111-4111-8111-111111111111", kind: "live" },
+      { id: "22222222-2222-4222-8222-222222222222", kind: "live" },
+    ]);
   });
 });

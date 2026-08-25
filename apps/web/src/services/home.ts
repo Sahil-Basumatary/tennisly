@@ -1,8 +1,10 @@
-import { classifyTournamentName, editorialCircuitRank, type CircuitId } from "@/lib/tournament-filter";
-import { pickHomeReplayCandidate, type HomeReplayFeature } from "@/lib/home-replay";
+import { classifyTournamentName, type CircuitId } from "@/lib/tournament-filter";
+import { rankHomeReplayCandidates, type HomeReplayFeature } from "@/lib/home-replay";
 import { toMatchCentrePanel } from "@/lib/match-mapper";
+import { matchCircuitRank } from "@/lib/match-order";
 import { fetchUpstreamMatch, fetchUpstreamMatches } from "@/lib/match-upstream";
-import { withMatchCentreHeadshots } from "@/lib/player-photos";
+import { headshotByName } from "@/lib/player-photos";
+import { isReplayPointReady } from "@/lib/replay-upstream";
 import { fetchWikiPlayerMediaMap, type WikiPlayerMedia } from "@/lib/wikipedia-upstream";
 import { getPlayersBoard } from "@/services/catalogue";
 import { getScoresFeed } from "@/services/scores";
@@ -99,13 +101,13 @@ function hasPortrait(match: ScoreCard): boolean {
 }
 
 function compareEditorial(a: ScoreCard, b: ScoreCard): number {
-  const photo = Number(hasPortrait(b)) - Number(hasPortrait(a));
-  if (photo !== 0) return photo;
-  const circuit = editorialCircuitRank(a.tournament) - editorialCircuitRank(b.tournament);
+  const circuit = a.circuitRank - b.circuitRank;
   if (circuit !== 0) return circuit;
   const live = (match: ScoreCard) =>
     match.status === "live" ? 0 : match.status === "upcoming" ? 1 : 2;
-  return live(a) - live(b);
+  const status = live(a) - live(b);
+  if (status !== 0) return status;
+  return Number(hasPortrait(b)) - Number(hasPortrait(a));
 }
 
 function matchMedia(wiki: Map<string, WikiPlayerMedia>, match: ScoreCard): WikiPlayerMedia | undefined {
@@ -158,77 +160,79 @@ function tournamentNameOf(match: { metadata?: Record<string, unknown> }): string
 }
 
 async function resolveHomeReplay(): Promise<HomeReplayFeature | null> {
-  let matches: Awaited<ReturnType<typeof fetchUpstreamMatches>> = [];
-  try {
-    matches = await fetchUpstreamMatches({ page: 0, size: 50 });
-  } catch {
-    matches = [];
-  }
-  const picked = pickHomeReplayCandidate(
+  const boards = await Promise.all(
+    (["IN_PROGRESS", "SUSPENDED", "COMPLETED"] as const).map((status) =>
+      fetchUpstreamMatches({ status, page: 0, size: 100 }).catch(() => []),
+    ),
+  );
+  const matches = [...new Map(boards.flat().map((match) => [match.id, match])).values()];
+  const ranked = rankHomeReplayCandidates(
     matches.map((match) => ({
       id: match.id,
       status: match.status,
       pointsPlayed: match.pointsPlayed,
+      circuitRank: matchCircuitRank(match),
       tournament: tournamentNameOf(match),
       endedAt: match.endedAt,
       scheduledAt: match.scheduledAt,
     })),
     process.env.HOME_FALLBACK_REPLAY_MATCH_ID,
   );
-  if (!picked) return null;
-  let match = matches.find((row) => row.id === picked.id) ?? null;
-  if (!match) {
+  const configuredFallback = process.env.HOME_FALLBACK_REPLAY_MATCH_ID?.trim();
+  const shortlist = ranked.slice(0, 8);
+  const fallbackPick = configuredFallback
+    ? ranked.find((pick) => pick.id === configuredFallback)
+    : undefined;
+  if (fallbackPick && !shortlist.some((pick) => pick.id === fallbackPick.id)) {
+    shortlist.push(fallbackPick);
+  }
+  const panels: Array<{
+    picked: (typeof shortlist)[number];
+    match: (typeof matches)[number];
+    panel: ReturnType<typeof toMatchCentrePanel>;
+  }> = [];
+  for (const picked of shortlist) {
+    let match = matches.find((row) => row.id === picked.id) ?? null;
+    if (!match) {
+      try {
+        match = await fetchUpstreamMatch(picked.id);
+      } catch {
+        match = null;
+      }
+    }
+    if (!match) continue;
     try {
-      match = await fetchUpstreamMatch(picked.id);
+      panels.push({ picked, match, panel: toMatchCentrePanel(match) });
     } catch {
-      match = null;
+      continue;
     }
   }
-  if (!match) {
-    return {
-      matchId: picked.id,
-      href: `/matches/${picked.id}`,
-      kind: picked.kind,
-      homeName: "Home",
-      awayName: "Away",
-      homePlayerId: "",
-      awayPlayerId: "",
-      tournament: "Tour",
-      round: "—",
-      surface: "HARD",
-      status: picked.kind === "live" ? "live" : "final",
-      score: {
-        homeSets: [],
-        awaySets: [],
-        homeGames: 0,
-        awayGames: 0,
-        homePoints: "0",
-        awayPoints: "0",
-        server: "HOME",
-      },
-    };
-  }
-  try {
-    const panel = await withMatchCentreHeadshots(toMatchCentrePanel(match));
-    return {
-      matchId: match.id,
-      href: `/matches/${match.externalId?.trim() || match.id}`,
-      kind: picked.kind,
-      homeName: panel.home.name,
-      awayName: panel.away.name,
-      homePhotoUrl: panel.home.photoUrl,
-      awayPhotoUrl: panel.away.photoUrl,
-      homePlayerId: panel.home.id,
-      awayPlayerId: panel.away.id,
-      tournament: panel.tournament,
-      round: panel.round,
-      surface: panel.surface,
-      status: panel.status,
-      score: panel.score,
-    };
-  } catch {
-    return null;
-  }
+  if (panels.length === 0) return null;
+  const photos = await headshotByName(
+    panels.flatMap(({ panel }) => [panel.home.name, panel.away.name]),
+  );
+  const featured = panels.find(
+    ({ panel }) => photos.get(panel.home.name) && photos.get(panel.away.name),
+  );
+  if (!featured) return null;
+  if (!(await isReplayPointReady(featured.match.id))) return null;
+  const { picked, match, panel } = featured;
+  return {
+    matchId: match.id,
+    href: `/matches/${match.externalId?.trim() || match.id}`,
+    kind: picked.kind,
+    homeName: panel.home.name,
+    awayName: panel.away.name,
+    homePhotoUrl: photos.get(panel.home.name),
+    awayPhotoUrl: photos.get(panel.away.name),
+    homePlayerId: panel.home.id,
+    awayPlayerId: panel.away.id,
+    tournament: panel.tournament,
+    round: panel.round,
+    surface: panel.surface,
+    status: panel.status,
+    score: panel.score,
+  };
 }
 
 export async function getHomeContent(): Promise<HomeContent> {

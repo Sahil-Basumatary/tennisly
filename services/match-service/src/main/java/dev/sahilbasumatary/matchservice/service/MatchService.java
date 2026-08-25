@@ -105,12 +105,18 @@ public class MatchService {
         List<Match> matches;
         if (tournamentId != null && status != null) {
             matches =
-                    matchRepository.findByTournamentIdAndStatusOrderByScheduledAtAsc(
-                            tournamentId, status, pageable);
+                    status == MatchStatus.SCHEDULED
+                            ? matchRepository.findByTournamentIdAndStatusOrderByScheduledAtAsc(
+                                    tournamentId, status, pageable)
+                            : matchRepository.findByTournamentIdAndStatusOrderByScheduledAtDesc(
+                                    tournamentId, status, pageable);
         } else if (tournamentId != null) {
             matches = matchRepository.findByTournamentIdOrderByScheduledAtAsc(tournamentId, pageable);
         } else if (status != null) {
-            matches = matchRepository.findByStatusOrderByScheduledAtAsc(status, pageable);
+            matches =
+                    status == MatchStatus.SCHEDULED
+                            ? matchRepository.findByStatusOrderByScheduledAtAsc(status, pageable)
+                            : matchRepository.findByStatusOrderByScheduledAtDesc(status, pageable);
         } else {
             matches = matchRepository.findAllByOrderByScheduledAtAsc(pageable);
         }
