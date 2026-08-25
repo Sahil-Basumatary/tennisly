@@ -14,12 +14,17 @@ export default async function HomePage() {
       <HomeHero {...content.hero} />
       <HomeScoreboard day={day} />
       {content.tourPulse ? <TourPulse pulse={content.tourPulse} /> : null}
-      {content.onCourt.length > 0 ? (
-        <EditorialCarousel title="On court" stories={content.onCourt} />
+      {content.onCourt.length > 0 || content.onCourtMore.length > 0 ? (
+        <EditorialCarousel title="On court" stories={content.onCourt} more={content.onCourtMore} />
       ) : null}
       {content.featured ? <FeaturedBand {...content.featured} /> : null}
       {content.playerProfiles.length > 0 ? (
-        <LatestGrid title="Player profiles" stories={content.playerProfiles} />
+        <LatestGrid
+          title="Player profiles"
+          stories={content.playerProfiles}
+          moreHref="/players?view=rankings"
+          moreLabel="Full rankings →"
+        />
       ) : null}
     </main>
   );

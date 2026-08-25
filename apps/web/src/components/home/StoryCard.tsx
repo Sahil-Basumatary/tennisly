@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { RemotePhoto } from "@/components/media/RemotePhoto";
 import { PORTRAIT_FIT } from "@/lib/headshot";
-import { playerInitials } from "@/lib/wikipedia-upstream";
 import type { HomeStory } from "@/services/home";
 
 type StoryCardProps = {
@@ -18,20 +17,16 @@ export function StoryCard({ story, className }: StoryCardProps) {
         "group flex w-[240px] shrink-0 flex-col text-foreground transition-opacity hover:opacity-90"
       }
     >
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-muted">
-        <RemotePhoto
-          src={story.imageSrc}
-          alt={story.imageAlt}
-          className={`${PORTRAIT_FIT} transition-transform duration-500 group-hover:scale-[1.03]`}
-          fallback={
-            <div className="absolute inset-0 flex items-center justify-center bg-chrome">
-              <span className="font-display text-[28px] font-bold tracking-wide text-white">
-                {playerInitials(story.imageAlt)}
-              </span>
-            </div>
-          }
-        />
-      </div>
+      {story.imageSrc ? (
+        <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-muted">
+          <RemotePhoto
+            src={story.imageSrc}
+            alt={story.imageAlt}
+            className={`${PORTRAIT_FIT} transition-transform duration-500 group-hover:scale-[1.03]`}
+            fallback={null}
+          />
+        </div>
+      ) : null}
       {story.imageCredit ? (
         <span className="mt-1 font-sans text-[11px] text-muted-foreground">{story.imageCredit}</span>
       ) : null}

@@ -12,7 +12,7 @@ export function PageHero({ eyebrow, title, description, portraitUrl }: PageHeroP
     <div className="bg-chrome text-chrome-foreground">
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 sm:py-10">
         <div className="flex items-center gap-5">
-          {portraitUrl !== undefined ? (
+          {portraitUrl ? (
             <PlayerName name={title} photoUrl={portraitUrl} size="xl" tone="dark" hideName />
           ) : null}
           <div className="min-w-0">

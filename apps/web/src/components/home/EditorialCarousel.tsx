@@ -5,15 +5,17 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@/components/ui/brandIcons";
+import { MoreLinks } from "@/components/home/MoreLinks";
 import { StoryCard } from "@/components/home/StoryCard";
-import type { HomeStory } from "@/services/home";
+import type { HomeMoreItem, HomeStory } from "@/services/home";
 
 type EditorialCarouselProps = {
   title: string;
   stories: HomeStory[];
+  more?: HomeMoreItem[];
 };
 
-export function EditorialCarousel({ title, stories }: EditorialCarouselProps) {
+export function EditorialCarousel({ title, stories, more = [] }: EditorialCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -48,36 +50,46 @@ export function EditorialCarousel({ title, stories }: EditorialCarouselProps) {
           <h2 className="font-display text-[32px] font-bold leading-none tracking-tight text-foreground md:text-[40px]">
             {title}
           </h2>
-          <div className="hidden items-center gap-2 sm:flex">
-            <button
-              type="button"
-              aria-label="Previous stories"
-              disabled={!canPrev}
-              onClick={() => scrollBy(-1)}
-              className="inline-flex h-9 w-9 items-center justify-center border border-hairline text-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
-            >
-              <ChevronLeftIcon className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Next stories"
-              disabled={!canNext}
-              onClick={() => scrollBy(1)}
-              className="inline-flex h-9 w-9 items-center justify-center border border-hairline text-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
-            >
-              <ChevronRightIcon className="h-4 w-4" />
-            </button>
+          {stories.length > 1 ? (
+            <div className="hidden items-center gap-2 sm:flex">
+              <button
+                type="button"
+                aria-label="Previous stories"
+                disabled={!canPrev}
+                onClick={() => scrollBy(-1)}
+                className="inline-flex h-9 w-9 items-center justify-center border border-hairline text-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next stories"
+                disabled={!canNext}
+                onClick={() => scrollBy(1)}
+                className="inline-flex h-9 w-9 items-center justify-center border border-hairline text-foreground transition-colors hover:bg-surface-muted disabled:opacity-30"
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+        {stories.length > 0 ? (
+          <div
+            ref={scrollerRef}
+            className="flex gap-8 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {stories.map((story) => (
+              <StoryCard key={story.id} story={story} />
+            ))}
           </div>
-        </div>
-        <div
-          ref={scrollerRef}
-          className="flex gap-8 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {stories.map((story) => (
-            <StoryCard key={story.id} story={story} />
-          ))}
-        </div>
+        ) : null}
+        <MoreLinks
+          title="More matches"
+          items={more}
+          footer={more.length > 0 ? { href: "/scores", label: "Full scoreboard →" } : undefined}
+          className={stories.length > 0 ? "mt-10" : undefined}
+        />
       </div>
     </section>
   );

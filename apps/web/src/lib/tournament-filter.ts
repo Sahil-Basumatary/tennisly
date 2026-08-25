@@ -113,3 +113,12 @@ export function classifyTournamentName(name: string): CircuitId | null {
   if (ATP_ONLY.test(text)) return "atp";
   return null;
 }
+
+/** Lower is more worth a portrait card — ITF M15/W35 land last. */
+export function editorialCircuitRank(tournament: string): number {
+  const id = classifyTournamentName(tournament);
+  if (id === "slams") return 0;
+  if (id === "atp" || id === "wta") return 1;
+  if (id === "davis" || id === "bjk") return 2;
+  return 3;
+}

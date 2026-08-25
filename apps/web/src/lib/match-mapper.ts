@@ -131,12 +131,14 @@ export function toScoreCard(match: UpstreamMatch): ScoreCard {
     href: hrefFor(match),
     home: {
       name: shortDisplayName(home.displayName),
+      fullName: publicPlayerName(home.displayName),
       shortName: playerShortName(home.displayName),
       sets: homeSets,
       winner: homeWinner || undefined,
     },
     away: {
       name: shortDisplayName(away.displayName),
+      fullName: publicPlayerName(away.displayName),
       shortName: playerShortName(away.displayName),
       sets: awaySets,
       winner: awayWinner || undefined,

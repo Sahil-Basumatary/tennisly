@@ -19,11 +19,18 @@ export async function headshotByName(names: string[]): Promise<Map<string, strin
   return photos;
 }
 
-function stampSide<T extends { name: string; photoUrl?: string | null }>(
+function lookupName(side: { name: string; fullName?: string }): string {
+  return side.fullName?.trim() || side.name;
+}
+
+function stampSide<T extends { name: string; fullName?: string; photoUrl?: string | null }>(
   side: T,
   photos: Map<string, string | null>,
 ): T {
-  return { ...side, photoUrl: photos.get(side.name) ?? null };
+  return {
+    ...side,
+    photoUrl: photos.get(lookupName(side)) ?? photos.get(side.name) ?? null,
+  };
 }
 
 function stampCard(card: ScoreCard, photos: Map<string, string | null>): ScoreCard {
@@ -35,7 +42,9 @@ function stampCard(card: ScoreCard, photos: Map<string, string | null>): ScoreCa
 }
 
 export async function withScoreHeadshots(cards: ScoreCard[]): Promise<ScoreCard[]> {
-  const photos = await headshotByName(cards.flatMap((card) => [card.home.name, card.away.name]));
+  const photos = await headshotByName(
+    cards.flatMap((card) => [lookupName(card.home), lookupName(card.away)]),
+  );
   return cards.map((card) => stampCard(card, photos));
 }
 
