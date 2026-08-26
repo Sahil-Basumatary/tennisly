@@ -26,7 +26,7 @@
     <jacoco.version>0.8.12</jacoco.version>
     <jacoco.skip.check>true</jacoco.skip.check>
     <testcontainers.version>1.20.6</testcontainers.version>
-    <pact.version>4.6.21</pact.version>
+    <pact.version>4.7.4</pact.version>
   </properties>
   <modules>
     <module>services/tennisly-common</module>
