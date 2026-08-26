@@ -1,0 +1,12 @@
+{
+  "schema": "tennisly.perf.floors.v1",
+  "slack": 0.2,
+  "note": "Local evidence suite only. PR CI keeps correctness and non-noisy canaries.",
+  "floors": {
+    "atomic_commit_tps": 201.52,
+    "transactional_batch_points": 2194.91,
+    "staging_copy_rows": 20486.22,
+    "promote_rows": 21037.79,
+    "replay_full_pipeline_frames_per_s": 22369.8
+  }
+}

@@ -173,8 +173,20 @@ load-v1: ## k6 /api/v1 (needs API_KEY + warm user-service)
 	@test -n "$$API_KEY" || { echo "set API_KEY=tly_live_..."; exit 1; }
 	k6 run -e BASE_URL=$${BASE_URL:-http://localhost:8080} -e API_KEY=$$API_KEY tests/load/public-api-v1.js
 
+.PHONY: jmh
+jmh: ## Forked JMH uber-jar (in-process CPU p99 < 1ms, not HTTP)
+	@$(LOAD_ENV) ./scripts/jmh-run.sh
+
+.PHONY: jmh-replay
+jmh-replay: ## Replay physics frames/s (assembler vs full pipeline, labelled separately)
+	@$(LOAD_ENV) ./scripts/replay-physics-bench.sh
+
+.PHONY: jmh-archive
+jmh-archive: ## In-memory million-event archive processor (not HTTP/Postgres)
+	@$(LOAD_ENV) ./scripts/archive-tape-bench.sh
+
 .PHONY: load-durable
-load-durable: ## Local HTTP -> Postgres point/outbox durability benchmark
+load-durable: ## Local HTTP -> Postgres atomic four-row point commits
 	@$(LOAD_ENV) ./scripts/match-durable-load.sh
 
 .PHONY: load-websocket
@@ -200,10 +212,6 @@ load-live-capacity: ## Staged sanity, backpressure, replay, failover (not a 100k
 .PHONY: load-live-scale
 load-live-scale: ## Staged 100→100k live WS proof (needs cluster+approval for >10k)
 	@$(LOAD_ENV) ./scripts/match-live-scale.sh
-
-.PHONY: jmh
-jmh: ## Forked JMH uber-jar (p99 < 1ms gates)
-	@$(LOAD_ENV) ./scripts/jmh-run.sh
 
 .PHONY: jfr
 jfr: ## Local JFR capture (JFR_PID=... DURATION=30)

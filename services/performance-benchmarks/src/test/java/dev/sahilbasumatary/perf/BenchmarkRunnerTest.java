@@ -45,6 +45,82 @@ class BenchmarkRunnerTest {
     }
 
     @Test
+    void gateScaleRejectsSlowArchiveTape() throws Exception {
+        Path slow = tmp.resolve("archive-slow.json");
+        Files.writeString(
+                slow,
+                """
+                [
+                  {
+                    "benchmark":"demo.processMillionEvents",
+                    "mode":"thrpt",
+                    "primaryMetric":{"score":0.05,"scoreUnit":"ops/s"}
+                  }
+                ]
+                """);
+        assertNotNull(
+                assertThrows(
+                                IllegalStateException.class,
+                                () -> BenchmarkRunner.gateScale(slow, "ArchiveThroughputBenchmark"))
+                        .getMessage());
+    }
+
+    @Test
+    void gateScaleAcceptsArchiveFloor() throws Exception {
+        Path ok = tmp.resolve("archive-ok.json");
+        Files.writeString(
+                ok,
+                """
+                [
+                  {
+                    "benchmark":"demo.processMillionEvents",
+                    "mode":"thrpt",
+                    "primaryMetric":{"score":0.2,"scoreUnit":"ops/s"}
+                  }
+                ]
+                """);
+        assertDoesNotThrow(() -> BenchmarkRunner.gateScale(ok, "ArchiveThroughputBenchmark"));
+    }
+
+    @Test
+    void gateScaleRejectsSlowReplayPipeline() throws Exception {
+        Path slow = tmp.resolve("replay-slow.json");
+        Files.writeString(
+                slow,
+                """
+                [
+                  {
+                    "benchmark":"demo.fullPointPipeline",
+                    "mode":"thrpt",
+                    "primaryMetric":{"score":1.0,"scoreUnit":"ops/s"}
+                  }
+                ]
+                """);
+        assertNotNull(
+                assertThrows(
+                                IllegalStateException.class,
+                                () -> BenchmarkRunner.gateScale(slow, "ReplayPhysicsBenchmark"))
+                        .getMessage());
+    }
+
+    @Test
+    void gateScaleAcceptsReplayFloor() throws Exception {
+        Path ok = tmp.resolve("replay-ok.json");
+        Files.writeString(
+                ok,
+                """
+                [
+                  {
+                    "benchmark":"demo.fullPointPipeline",
+                    "mode":"thrpt",
+                    "primaryMetric":{"score":25.0,"scoreUnit":"ops/s"}
+                  }
+                ]
+                """);
+        assertDoesNotThrow(() -> BenchmarkRunner.gateScale(ok, "ReplayPhysicsBenchmark"));
+    }
+
+    @Test
     void gateRejectsLowPointDecisionThroughput() throws Exception {
         Path slow = tmp.resolve("slow.json");
         Files.writeString(

@@ -27,26 +27,60 @@ public final class BenchmarkRunner {
             Files.createDirectories(parent);
         }
         boolean quick = Boolean.parseBoolean(System.getenv().getOrDefault("JMH_QUICK", "false"));
-        int forks = Integer.parseInt(System.getenv().getOrDefault("JMH_FORKS", quick ? "1" : "2"));
-        // ForkedMain lives on this process classpath only if we launched a shaded uber-jar.
-        ChainedOptionsBuilder builder =
-                new OptionsBuilder()
-                        .include(
+        boolean evidence =
+                Boolean.parseBoolean(System.getenv().getOrDefault("JMH_EVIDENCE", "false"));
+        String defaultForks = evidence ? "3" : quick ? "1" : "2";
+        int forks = Integer.parseInt(System.getenv().getOrDefault("JMH_FORKS", defaultForks));
+        String include =
+                System.getenv()
+                        .getOrDefault(
+                                "JMH_INCLUDE",
                                 HotPathBenchmark.class.getSimpleName()
                                         + "|"
-                                        + PointDecisionThroughputBenchmark.class.getSimpleName())
+                                        + PointDecisionThroughputBenchmark.class.getSimpleName()
+                                        + "|"
+                                        + PointCommitCpuBenchmark.class.getSimpleName());
+        String heap = System.getenv().getOrDefault("JMH_HEAP", evidence ? "512m" : "256m");
+        int warmup = quick ? 1 : evidence ? 5 : 3;
+        int measurement = quick ? 2 : evidence ? 10 : 5;
+        ChainedOptionsBuilder builder =
+                new OptionsBuilder()
+                        .include(include)
                         .result(out.toString())
                         .resultFormat(ResultFormatType.JSON)
                         .forks(forks)
-                        .warmupIterations(quick ? 1 : 3)
-                        .measurementIterations(quick ? 2 : 5)
+                        .warmupIterations(warmup)
+                        .measurementIterations(measurement)
                         .shouldFailOnError(true)
-                        .jvmArgsAppend("-Xms256m", "-Xmx256m");
+                        .jvmArgsAppend("-Xms" + heap, "-Xmx" + heap);
         if (!quick) {
             builder.addProfiler(GCProfiler.class);
         }
+        String jfr = System.getenv().getOrDefault("JMH_JFR", "");
+        if (jfr.isBlank() && evidence) {
+            Path jfrPath = out.resolveSibling(out.getFileName().toString().replace(".json", ".jfr"));
+            jfr = jfrPath.toString();
+        }
+        if (!jfr.isBlank()) {
+            Path jfrFile = Path.of(jfr);
+            Path jfrParent = jfrFile.getParent();
+            if (jfrParent != null) {
+                Files.createDirectories(jfrParent);
+            }
+            builder.jvmArgsAppend(
+                    "-XX:StartFlightRecording=dumponexit=true,filename="
+                            + jfrFile.toAbsolutePath()
+                            + ",settings=profile,maxsize=64m");
+        }
         Options options = builder.build();
         new Runner(options).run();
+        if (Boolean.parseBoolean(System.getenv().getOrDefault("JMH_SKIP_GATE", "false"))) {
+            return;
+        }
+        if (include.contains("ReplayPhysics") || include.contains("ArchiveThroughput")) {
+            gateScale(out, include);
+            return;
+        }
         gate(out);
     }
 
@@ -93,6 +127,56 @@ public final class BenchmarkRunner {
         }
         if (!failures.isEmpty()) {
             throw new IllegalStateException("JMH performance budget missed: " + failures);
+        }
+    }
+
+    static void gateScale(Path resultJson, String include) throws Exception {
+        JsonNode root = new ObjectMapper().readTree(resultJson.toFile());
+        if (!root.isArray() || root.isEmpty()) {
+            throw new IllegalStateException("JMH result has no benchmarks: " + resultJson);
+        }
+        List<String> failures = new ArrayList<>();
+        if (include.contains("ArchiveThroughput")) {
+            boolean found = false;
+            for (JsonNode bench : root) {
+                if (bench.path("benchmark").asText().endsWith(".processMillionEvents")
+                        && "thrpt".equals(bench.path("mode").asText())) {
+                    found = true;
+                    double score = bench.path("primaryMetric").path("score").asDouble();
+                    if (score < 0.1d) {
+                        failures.add(
+                                bench.path("benchmark").asText()
+                                        + " tape/s="
+                                        + score
+                                        + " (100k events/s floor)");
+                    }
+                }
+            }
+            if (!found) {
+                failures.add("missing archive throughput benchmark");
+            }
+        }
+        if (include.contains("ReplayPhysics")) {
+            boolean found = false;
+            for (JsonNode bench : root) {
+                if (bench.path("benchmark").asText().endsWith(".fullPointPipeline")
+                        && "thrpt".equals(bench.path("mode").asText())) {
+                    found = true;
+                    double score = bench.path("primaryMetric").path("score").asDouble();
+                    if (score < 10d) {
+                        failures.add(
+                                bench.path("benchmark").asText()
+                                        + " full-pipeline points/s="
+                                        + score);
+                    }
+                }
+            }
+            if (!found) {
+                failures.add("missing replay full-pipeline benchmark");
+            }
+        }
+        if (!failures.isEmpty()) {
+            throw new IllegalStateException("JMH scale budget missed: " + failures);
         }
     }
 

@@ -81,6 +81,8 @@ env \
   EUREKA_CLIENT_ENABLED=false \
   SPRING_CLOUD_CONFIG_ENABLED=false \
   MANAGEMENT_HEALTH_KAFKA_ENABLED=false \
+  GATEWAY_INTERNAL_TOKEN="${GATEWAY_INTERNAL_TOKEN:-}" \
+  POSTGRES_POOL_MAX="${POSTGRES_POOL_MAX:-16}" \
   LOGGING_LEVEL_DEV_SAHILBASUMATARY_MATCHSERVICE=ERROR \
   java -jar "$JAR" >"$SERVICE_LOG" 2>&1 &
 SERVICE_PID=$!
@@ -109,6 +111,7 @@ k6 run \
   -e WRITE_VUS="$WRITE_VUS" \
   -e WARMUP_VUS="$WARMUP_VUS" \
   -e WRITE_DURATION="$WRITE_DURATION" \
+  -e GATEWAY_INTERNAL_TOKEN="${GATEWAY_INTERNAL_TOKEN:-}" \
   "$ROOT/tests/load/match-durable-write.js" | tee "$OUTPUT"
 K6_STATUS=${PIPESTATUS[0]}
 set -e
@@ -152,7 +155,7 @@ if [[ "$MATCHES" -ne $((2 * (WRITE_VUS + WARMUP_VUS))) ]] \
   INTEGRITY_STATUS=1
 fi
 
-python3 - "$SUMMARY" "$WRITE_DURATION" <<'PY'
+python3 - "$SUMMARY" "$WRITE_DURATION" "$REPORT_DIR/durable-${RUN_ID}.json" "${PERF_PHASE:-warm}" <<'PY'
 import json
 import re
 import sys
@@ -167,12 +170,26 @@ metrics = data["metrics"]
 duration = metrics["durable_point_commit_ms"]
 committed = metrics["durable_points_committed"]
 errors = metrics["durable_point_non_201"]
+rate = committed["count"] / duration_seconds
 print(
-    "measured "
-    f"commits={committed['count']} stage_tps={committed['count'] / duration_seconds:.2f} "
+    "claim=atomic commit TPS "
+    f"commits={committed['count']} stage_tps={rate:.2f} "
     f"p50={duration['med']:.2f}ms p95={duration['p(95)']:.2f}ms "
     f"p99={duration['p(99)']:.2f}ms errors={errors['value']:.6f}"
 )
+payload = {
+    "phase": sys.argv[4],
+    "operations": [
+        {
+            "operation": "atomic_commit_tps",
+            "rate": rate,
+            "p50_ms": duration["med"],
+            "p95_ms": duration["p(95)"],
+            "p99_ms": duration["p(99)"],
+        }
+    ],
+}
+json.dump(payload, open(sys.argv[3], "w", encoding="utf-8"), indent=2)
 PY
 
 if [[ "${KEEP_PERF_DATA:-false}" != "true" ]]; then
@@ -192,5 +209,9 @@ echo "summary=$SUMMARY"
 echo "service_log=$SERVICE_LOG"
 if [[ "$INTEGRITY_STATUS" -ne 0 ]]; then
   exit "$INTEGRITY_STATUS"
+fi
+if [[ "$K6_STATUS" -ne 0 && "${PERF_RECORD_ONLY:-false}" == "true" ]]; then
+  echo "k6 thresholds missed; durability held so evidence records the p99 instead of aborting"
+  exit 0
 fi
 exit "$K6_STATUS"

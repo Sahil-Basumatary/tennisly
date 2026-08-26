@@ -9,6 +9,15 @@ const WARMUP_VUS = Number(__ENV.WARMUP_VUS || 2);
 const WRITE_DURATION = __ENV.WRITE_DURATION || '30s';
 const P95_BUDGET_MS = Number(__ENV.WRITE_P95_MS || 100);
 const P99_BUDGET_MS = Number(__ENV.WRITE_P99_MS || 250);
+const INTERNAL_TOKEN = __ENV.GATEWAY_INTERNAL_TOKEN || '';
+
+function jsonHeaders(extra = {}) {
+  const headers = { 'Content-Type': 'application/json', ...extra };
+  if (INTERNAL_TOKEN) {
+    headers['X-Gateway-Token'] = INTERNAL_TOKEN;
+  }
+  return headers;
+}
 
 const commitDuration = new Trend('durable_point_commit_ms', true);
 const non201 = new Rate('durable_point_non_201');
@@ -59,7 +68,7 @@ function createMatch(kind, index) {
         { playerId: awayId, displayName: `Away ${index}`, side: 'AWAY' },
       ],
     }),
-    { headers: { 'Content-Type': 'application/json' }, tags: { phase: 'setup' } },
+    { headers: jsonHeaders(), tags: { phase: 'setup' } },
   );
   if (create.status !== 201) {
     fail(`create match failed status=${create.status} body=${create.body}`);
@@ -68,7 +77,7 @@ function createMatch(kind, index) {
   const status = http.patch(
     `${BASE_URL}/api/matches/${matchId}/status`,
     JSON.stringify({ status: 'IN_PROGRESS', metadata: {} }),
-    { headers: { 'Content-Type': 'application/json' }, tags: { phase: 'setup' } },
+    { headers: jsonHeaders(), tags: { phase: 'setup' } },
   );
   if (status.status !== 200) {
     fail(`start match failed status=${status.status} body=${status.body}`);
@@ -107,10 +116,9 @@ function recordPoint(matches, measured) {
       shotSummary: {},
     }),
     {
-      headers: {
-        'Content-Type': 'application/json',
+      headers: jsonHeaders({
         'X-Request-Id': `durable-${RUN_ID}-${__VU}-${__ITER}`,
-      },
+      }),
       tags: { phase: measured ? 'measured' : 'warmup' },
     },
   );
