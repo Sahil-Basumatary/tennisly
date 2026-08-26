@@ -3,7 +3,7 @@ package dev.sahilbasumatary.replayservice.trajectory;
 import dev.sahilbasumatary.replayservice.domain.PlayerSide;
 import dev.sahilbasumatary.replayservice.dto.response.ReplayFrame;
 import dev.sahilbasumatary.replayservice.dto.response.ShotSummaryResponse;
-import dev.sahilbasumatary.replayservice.physics.BallState;
+import dev.sahilbasumatary.replayservice.physics.BallPathBuffer;
 import dev.sahilbasumatary.replayservice.physics.Vector3;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,25 +21,29 @@ public class FrameAssembler {
 
     public List<ReplayFrame> framesForPoint(
             PointTrajectory point, double startTimeSeconds, int framesPerSecond) {
-        List<ReplayFrame> frames = new ArrayList<>();
+        int estimated = 0;
+        for (ShotTrajectory shot : point.shots()) {
+            estimated += Math.max(1, (int) Math.round(shot.flightSeconds() * framesPerSecond)) + 1;
+        }
+        List<ReplayFrame> frames = new ArrayList<>(estimated);
         double cursor = startTimeSeconds;
         double frameStep = 1.0 / framesPerSecond;
         for (ShotTrajectory shot : point.shots()) {
             double flight = shot.flightSeconds();
             int frameCount = Math.max(1, (int) Math.round(flight * framesPerSecond));
-            Vector3 hitterPosition = new Vector3(shot.contactPoint().x(), shot.contactPoint().y(), 0);
+            Vector3 hitterPosition =
+                    new Vector3(shot.contactPoint().x(), shot.contactPoint().y(), 0);
             int sampleIndex = 0;
-            List<BallState> samples = shot.samples();
+            BallPathBuffer samples = shot.path();
             for (int frame = 0; frame <= frameCount; frame++) {
                 double localTime = Math.min(flight, frame * frameStep);
                 while (sampleIndex < samples.size() - 1
-                        && samples.get(sampleIndex + 1).timeSeconds() < localTime) {
+                        && samples.time(sampleIndex + 1) < localTime) {
                     sampleIndex++;
                 }
                 Vector3 ball = interpolateBall(samples, sampleIndex, localTime);
                 double progress = flight == 0.0 ? 1.0 : localTime / flight;
-                Vector3 receiverPosition =
-                        lerp(shot.receiverStart(), shot.receiverEnd(), progress);
+                Vector3 receiverPosition = lerp(shot.receiverStart(), shot.receiverEnd(), progress);
                 Vector3 home =
                         shot.hitterSide() == PlayerSide.HOME ? hitterPosition : receiverPosition;
                 Vector3 away =
@@ -80,20 +84,31 @@ public class FrameAssembler {
         return summaries;
     }
 
-    private Vector3 interpolateBall(List<BallState> samples, int sampleIndex, double localTime) {
+    private Vector3 interpolateBall(BallPathBuffer samples, int sampleIndex, double localTime) {
         if (sampleIndex >= samples.size() - 1) {
-            return samples.get(samples.size() - 1).position();
+            int last = samples.size() - 1;
+            return new Vector3(samples.x(last), samples.y(last), samples.z(last));
         }
-        BallState before = samples.get(sampleIndex);
-        BallState after = samples.get(sampleIndex + 1);
-        double span = after.timeSeconds() - before.timeSeconds();
-        double fraction = span <= 0.0 ? 0.0 : (localTime - before.timeSeconds()) / span;
-        return lerp(before.position(), after.position(), fraction);
+        double beforeTime = samples.time(sampleIndex);
+        double afterTime = samples.time(sampleIndex + 1);
+        double span = afterTime - beforeTime;
+        double fraction = span <= 0.0 ? 0.0 : (localTime - beforeTime) / span;
+        double clamped = Math.max(0.0, Math.min(1.0, fraction));
+        return new Vector3(
+                samples.x(sampleIndex)
+                        + (samples.x(sampleIndex + 1) - samples.x(sampleIndex)) * clamped,
+                samples.y(sampleIndex)
+                        + (samples.y(sampleIndex + 1) - samples.y(sampleIndex)) * clamped,
+                samples.z(sampleIndex)
+                        + (samples.z(sampleIndex + 1) - samples.z(sampleIndex)) * clamped);
     }
 
     private Vector3 lerp(Vector3 from, Vector3 to, double fraction) {
         double clamped = Math.max(0.0, Math.min(1.0, fraction));
-        return from.add(to.subtract(from).scale(clamped));
+        return new Vector3(
+                from.x() + (to.x() - from.x()) * clamped,
+                from.y() + (to.y() - from.y()) * clamped,
+                from.z() + (to.z() - from.z()) * clamped);
     }
 
     private Vector3 round(Vector3 value) {

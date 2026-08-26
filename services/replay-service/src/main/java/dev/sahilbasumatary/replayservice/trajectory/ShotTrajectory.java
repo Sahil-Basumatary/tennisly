@@ -3,13 +3,14 @@ package dev.sahilbasumatary.replayservice.trajectory;
 import dev.sahilbasumatary.replayservice.domain.PlayerSide;
 import dev.sahilbasumatary.replayservice.domain.ShotType;
 import dev.sahilbasumatary.replayservice.domain.SpinType;
+import dev.sahilbasumatary.replayservice.physics.BallPathBuffer;
 import dev.sahilbasumatary.replayservice.physics.BallState;
 import dev.sahilbasumatary.replayservice.physics.Vector3;
 import java.util.List;
 
 /**
  * The computed flight of one shot, in world coordinates, together with the player kinematics needed
- * to animate it. {@code samples} run from the moment of contact ({@code t = 0}) to the receiver's
+ * to animate it. {@code path} runs from the moment of contact ({@code t = 0}) to the receiver's
  * next contact.
  */
 public record ShotTrajectory(
@@ -17,7 +18,7 @@ public record ShotTrajectory(
         ShotType shotType,
         PlayerSide hitterSide,
         SpinType spinType,
-        List<BallState> samples,
+        BallPathBuffer path,
         Vector3 contactPoint,
         Vector3 landingPoint,
         Vector3 nextContactPoint,
@@ -25,4 +26,9 @@ public record ShotTrajectory(
         Vector3 receiverEnd,
         double apexHeightMetres,
         double launchSpeedMetresPerSecond,
-        double flightSeconds) {}
+        double flightSeconds) {
+
+    public List<BallState> samples() {
+        return path.toList();
+    }
+}

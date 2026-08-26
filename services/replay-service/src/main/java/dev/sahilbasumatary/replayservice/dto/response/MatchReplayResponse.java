@@ -1,5 +1,6 @@
 package dev.sahilbasumatary.replayservice.dto.response;
 
+import dev.sahilbasumatary.replayservice.config.ReplayEngineVersions;
 import dev.sahilbasumatary.replayservice.domain.Surface;
 import java.util.List;
 import java.util.UUID;
@@ -15,4 +16,12 @@ public record MatchReplayResponse(
         double durationSeconds,
         List<PointReplaySummary> points,
         List<ShotSummaryResponse> shots,
-        List<ReplayFrame> frames) {}
+        List<ReplayFrame> frames,
+        String engineVersion) {
+
+    public MatchReplayResponse {
+        if (engineVersion == null || engineVersion.isBlank()) {
+            engineVersion = ReplayEngineVersions.V1;
+        }
+    }
+}

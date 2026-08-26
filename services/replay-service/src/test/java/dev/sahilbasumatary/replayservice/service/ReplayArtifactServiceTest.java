@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.sahilbasumatary.replayservice.config.ReplayEngineVersions;
 import dev.sahilbasumatary.replayservice.config.ReplayStorageProperties;
 import dev.sahilbasumatary.replayservice.domain.ReplayStatus;
 import dev.sahilbasumatary.replayservice.domain.Surface;
@@ -123,6 +124,7 @@ class ReplayArtifactServiceTest {
         assertEquals(MATCH_ID, response.matchId());
         assertEquals(replay.frameCount(), response.frameCount());
         assertEquals(ReplayStatus.READY, response.status());
+        assertEquals(ReplayEngineVersions.CURRENT, response.engineVersion());
         assertEquals(KEY, response.storageKey());
         assertTrue(artifacts.containsKey(MATCH_ID));
     }
@@ -252,7 +254,8 @@ class ReplayArtifactServiceTest {
                 1.5,
                 List.of(),
                 List.of(),
-                List.of());
+                List.of(),
+                ReplayEngineVersions.CURRENT);
     }
 
     private byte[] writeBytes(MatchReplayResponse replay) {

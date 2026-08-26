@@ -6,8 +6,8 @@ import dev.sahilbasumatary.replayservice.domain.PlayerSide;
 import dev.sahilbasumatary.replayservice.domain.PlayerTier;
 import dev.sahilbasumatary.replayservice.domain.ShotType;
 import dev.sahilbasumatary.replayservice.domain.Surface;
+import dev.sahilbasumatary.replayservice.physics.BallPathBuffer;
 import dev.sahilbasumatary.replayservice.physics.BallPhysicsSimulator;
-import dev.sahilbasumatary.replayservice.physics.BallState;
 import dev.sahilbasumatary.replayservice.physics.BounceProfile;
 import dev.sahilbasumatary.replayservice.physics.CourtGeometry;
 import dev.sahilbasumatary.replayservice.physics.LaunchSolver;
@@ -35,9 +35,7 @@ public class TrajectoryEngine {
     private final ShotSampler shotSampler;
 
     public TrajectoryEngine(
-            BallPhysicsSimulator simulator,
-            LaunchSolver launchSolver,
-            ShotSampler shotSampler) {
+            BallPhysicsSimulator simulator, LaunchSolver launchSolver, ShotSampler shotSampler) {
         this.simulator = simulator;
         this.launchSolver = launchSolver;
         this.shotSampler = shotSampler;
@@ -64,6 +62,7 @@ public class TrajectoryEngine {
         List<ShotTrajectory> shots = new ArrayList<>(shotTypes.size());
         Vector3 contactPoint = null;
         double totalDuration = 0.0;
+        BallPathBuffer scratch = new BallPathBuffer();
 
         for (int shotIndex = 0; shotIndex < shotTypes.size(); shotIndex++) {
             ShotType shotType = shotTypes.get(shotIndex);
@@ -104,35 +103,36 @@ public class TrajectoryEngine {
                             ShotKinematics.needsHighArc(shotType),
                             engine.solverMaxIterations(),
                             engine.solverToleranceMetres(),
-                            engine.solverStepSeconds(),
-                            engine.maxFlightSeconds());
-
-            List<BallState> fullPath =
-                    simulator.simulate(
-                            solution.launchState(),
-                            profile,
                             engine.integrationStepSeconds(),
                             engine.maxFlightSeconds(),
-                            false);
+                            scratch);
+            if (scratch.size() == 0) {
+                simulator.simulateInto(
+                        solution.launchState(),
+                        profile,
+                        engine.integrationStepSeconds(),
+                        engine.maxFlightSeconds(),
+                        false,
+                        scratch);
+            }
 
-            int bounceIndex = firstBounceIndex(fullPath);
-            Vector3 landing = fullPath.get(bounceIndex).position();
-            int contactIndex = nextContactIndex(fullPath, bounceIndex, RECEIVER_CONTACT_HEIGHT_METRES);
-            List<BallState> samples = new ArrayList<>(fullPath.subList(0, contactIndex + 1));
+            int bounceIndex = firstBounceIndex(scratch);
+            Vector3 landing =
+                    new Vector3(
+                            scratch.x(bounceIndex), scratch.y(bounceIndex), scratch.z(bounceIndex));
+            int contactIndex =
+                    nextContactIndex(scratch, bounceIndex, RECEIVER_CONTACT_HEIGHT_METRES);
+            BallPathBuffer samples = new BallPathBuffer();
+            samples.copyPrefix(scratch, contactIndex + 1);
 
-            Vector3 nextContact =
-                    clampToCourt(
-                            new Vector3(
-                                    samples.get(samples.size() - 1).position().x(),
-                                    samples.get(samples.size() - 1).position().y(),
-                                    0));
+            int last = samples.size() - 1;
+            Vector3 nextContact = clampToCourt(new Vector3(samples.x(last), samples.y(last), 0));
 
             PlayerSide receiverSide =
                     hitterSide == PlayerSide.HOME ? PlayerSide.AWAY : PlayerSide.HOME;
-            Vector3 receiverStart =
-                    receiverSide == PlayerSide.HOME ? homePosition : awayPosition;
+            Vector3 receiverStart = receiverSide == PlayerSide.HOME ? homePosition : awayPosition;
 
-            double flightSeconds = samples.get(samples.size() - 1).timeSeconds();
+            double flightSeconds = samples.time(last);
             shots.add(
                     new ShotTrajectory(
                             shotIndex,
@@ -166,26 +166,23 @@ public class TrajectoryEngine {
         return new Vector3(0, -sign * behindBaseline, CourtGeometry.SERVE_CONTACT_HEIGHT_METRES);
     }
 
-    private int firstBounceIndex(List<BallState> path) {
+    private int firstBounceIndex(BallPathBuffer path) {
         for (int index = 1; index < path.size(); index++) {
-            if (path.get(index).position().z() <= 1.0e-6
-                    && path.get(index - 1).position().z() > 1.0e-6) {
+            if (path.z(index) <= 1.0e-6 && path.z(index - 1) > 1.0e-6) {
                 return index;
             }
         }
         return path.size() - 1;
     }
 
-    private int nextContactIndex(List<BallState> path, int bounceIndex, double contactHeight) {
+    private int nextContactIndex(BallPathBuffer path, int bounceIndex, double contactHeight) {
         if (bounceIndex >= path.size() - 1) {
             return path.size() - 1;
         }
         double depthCap = CourtGeometry.HALF_LENGTH_METRES + 0.80;
         for (int index = bounceIndex + 1; index < path.size(); index++) {
-            BallState sample = path.get(index);
-            boolean reachedBaseline = Math.abs(sample.position().y()) >= depthCap;
-            boolean reachableOnDescent =
-                    sample.velocity().z() < 0.0 && sample.position().z() <= contactHeight;
+            boolean reachedBaseline = Math.abs(path.y(index)) >= depthCap;
+            boolean reachableOnDescent = path.vz(index) < 0.0 && path.z(index) <= contactHeight;
             if (reachedBaseline || reachableOnDescent) {
                 return index;
             }
@@ -193,10 +190,10 @@ public class TrajectoryEngine {
         return path.size() - 1;
     }
 
-    private double apexHeight(List<BallState> samples) {
+    private double apexHeight(BallPathBuffer samples) {
         double apex = 0.0;
-        for (BallState sample : samples) {
-            apex = Math.max(apex, sample.position().z());
+        for (int index = 0; index < samples.size(); index++) {
+            apex = Math.max(apex, samples.z(index));
         }
         return apex;
     }

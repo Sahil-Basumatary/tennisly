@@ -3,8 +3,9 @@ package dev.sahilbasumatary.replayservice.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Tunable parameters for the trajectory engine. Defaults are sensible for broadcast-quality replays;
- * lowering the frame rate or coarsening the integration step trades fidelity for generation speed.
+ * Tunable parameters for the trajectory engine. Defaults are sensible for broadcast-quality
+ * replays; lowering the frame rate or coarsening the integration step trades fidelity for
+ * generation speed.
  */
 @ConfigurationProperties(prefix = "replay.engine")
 public record ReplayEngineProperties(
@@ -13,7 +14,25 @@ public record ReplayEngineProperties(
         double maxFlightSeconds,
         int solverMaxIterations,
         double solverToleranceMetres,
-        int maxRallyLength) {
+        int maxRallyLength,
+        int pointWorkers) {
+
+    public ReplayEngineProperties(
+            int framesPerSecond,
+            double integrationStepSeconds,
+            double maxFlightSeconds,
+            int solverMaxIterations,
+            double solverToleranceMetres,
+            int maxRallyLength) {
+        this(
+                framesPerSecond,
+                integrationStepSeconds,
+                maxFlightSeconds,
+                solverMaxIterations,
+                solverToleranceMetres,
+                maxRallyLength,
+                0);
+    }
 
     public ReplayEngineProperties {
         if (framesPerSecond <= 0) {
@@ -33,6 +52,9 @@ public record ReplayEngineProperties(
         }
         if (maxRallyLength <= 0) {
             maxRallyLength = 40;
+        }
+        if (pointWorkers < 0) {
+            pointWorkers = 0;
         }
     }
 

@@ -20,8 +20,7 @@ class BallPhysicsSimulatorTest {
 
         assertEquals(0.0, acceleration.x(), 1.0e-9);
         assertEquals(0.0, acceleration.y(), 1.0e-9);
-        assertEquals(
-                -CourtGeometry.GRAVITY_METRES_PER_SECOND_SQUARED, acceleration.z(), 1.0e-9);
+        assertEquals(-CourtGeometry.GRAVITY_METRES_PER_SECOND_SQUARED, acceleration.z(), 1.0e-9);
     }
 
     @Test
@@ -62,7 +61,10 @@ class BallPhysicsSimulatorTest {
 
         assertTrue(
                 topspinRange < backspinRange,
-                "topspin range " + topspinRange + " should be shorter than backspin " + backspinRange);
+                "topspin range "
+                        + topspinRange
+                        + " should be shorter than backspin "
+                        + backspinRange);
     }
 
     @Test

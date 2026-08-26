@@ -121,7 +121,6 @@ class TrajectoryEngineTest {
                         SEED,
                         properties);
 
-        assertEquals(
-                first.shots().get(2).landingPoint(), second.shots().get(2).landingPoint());
+        assertEquals(first.shots().get(2).landingPoint(), second.shots().get(2).landingPoint());
     }
 }

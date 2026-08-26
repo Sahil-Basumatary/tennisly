@@ -1,6 +1,5 @@
 package dev.sahilbasumatary.replayservice.physics;
 
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -9,8 +8,9 @@ import org.springframework.stereotype.Component;
  * the Magnus force produced by spin, with surface-aware bounce handling.
  *
  * <p>There is no closed-form solution once drag is involved, so the path is advanced with a
- * fourth-order Runge-Kutta integrator. Spin is treated as constant over the short flight time, which
- * is an accepted simplification for single-shot trajectories.
+ * fourth-order Runge-Kutta integrator. Spin is treated as constant over the short flight time,
+ * which is an accepted simplification for single-shot trajectories. Hot-path samples live in a
+ * primitive buffer so solver scans do not allocate a {@link BallState} per step.
  */
 @Component
 public class BallPhysicsSimulator {
@@ -46,68 +46,42 @@ public class BallPhysicsSimulator {
     }
 
     /**
-     * Acceleration acting on the ball for a given velocity and spin, combining gravity, drag and the
-     * Magnus (lift) force.
+     * Acceleration acting on the ball for a given velocity and spin, combining gravity, drag and
+     * the Magnus (lift) force.
      */
     public Vector3 acceleration(Vector3 velocity, Vector3 spin) {
-        Vector3 gravityAcceleration = new Vector3(0, 0, -gravity);
-        double speed = velocity.magnitude();
-        if (speed == 0.0) {
-            return gravityAcceleration;
-        }
-        Vector3 dragForce = velocity.scale(-dragFactor * speed);
-        Vector3 magnusForce = magnusForce(velocity, spin, speed);
-        return gravityAcceleration.add(dragForce.add(magnusForce).scale(1.0 / mass));
-    }
-
-    private Vector3 magnusForce(Vector3 velocity, Vector3 spin, double speed) {
-        double spinRate = spin.magnitude();
-        if (spinRate == 0.0) {
-            return Vector3.ZERO;
-        }
-        Vector3 spinCrossVelocity = spin.cross(velocity);
-        if (spinCrossVelocity.magnitude() == 0.0) {
-            return Vector3.ZERO;
-        }
-        double spinRatio = (ballRadius * spinRate) / speed;
-        double liftCoefficient = 1.0 / (2.0 + (1.0 / spinRatio));
-        double magnitude = liftFactor * liftCoefficient * speed * speed;
-        return spinCrossVelocity.normalized().scale(magnitude);
+        Accel accel = new Accel();
+        acceleration(velocity.x(), velocity.y(), velocity.z(), spin.x(), spin.y(), spin.z(), accel);
+        return new Vector3(accel.x, accel.y, accel.z);
     }
 
     /** Advances the ball by one timestep using fourth-order Runge-Kutta, ignoring the ground. */
     public BallState integrate(BallState state, double stepSeconds) {
-        Vector3 p0 = state.position();
-        Vector3 v0 = state.velocity();
-        Vector3 spin = state.spin();
-
-        Vector3 a1 = acceleration(v0, spin);
-        Vector3 v1 = v0;
-
-        Vector3 v2 = v0.add(a1.scale(stepSeconds / 2.0));
-        Vector3 a2 = acceleration(v2, spin);
-
-        Vector3 v3 = v0.add(a2.scale(stepSeconds / 2.0));
-        Vector3 a3 = acceleration(v3, spin);
-
-        Vector3 v4 = v0.add(a3.scale(stepSeconds));
-        Vector3 a4 = acceleration(v4, spin);
-
-        Vector3 velocityIncrement =
-                a1.add(a2.scale(2)).add(a3.scale(2)).add(a4).scale(stepSeconds / 6.0);
-        Vector3 positionIncrement =
-                v1.add(v2.scale(2)).add(v3.scale(2)).add(v4).scale(stepSeconds / 6.0);
-
+        Step step = new Step();
+        integrate(
+                state.timeSeconds(),
+                state.position().x(),
+                state.position().y(),
+                state.position().z(),
+                state.velocity().x(),
+                state.velocity().y(),
+                state.velocity().z(),
+                state.spin().x(),
+                state.spin().y(),
+                state.spin().z(),
+                stepSeconds,
+                step);
         return new BallState(
-                state.timeSeconds() + stepSeconds,
-                p0.add(positionIncrement),
-                v0.add(velocityIncrement),
-                spin);
+                step.time,
+                new Vector3(step.px, step.py, step.pz),
+                new Vector3(step.vx, step.vy, step.vz),
+                state.spin());
     }
 
     /**
-     * Simulates the full flight, sampling the ball on every integration step, applying bounces using
-     * the surface profile until the {@code stopOnFirstBounce} condition or the time budget is hit.
+     * Simulates the full flight, sampling the ball on every integration step, applying bounces
+     * using the surface profile until the {@code stopOnFirstBounce} condition or the time budget is
+     * hit.
      */
     public List<BallState> simulate(
             BallState initial,
@@ -115,58 +89,312 @@ public class BallPhysicsSimulator {
             double stepSeconds,
             double maxTimeSeconds,
             boolean stopOnFirstBounce) {
-        List<BallState> path = new ArrayList<>();
-        path.add(initial);
-        BallState current = initial;
-        while (current.timeSeconds() < maxTimeSeconds) {
-            BallState next = integrate(current, stepSeconds);
-            if (next.position().z() <= 0.0 && current.position().z() > 0.0) {
-                BallState impact = interpolateGroundContact(current, next);
-                path.add(impact);
+        BallPathBuffer path = new BallPathBuffer();
+        simulateInto(initial, profile, stepSeconds, maxTimeSeconds, stopOnFirstBounce, path);
+        return path.toList();
+    }
+
+    public void simulateInto(
+            BallState initial,
+            BounceProfile profile,
+            double stepSeconds,
+            double maxTimeSeconds,
+            boolean stopOnFirstBounce,
+            BallPathBuffer path) {
+        path.clear();
+        int estimatedSteps = (int) Math.ceil(maxTimeSeconds / Math.max(stepSeconds, 1.0e-6)) + 8;
+        path.ensureCapacity(estimatedSteps);
+        path.append(initial);
+        Step current = Step.from(initial);
+        Step next = new Step();
+        while (current.time < maxTimeSeconds) {
+            integrate(
+                    current.time,
+                    current.px,
+                    current.py,
+                    current.pz,
+                    current.vx,
+                    current.vy,
+                    current.vz,
+                    current.sx,
+                    current.sy,
+                    current.sz,
+                    stepSeconds,
+                    next);
+            if (next.pz <= 0.0 && current.pz > 0.0) {
+                interpolateGroundContact(current, next, next);
+                path.append(
+                        next.time, next.px, next.py, 0.0, next.vx, next.vy, next.vz, next.sx,
+                        next.sy, next.sz);
                 if (stopOnFirstBounce) {
-                    return path;
+                    return;
                 }
-                current = applyBounce(impact, profile);
+                applyBounce(next, profile, current);
                 continue;
             }
-            path.add(next);
-            current = next;
+            path.append(
+                    next.time, next.px, next.py, next.pz, next.vx, next.vy, next.vz, next.sx,
+                    next.sy, next.sz);
+            current.copyFrom(next);
         }
-        return path;
     }
 
     /** Returns the horizontal landing point of the first ground contact for a launch state. */
     public Vector3 landingPoint(
             BallState initial, BounceProfile profile, double stepSeconds, double maxTimeSeconds) {
-        List<BallState> path = simulate(initial, profile, stepSeconds, maxTimeSeconds, true);
-        return path.get(path.size() - 1).position();
+        BounceSample sample = sampleFirstBounce(initial, profile, stepSeconds, maxTimeSeconds);
+        return new Vector3(sample.landingX(), sample.landingY(), 0.0);
     }
 
-    private BallState interpolateGroundContact(BallState above, BallState below) {
-        double z0 = above.position().z();
-        double z1 = below.position().z();
+    /**
+     * First bounce plus the net-plane crossing. The extra interpolate is free relative to another
+     * full flight: the solver needs both to reject shots that land in and still clip the tape.
+     */
+    public BounceSample sampleFirstBounce(
+            BallState initial, BounceProfile profile, double stepSeconds, double maxTimeSeconds) {
+        Step current = Step.from(initial);
+        Step next = new Step();
+        boolean crossedNet = false;
+        double netX = initial.position().x();
+        double netZ = initial.position().z();
+        while (current.time < maxTimeSeconds) {
+            integrate(
+                    current.time,
+                    current.px,
+                    current.py,
+                    current.pz,
+                    current.vx,
+                    current.vy,
+                    current.vz,
+                    current.sx,
+                    current.sy,
+                    current.sz,
+                    stepSeconds,
+                    next);
+            if (!crossedNet && current.py * next.py <= 0.0 && current.py != next.py) {
+                double span = next.py - current.py;
+                double fraction = (0.0 - current.py) / span;
+                netX = current.px + (next.px - current.px) * fraction;
+                netZ = current.pz + (next.pz - current.pz) * fraction;
+                crossedNet = true;
+            }
+            if (next.pz <= 0.0 && current.pz > 0.0) {
+                interpolateGroundContact(current, next, next);
+                return new BounceSample(next.px, next.py, netX, netZ, crossedNet);
+            }
+            current.copyFrom(next);
+        }
+        return new BounceSample(current.px, current.py, netX, netZ, crossedNet);
+    }
+
+    public record BounceSample(
+            double landingX, double landingY, double netX, double netZ, boolean crossedNet) {
+
+        public boolean clearsNet() {
+            if (!crossedNet) {
+                return true;
+            }
+            return netZ + 0.02 >= CourtGeometry.netHeightAt(netX);
+        }
+    }
+
+    private void integrate(
+            double time,
+            double px,
+            double py,
+            double pz,
+            double vx,
+            double vy,
+            double vz,
+            double sx,
+            double sy,
+            double sz,
+            double stepSeconds,
+            Step out) {
+        Accel a1 = out.a1;
+        Accel a2 = out.a2;
+        Accel a3 = out.a3;
+        Accel a4 = out.a4;
+        acceleration(vx, vy, vz, sx, sy, sz, a1);
+        double v2x = vx + a1.x * (stepSeconds / 2.0);
+        double v2y = vy + a1.y * (stepSeconds / 2.0);
+        double v2z = vz + a1.z * (stepSeconds / 2.0);
+        acceleration(v2x, v2y, v2z, sx, sy, sz, a2);
+        double v3x = vx + a2.x * (stepSeconds / 2.0);
+        double v3y = vy + a2.y * (stepSeconds / 2.0);
+        double v3z = vz + a2.z * (stepSeconds / 2.0);
+        acceleration(v3x, v3y, v3z, sx, sy, sz, a3);
+        double v4x = vx + a3.x * stepSeconds;
+        double v4y = vy + a3.y * stepSeconds;
+        double v4z = vz + a3.z * stepSeconds;
+        acceleration(v4x, v4y, v4z, sx, sy, sz, a4);
+        double velocityIncrementX = (a1.x + a2.x * 2.0 + a3.x * 2.0 + a4.x) * (stepSeconds / 6.0);
+        double velocityIncrementY = (a1.y + a2.y * 2.0 + a3.y * 2.0 + a4.y) * (stepSeconds / 6.0);
+        double velocityIncrementZ = (a1.z + a2.z * 2.0 + a3.z * 2.0 + a4.z) * (stepSeconds / 6.0);
+        // v1 is v0; chained Vector3 add/scale must stay left-associative.
+        double positionIncrementX = (((vx + v2x * 2.0) + v3x * 2.0) + v4x) * (stepSeconds / 6.0);
+        double positionIncrementY = (((vy + v2y * 2.0) + v3y * 2.0) + v4y) * (stepSeconds / 6.0);
+        double positionIncrementZ = (((vz + v2z * 2.0) + v3z * 2.0) + v4z) * (stepSeconds / 6.0);
+        out.time = time + stepSeconds;
+        out.px = px + positionIncrementX;
+        out.py = py + positionIncrementY;
+        out.pz = pz + positionIncrementZ;
+        out.vx = vx + velocityIncrementX;
+        out.vy = vy + velocityIncrementY;
+        out.vz = vz + velocityIncrementZ;
+        out.sx = sx;
+        out.sy = sy;
+        out.sz = sz;
+    }
+
+    private void acceleration(
+            double vx, double vy, double vz, double sx, double sy, double sz, Accel out) {
+        double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+        if (speed == 0.0) {
+            out.x = 0.0;
+            out.y = 0.0;
+            out.z = -gravity;
+            return;
+        }
+        double dragScale = -dragFactor * speed;
+        double dragX = vx * dragScale;
+        double dragY = vy * dragScale;
+        double dragZ = vz * dragScale;
+        magnusForce(vx, vy, vz, sx, sy, sz, speed, out);
+        double invMass = 1.0 / mass;
+        out.x = 0.0 + (dragX + out.x) * invMass;
+        out.y = 0.0 + (dragY + out.y) * invMass;
+        out.z = -gravity + (dragZ + out.z) * invMass;
+    }
+
+    private void magnusForce(
+            double vx,
+            double vy,
+            double vz,
+            double sx,
+            double sy,
+            double sz,
+            double speed,
+            Accel out) {
+        double spinRate = Math.sqrt(sx * sx + sy * sy + sz * sz);
+        if (spinRate == 0.0) {
+            out.x = 0.0;
+            out.y = 0.0;
+            out.z = 0.0;
+            return;
+        }
+        double cx = sy * vz - sz * vy;
+        double cy = sz * vx - sx * vz;
+        double cz = sx * vy - sy * vx;
+        double crossMagnitude = Math.sqrt(cx * cx + cy * cy + cz * cz);
+        if (crossMagnitude == 0.0) {
+            out.x = 0.0;
+            out.y = 0.0;
+            out.z = 0.0;
+            return;
+        }
+        double spinRatio = (ballRadius * spinRate) / speed;
+        double liftCoefficient = 1.0 / (2.0 + (1.0 / spinRatio));
+        double magnitude = liftFactor * liftCoefficient * speed * speed;
+        double inv = 1.0 / crossMagnitude;
+        out.x = cx * inv * magnitude;
+        out.y = cy * inv * magnitude;
+        out.z = cz * inv * magnitude;
+    }
+
+    private void interpolateGroundContact(Step above, Step below, Step out) {
+        double z0 = above.pz;
+        double z1 = below.pz;
         double fraction = z0 / (z0 - z1);
-        Vector3 position =
-                above.position().add(below.position().subtract(above.position()).scale(fraction));
-        Vector3 velocity =
-                above.velocity().add(below.velocity().subtract(above.velocity()).scale(fraction));
-        double time = above.timeSeconds() + (below.timeSeconds() - above.timeSeconds()) * fraction;
-        return new BallState(time, new Vector3(position.x(), position.y(), 0.0), velocity, above.spin());
+        out.time = above.time + (below.time - above.time) * fraction;
+        out.px = above.px + (below.px - above.px) * fraction;
+        out.py = above.py + (below.py - above.py) * fraction;
+        out.pz = 0.0;
+        out.vx = above.vx + (below.vx - above.vx) * fraction;
+        out.vy = above.vy + (below.vy - above.vy) * fraction;
+        out.vz = above.vz + (below.vz - above.vz) * fraction;
+        out.sx = above.sx;
+        out.sy = above.sy;
+        out.sz = above.sz;
     }
 
-    private BallState applyBounce(BallState impact, BounceProfile profile) {
-        Vector3 velocity = impact.velocity();
-        double bouncedVerticalSpeed = -velocity.z() * profile.verticalRestitution();
+    private void applyBounce(Step impact, BounceProfile profile, Step out) {
+        double bouncedVerticalSpeed = -impact.vz * profile.verticalRestitution();
         double horizontalRetention = 1.0 - 0.35 * profile.horizontalFriction();
-        double spinSurfaceSpeed = impact.spin().magnitude() * ballRadius;
-        Vector3 horizontalDirection =
-                new Vector3(velocity.x(), velocity.y(), 0.0).normalized();
+        double spinRate =
+                Math.sqrt(impact.sx * impact.sx + impact.sy * impact.sy + impact.sz * impact.sz);
+        double spinSurfaceSpeed = spinRate * ballRadius;
+        double horizontalMagnitude = Math.sqrt(impact.vx * impact.vx + impact.vy * impact.vy);
+        double nx;
+        double ny;
+        if (horizontalMagnitude == 0.0) {
+            nx = 0.0;
+            ny = 0.0;
+        } else {
+            nx = impact.vx / horizontalMagnitude;
+            ny = impact.vy / horizontalMagnitude;
+        }
         double forwardBoost = profile.spinForwardFactor() * spinSurfaceSpeed;
-        Vector3 bouncedVelocity =
-                new Vector3(
-                        velocity.x() * horizontalRetention + horizontalDirection.x() * forwardBoost,
-                        velocity.y() * horizontalRetention + horizontalDirection.y() * forwardBoost,
-                        bouncedVerticalSpeed);
-        return impact.withPositionAndVelocity(impact.position(), bouncedVelocity);
+        out.time = impact.time;
+        out.px = impact.px;
+        out.py = impact.py;
+        out.pz = impact.pz;
+        out.vx = impact.vx * horizontalRetention + nx * forwardBoost;
+        out.vy = impact.vy * horizontalRetention + ny * forwardBoost;
+        out.vz = bouncedVerticalSpeed;
+        out.sx = impact.sx;
+        out.sy = impact.sy;
+        out.sz = impact.sz;
+    }
+
+    private static final class Accel {
+        private double x;
+        private double y;
+        private double z;
+    }
+
+    private static final class Step {
+        private final Accel a1 = new Accel();
+        private final Accel a2 = new Accel();
+        private final Accel a3 = new Accel();
+        private final Accel a4 = new Accel();
+        private double time;
+        private double px;
+        private double py;
+        private double pz;
+        private double vx;
+        private double vy;
+        private double vz;
+        private double sx;
+        private double sy;
+        private double sz;
+
+        private static Step from(BallState state) {
+            Step step = new Step();
+            step.time = state.timeSeconds();
+            step.px = state.position().x();
+            step.py = state.position().y();
+            step.pz = state.position().z();
+            step.vx = state.velocity().x();
+            step.vy = state.velocity().y();
+            step.vz = state.velocity().z();
+            step.sx = state.spin().x();
+            step.sy = state.spin().y();
+            step.sz = state.spin().z();
+            return step;
+        }
+
+        private void copyFrom(Step other) {
+            time = other.time;
+            px = other.px;
+            py = other.py;
+            pz = other.pz;
+            vx = other.vx;
+            vy = other.vy;
+            vz = other.vz;
+            sx = other.sx;
+            sy = other.sy;
+            sz = other.sz;
+        }
     }
 }

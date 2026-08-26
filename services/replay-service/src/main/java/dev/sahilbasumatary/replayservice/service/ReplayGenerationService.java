@@ -6,6 +6,7 @@ import dev.sahilbasumatary.replayservice.client.dto.MatchPlayerSummary;
 import dev.sahilbasumatary.replayservice.client.dto.MatchPointSummary;
 import dev.sahilbasumatary.replayservice.client.dto.MatchSummary;
 import dev.sahilbasumatary.replayservice.config.ReplayEngineProperties;
+import dev.sahilbasumatary.replayservice.config.ReplayEngineVersions;
 import dev.sahilbasumatary.replayservice.domain.PlayerSide;
 import dev.sahilbasumatary.replayservice.domain.PlayerTier;
 import dev.sahilbasumatary.replayservice.domain.PointOutcome;
@@ -17,6 +18,7 @@ import dev.sahilbasumatary.replayservice.dto.response.ReplayFrame;
 import dev.sahilbasumatary.replayservice.dto.response.ShotSummaryResponse;
 import dev.sahilbasumatary.replayservice.exception.ResourceNotFoundException;
 import dev.sahilbasumatary.replayservice.trajectory.FrameAssembler;
+import dev.sahilbasumatary.replayservice.trajectory.OrderedParallel;
 import dev.sahilbasumatary.replayservice.trajectory.PointTrajectory;
 import dev.sahilbasumatary.replayservice.trajectory.RallySynthesizer;
 import dev.sahilbasumatary.replayservice.trajectory.ShotDistributionIndex;
@@ -73,9 +75,16 @@ public class ReplayGenerationService {
         List<PointReplaySummary> pointSummaries = new ArrayList<>(points.size());
         List<ShotSummaryResponse> shotSummaries = new ArrayList<>();
         List<ReplayFrame> frames = new ArrayList<>();
+        int workers = OrderedParallel.resolveWorkers(engineProperties.pointWorkers());
+        List<PointTrajectory> trajectories =
+                OrderedParallel.map(
+                        points.size(),
+                        workers,
+                        slot -> simulatePoint(matchId, match, points.get(slot), index));
         double cursor = 0.0;
-        for (MatchPointSummary point : points) {
-            PointTrajectory trajectory = simulatePoint(matchId, match, point, index);
+        for (int slot = 0; slot < points.size(); slot++) {
+            PointTrajectory trajectory = trajectories.get(slot);
+            MatchPointSummary point = points.get(slot);
             frames.addAll(
                     frameAssembler.framesForPoint(
                             trajectory, cursor, engineProperties.framesPerSecond()));
@@ -101,7 +110,8 @@ public class ReplayGenerationService {
                 round(cursor),
                 pointSummaries,
                 shotSummaries,
-                frames);
+                frames,
+                ReplayEngineVersions.CURRENT);
     }
 
     public PointReplayResponse generatePointReplay(UUID matchId, int sequenceNumber) {
@@ -127,15 +137,18 @@ public class ReplayGenerationService {
                 engineProperties.framesPerSecond(),
                 toPointSummary(point, trajectory),
                 shots,
-                frames);
+                frames,
+                ReplayEngineVersions.CURRENT);
     }
 
     private PointTrajectory simulatePoint(
-            UUID matchId, MatchSummary match, MatchPointSummary point, ShotDistributionIndex index) {
+            UUID matchId,
+            MatchSummary match,
+            MatchPointSummary point,
+            ShotDistributionIndex index) {
         PointOutcome outcome = PointOutcome.fromExternal(point.outcome());
         PlayerSide serverSide = sideOf(match, point.serverId());
-        PlayerSide receiverSide =
-                serverSide == PlayerSide.HOME ? PlayerSide.AWAY : PlayerSide.HOME;
+        PlayerSide receiverSide = serverSide == PlayerSide.HOME ? PlayerSide.AWAY : PlayerSide.HOME;
         PlayerTier serverTier = tierOf(match.playerOn(serverSide));
         PlayerTier receiverTier = tierOf(match.playerOn(receiverSide));
         long seed = pointSeed(matchId, point.sequenceNumber());

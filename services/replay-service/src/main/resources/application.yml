@@ -60,6 +60,7 @@ replay:
     solver-max-iterations: ${REPLAY_ENGINE_SOLVER_ITERATIONS:48}
     solver-tolerance-metres: ${REPLAY_ENGINE_SOLVER_TOLERANCE:0.05}
     max-rally-length: ${REPLAY_ENGINE_MAX_RALLY:40}
+    point-workers: ${REPLAY_ENGINE_POINT_WORKERS:0}
   storage:
     endpoint: ${REPLAY_STORAGE_ENDPOINT:http://localhost:19000}
     region: ${REPLAY_STORAGE_REGION:us-east-1}

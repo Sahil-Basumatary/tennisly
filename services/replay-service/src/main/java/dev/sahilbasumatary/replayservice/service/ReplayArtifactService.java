@@ -2,6 +2,7 @@ package dev.sahilbasumatary.replayservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.sahilbasumatary.replayservice.config.ReplayEngineVersions;
 import dev.sahilbasumatary.replayservice.domain.ReplayStatus;
 import dev.sahilbasumatary.replayservice.dto.response.MatchReplayResponse;
 import dev.sahilbasumatary.replayservice.dto.response.ReplayArtifactResponse;
@@ -26,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ReplayArtifactService {
 
-    private static final String ENGINE_VERSION = "1.0.0";
     private static final Logger log = LoggerFactory.getLogger(ReplayArtifactService.class);
 
     private final ReplayGenerationService replayGenerationService;
@@ -154,7 +154,7 @@ public class ReplayArtifactService {
         artifact.setSizeBytes(payload.sizeBytes());
         artifact.setUncompressedBytes(payload.uncompressedBytes());
         artifact.setChecksumSha256(payload.checksumSha256());
-        artifact.setEngineVersion(ENGINE_VERSION);
+        artifact.setEngineVersion(ReplayEngineVersions.CURRENT);
         artifact.setStatus(ReplayStatus.READY);
     }
 

@@ -1,0 +1,13 @@
+# Replay golden SHA-256 (engine 1.0.0, 3-decimal coordinates, production-shaped defaults)
+
+Historical v1 hashes. Captured on the unoptimised AoS engine, then re-checked after allocation cuts, SoA buffers, and parallel point generation. Bit-identical for engineVersion=1.0.0. Replay 2.0.0 uses replay-golden-sha256.txt.
+
+point_frames: 363
+point_frames_sha256: 85aa9d59c8eb0def096284198c61853c0673af4a6c0d8b4ba927fc5555e32ab5
+point_shots_sha256: ce4c9fcfe100215c794ee8b286e084b833dbd8d0a2ba5a3e79bf40ee4b638c75
+match_frames: 4341
+match_frames_sha256: 7597e358ba23f43b629423f48b36c95124f30e9336eabf86402bcd08fc9114ce
+
+seed_point: 123456789
+seed_match: 0xC0FFEE1234
+engine: fps=60 step=0.002 max_flight=6.0 solver_iters=48 tolerance=0.05
