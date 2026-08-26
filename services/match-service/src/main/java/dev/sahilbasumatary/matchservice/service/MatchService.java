@@ -7,29 +7,35 @@ import dev.sahilbasumatary.matchservice.dto.request.RecordPointRequest;
 import dev.sahilbasumatary.matchservice.dto.request.UpdateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.UpdateMatchStatusRequest;
 import dev.sahilbasumatary.matchservice.dto.response.CompletedMatchFeedResponse;
+import dev.sahilbasumatary.matchservice.dto.response.MatchCursorResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchEventLogResponse;
+import dev.sahilbasumatary.matchservice.dto.response.MatchLiveScoreResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchPointResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
 import dev.sahilbasumatary.matchservice.entity.Match;
 import dev.sahilbasumatary.matchservice.entity.MatchEventType;
 import dev.sahilbasumatary.matchservice.entity.MatchPlayer;
-import dev.sahilbasumatary.matchservice.entity.MatchPoint;
 import dev.sahilbasumatary.matchservice.entity.MatchStatus;
 import dev.sahilbasumatary.matchservice.entity.PlayerSide;
 import dev.sahilbasumatary.matchservice.exception.DuplicateResourceException;
 import dev.sahilbasumatary.matchservice.exception.InvalidMatchStateException;
 import dev.sahilbasumatary.matchservice.exception.ResourceNotFoundException;
 import dev.sahilbasumatary.matchservice.metrics.MatchTimers;
+import dev.sahilbasumatary.matchservice.repository.CommittedPoint;
 import dev.sahilbasumatary.matchservice.repository.MatchEventLogRepository;
+import dev.sahilbasumatary.matchservice.repository.MatchPointCommitStore;
 import dev.sahilbasumatary.matchservice.repository.MatchPointRepository;
 import dev.sahilbasumatary.matchservice.repository.MatchRepository;
+import dev.sahilbasumatary.matchservice.repository.PointMatchSnapshot;
 import dev.sahilbasumatary.matchservice.web.PageBounds;
 import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -51,6 +57,9 @@ public class MatchService {
     private final MatchRealtimeNotifier realtimeNotifier;
     private final MatchEventDispatch eventDispatch;
     private final MatchTimers matchTimers;
+    private final MatchPointCommitStore pointCommitStore;
+    private final MatchTickerCache tickerCache;
+    private final MatchEventReplayCache eventReplayCache;
 
     public MatchService(
             MatchRepository matchRepository,
@@ -60,7 +69,10 @@ public class MatchService {
             MatchEventLogService eventLogService,
             MatchRealtimeNotifier realtimeNotifier,
             MatchEventDispatch eventDispatch,
-            MatchTimers matchTimers) {
+            MatchTimers matchTimers,
+            MatchPointCommitStore pointCommitStore,
+            MatchTickerCache tickerCache,
+            MatchEventReplayCache eventReplayCache) {
         this.matchRepository = matchRepository;
         this.pointRepository = pointRepository;
         this.eventLogRepository = eventLogRepository;
@@ -69,6 +81,9 @@ public class MatchService {
         this.realtimeNotifier = realtimeNotifier;
         this.eventDispatch = eventDispatch;
         this.matchTimers = matchTimers;
+        this.pointCommitStore = pointCommitStore;
+        this.tickerCache = tickerCache;
+        this.eventReplayCache = eventReplayCache;
     }
 
     @Transactional
@@ -111,7 +126,8 @@ public class MatchService {
                             : matchRepository.findByTournamentIdAndStatusOrderByScheduledAtDesc(
                                     tournamentId, status, pageable);
         } else if (tournamentId != null) {
-            matches = matchRepository.findByTournamentIdOrderByScheduledAtAsc(tournamentId, pageable);
+            matches =
+                    matchRepository.findByTournamentIdOrderByScheduledAtAsc(tournamentId, pageable);
         } else if (status != null) {
             matches =
                     status == MatchStatus.SCHEDULED
@@ -121,6 +137,33 @@ public class MatchService {
             matches = matchRepository.findAllByOrderByScheduledAtAsc(pageable);
         }
         return matches.stream().map(MatchResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MatchResponse> listTicker() {
+        Optional<List<MatchResponse>> cached = tickerCache.read();
+        if (cached.filter(rows -> !rows.isEmpty()).isPresent()) {
+            return cached.get();
+        }
+        List<MatchResponse> live = new ArrayList<>(listMatches(MatchStatus.IN_PROGRESS, null, 0, 12));
+        if (live.size() < MatchTickerCache.MAX_ITEMS) {
+            live.addAll(listMatches(MatchStatus.SUSPENDED, null, 0, MatchTickerCache.MAX_ITEMS - live.size()));
+        }
+        if (live.size() > MatchTickerCache.MAX_ITEMS) {
+            live = List.copyOf(live.subList(0, MatchTickerCache.MAX_ITEMS));
+        }
+        tickerCache.write(live);
+        return live;
+    }
+
+    @Transactional(readOnly = true)
+    public MatchLiveScoreResponse getLiveScore(UUID matchId) {
+        return MatchLiveScoreResponse.from(getMatch(matchId));
+    }
+
+    @Transactional(readOnly = true)
+    public MatchCursorResponse getLiveCursor(UUID matchId) {
+        return MatchCursorResponse.from(getMatch(matchId));
     }
 
     @Transactional(readOnly = true)
@@ -221,43 +264,52 @@ public class MatchService {
     public MatchPointResponse recordPoint(UUID matchId, RecordPointRequest request) {
         Timer.Sample sample = Timer.start();
         try {
-            Match match = findMatch(matchId);
-            stateMachine.assertCanRecordPoint(match.getStatus());
-            assertPlayerInMatch(match, request.serverId());
-            assertPlayerInMatch(match, request.winnerId());
-            MatchPoint point = new MatchPoint();
-            point.setSequenceNumber(match.getPointCount() + 1);
-            point.setServerId(request.serverId());
-            point.setWinnerId(request.winnerId());
-            point.setOutcome(request.outcome());
-            point.setRallyLength(request.rallyLength());
-            point.setScoreSnapshot(request.scoreSnapshot());
-            point.setShotSummary(request.shotSummary());
-            point.setMatch(match);
-            match.setCurrentScore(request.scoreSnapshot());
-            match.setPointCount(match.getPointCount() + 1);
-            pointRepository.save(point);
-            matchRepository.save(match);
-            long sequence =
-                    eventLogService.append(
-                            match, MatchEventType.POINT_RECORDED, pointPayload(point));
-            MatchResponse response = MatchResponse.from(match);
-            publish(
-                    matchId,
+            PointMatchSnapshot snapshot = pointCommitStore.loadSnapshot(matchId);
+            stateMachine.assertCanRecordPoint(snapshot.status());
+            assertPlayerInSnapshot(snapshot, request.serverId());
+            assertPlayerInSnapshot(snapshot, request.winnerId());
+            MatchEvent event =
                     MatchEvent.pointRecorded(
                             matchId,
-                            match.getStatus().name(),
-                            point.getSequenceNumber(),
-                            point.getWinnerId(),
-                            point.getOutcome().name()),
-                    response,
-                    sequence);
+                            snapshot.status().name(),
+                            null,
+                            request.winnerId(),
+                            request.outcome().name());
+            CommittedPoint committed = pointCommitStore.commit(snapshot, request, event);
+            MatchResponse response =
+                    new MatchResponse(
+                            snapshot.id(),
+                            snapshot.externalId(),
+                            snapshot.tournamentId(),
+                            snapshot.surface(),
+                            snapshot.status(),
+                            snapshot.bestOfSets(),
+                            snapshot.scheduledAt(),
+                            snapshot.startedAt(),
+                            snapshot.endedAt(),
+                            snapshot.metadata(),
+                            committed.currentScore(),
+                            snapshot.players(),
+                            committed.sequenceNumber(),
+                            committed.liveSequence(),
+                            snapshot.createdAt(),
+                            committed.updatedAt());
+            eventDispatch.fanoutAfterCommit(matchId, event, response);
             log.info(
                     "Recorded point matchId={} sequence={} winnerId={}",
                     matchId,
-                    point.getSequenceNumber(),
-                    point.getWinnerId());
-            return MatchPointResponse.from(point);
+                    committed.sequenceNumber(),
+                    request.winnerId());
+            return new MatchPointResponse(
+                    committed.pointId(),
+                    committed.sequenceNumber(),
+                    request.serverId(),
+                    request.winnerId(),
+                    request.outcome(),
+                    request.rallyLength(),
+                    request.scoreSnapshot(),
+                    request.shotSummary() == null ? Map.of() : request.shotSummary(),
+                    committed.recordedAt());
         } finally {
             sample.stop(matchTimers.recordPoint());
         }
@@ -276,12 +328,20 @@ public class MatchService {
         findMatch(matchId);
         int clamped = Math.max(1, Math.min(limit, 1_000));
         long cursor = Math.max(0, afterSequence);
-        return eventLogRepository
-                .findByMatchIdAndSequenceNumberGreaterThanOrderBySequenceNumberAsc(
-                        matchId, cursor, PageRequest.of(0, clamped))
-                .stream()
-                .map(MatchEventLogResponse::from)
-                .toList();
+        return eventReplayCache
+                .read(matchId, cursor, clamped)
+                .orElseGet(
+                        () -> {
+                            List<MatchEventLogResponse> rows =
+                                    eventLogRepository
+                                            .findByMatchIdAndSequenceNumberGreaterThanOrderBySequenceNumberAsc(
+                                                    matchId, cursor, PageRequest.of(0, clamped))
+                                            .stream()
+                                            .map(MatchEventLogResponse::from)
+                                            .toList();
+                            eventReplayCache.write(matchId, cursor, clamped, rows);
+                            return rows;
+                        });
     }
 
     @Transactional(readOnly = true)
@@ -325,14 +385,17 @@ public class MatchService {
         Set<PlayerSide> sides = new HashSet<>();
         for (CreateMatchPlayerRequest player : players) {
             if (!playerIds.add(player.playerId())) {
-                throw new InvalidMatchStateException("A match cannot contain the same player twice");
+                throw new InvalidMatchStateException(
+                        "A match cannot contain the same player twice");
             }
             if (!sides.add(player.side())) {
-                throw new InvalidMatchStateException("A match must contain one HOME and one AWAY player");
+                throw new InvalidMatchStateException(
+                        "A match must contain one HOME and one AWAY player");
             }
         }
         if (!sides.containsAll(Set.of(PlayerSide.HOME, PlayerSide.AWAY))) {
-            throw new InvalidMatchStateException("A match must contain one HOME and one AWAY player");
+            throw new InvalidMatchStateException(
+                    "A match must contain one HOME and one AWAY player");
         }
     }
 
@@ -358,7 +421,8 @@ public class MatchService {
     }
 
     private void assertMutable(Match match) {
-        if (match.getStatus() == MatchStatus.COMPLETED || match.getStatus() == MatchStatus.CANCELLED) {
+        if (match.getStatus() == MatchStatus.COMPLETED
+                || match.getStatus() == MatchStatus.CANCELLED) {
             throw new InvalidMatchStateException(
                     "Completed or cancelled matches cannot be changed");
         }
@@ -374,23 +438,21 @@ public class MatchService {
         }
     }
 
-    private void assertPlayerInMatch(Match match, UUID playerId) {
-        boolean exists =
-                match.getPlayers().stream().anyMatch(player -> player.getPlayerId().equals(playerId));
-        if (!exists) {
-            throw new InvalidMatchStateException("Player " + playerId + " is not part of this match");
+    private void assertPlayerInSnapshot(PointMatchSnapshot snapshot, UUID playerId) {
+        if (!snapshot.hasPlayer(playerId)) {
+            throw new InvalidMatchStateException(
+                    "Player " + playerId + " is not part of this match");
         }
     }
 
-    private Map<String, Object> pointPayload(MatchPoint point) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("sequenceNumber", point.getSequenceNumber());
-        payload.put("serverId", point.getServerId());
-        payload.put("winnerId", point.getWinnerId());
-        payload.put("outcome", point.getOutcome());
-        payload.put("rallyLength", point.getRallyLength());
-        payload.put("scoreSnapshot", point.getScoreSnapshot());
-        return payload;
+    private void assertPlayerInMatch(Match match, UUID playerId) {
+        boolean exists =
+                match.getPlayers().stream()
+                        .anyMatch(player -> player.getPlayerId().equals(playerId));
+        if (!exists) {
+            throw new InvalidMatchStateException(
+                    "Player " + playerId + " is not part of this match");
+        }
     }
 
     private void publish(

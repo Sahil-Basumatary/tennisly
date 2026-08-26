@@ -39,6 +39,10 @@ public class MatchEventDispatch {
 
     public void publish(UUID matchId, MatchEvent event, MatchResponse response) {
         outboxWriter.enqueue(event);
+        fanoutAfterCommit(matchId, event, response);
+    }
+
+    public void fanoutAfterCommit(UUID matchId, MatchEvent event, MatchResponse response) {
         scheduleFanout(matchId, event, response);
     }
 
@@ -57,19 +61,13 @@ public class MatchEventDispatch {
     }
 
     private void submitFanout(
-            UUID matchId,
-            MatchEvent event,
-            MatchResponse response,
-            Instant commitObservedAt) {
+            UUID matchId, MatchEvent event, MatchResponse response, Instant commitObservedAt) {
         matchFanoutScheduler.execute(
                 matchId, () -> publishAfterCommit(matchId, event, response, commitObservedAt));
     }
 
     private void publishAfterCommit(
-            UUID matchId,
-            MatchEvent event,
-            MatchResponse response,
-            Instant commitObservedAt) {
+            UUID matchId, MatchEvent event, MatchResponse response, Instant commitObservedAt) {
         try {
             realtimeNotifier.publish(
                     MatchLiveEventResponse.from(event, response, commitObservedAt));

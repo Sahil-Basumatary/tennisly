@@ -4,7 +4,9 @@ import dev.sahilbasumatary.matchservice.dto.request.CreateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.RecordPointRequest;
 import dev.sahilbasumatary.matchservice.dto.request.UpdateMatchRequest;
 import dev.sahilbasumatary.matchservice.dto.request.UpdateMatchStatusRequest;
+import dev.sahilbasumatary.matchservice.dto.response.MatchCursorResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchEventLogResponse;
+import dev.sahilbasumatary.matchservice.dto.response.MatchLiveScoreResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchPointResponse;
 import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
 import dev.sahilbasumatary.matchservice.entity.MatchStatus;
@@ -54,6 +56,12 @@ public class MatchController {
         return ResponseEntity.ok(matchService.listMatches(status, tournamentId, page, size));
     }
 
+    @GetMapping("/ticker")
+    public ResponseEntity<List<MatchResponse>> ticker() {
+        log.debug("GET /api/matches/ticker");
+        return MatchPublicCache.ticker(matchService.listTicker());
+    }
+
     @GetMapping("/external/{externalId}")
     public ResponseEntity<MatchResponse> getMatchByExternalId(@PathVariable String externalId) {
         log.debug("GET /api/matches/external/{}", externalId);
@@ -64,6 +72,26 @@ public class MatchController {
     public ResponseEntity<MatchResponse> getMatch(@PathVariable UUID matchId) {
         log.debug("GET /api/matches/{}", matchId);
         return ResponseEntity.ok(matchService.getMatch(matchId));
+    }
+
+    @GetMapping("/{matchId}/live")
+    public ResponseEntity<MatchLiveScoreResponse> getLiveScore(@PathVariable UUID matchId) {
+        log.debug("GET /api/matches/{}/live", matchId);
+        MatchLiveScoreResponse live = matchService.getLiveScore(matchId);
+        return MatchPublicCache.withEtag(
+                live,
+                "live-" + live.id() + "-" + live.liveSequence(),
+                MatchPublicCache.liveControl(live.status()));
+    }
+
+    @GetMapping("/{matchId}/cursor")
+    public ResponseEntity<MatchCursorResponse> getLiveCursor(@PathVariable UUID matchId) {
+        log.debug("GET /api/matches/{}/cursor", matchId);
+        MatchCursorResponse cursor = matchService.getLiveCursor(matchId);
+        return MatchPublicCache.withEtag(
+                cursor,
+                "cursor-" + cursor.id() + "-" + cursor.liveSequence(),
+                MatchPublicCache.liveControl(cursor.status()));
     }
 
     @PutMapping("/{matchId}")
@@ -104,6 +132,8 @@ public class MatchController {
                 matchId,
                 afterSequence,
                 limit);
-        return ResponseEntity.ok(matchService.listEvents(matchId, afterSequence, limit));
+        return ResponseEntity.ok()
+                .header("Cache-Control", MatchPublicCache.PRIVATE_NO_STORE)
+                .body(matchService.listEvents(matchId, afterSequence, limit));
     }
 }

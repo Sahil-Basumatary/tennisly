@@ -22,21 +22,25 @@ public class MatchRealtimeNotifier {
     private final SimpMessagingTemplate messagingTemplate;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final MatchTickerCache tickerCache;
     private final String liveEventChannel;
 
     public MatchRealtimeNotifier(
             SimpMessagingTemplate messagingTemplate,
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
+            MatchTickerCache tickerCache,
             @Value("${tennisly.websocket.redis-channel:match-live-events}") String liveEventChannel) {
         this.messagingTemplate = messagingTemplate;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.tickerCache = tickerCache;
         this.liveEventChannel = liveEventChannel;
     }
 
     public void publish(MatchLiveEventResponse event) {
         cacheSnapshot(event.snapshot());
+        tickerCache.remember(event.snapshot());
         String json;
         try {
             json = objectMapper.writeValueAsString(event);
@@ -92,7 +96,7 @@ public class MatchRealtimeNotifier {
         return "/topic/matches/" + matchId;
     }
 
-    private String cacheKey(UUID matchId) {
+    public static String cacheKey(UUID matchId) {
         return "live-match:" + matchId;
     }
 }

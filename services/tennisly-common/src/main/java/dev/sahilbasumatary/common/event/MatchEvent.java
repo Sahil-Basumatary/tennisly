@@ -8,6 +8,7 @@ public class MatchEvent extends BaseEvent {
     public static final String MATCH_UPDATED = "MATCH_UPDATED";
     public static final String MATCH_STATUS_CHANGED = "MATCH_STATUS_CHANGED";
     public static final String MATCH_POINT_RECORDED = "MATCH_POINT_RECORDED";
+    public static final String MATCH_ARCHIVE_COMPLETED = "MATCH_ARCHIVE_COMPLETED";
 
     private UUID matchId;
     private String status;
@@ -48,6 +49,14 @@ public class MatchEvent extends BaseEvent {
         event.pointSequence = pointSequence;
         event.winnerId = winnerId;
         event.summary = summary;
+        return event;
+    }
+
+    public static MatchEvent archiveCompleted(
+            UUID matchId, UUID jobId, long acceptedRows, String checksum) {
+        MatchEvent event = new MatchEvent(MATCH_ARCHIVE_COMPLETED, matchId);
+        event.status = "ARCHIVED";
+        event.summary = jobId + " accepted=" + acceptedRows + " sha256=" + checksum;
         return event;
     }
 

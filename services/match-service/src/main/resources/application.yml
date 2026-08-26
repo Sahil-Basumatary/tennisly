@@ -1,5 +1,8 @@
 server:
   port: ${SERVER_PORT:18084}
+  tomcat:
+    max-http-form-post-size: ${TOMCAT_MAX_POST:-1}
+    max-swallow-size: ${TOMCAT_MAX_SWALLOW:-1}
 spring:
   application:
     name: match-service
@@ -52,6 +55,9 @@ tennisly:
   internal-token: ${GATEWAY_INTERNAL_TOKEN:}
   kafka:
     enabled: ${TENNISLY_KAFKA_ENABLED:true}
+  archive:
+    max-rows: ${ARCHIVE_MAX_ROWS:1000000}
+    max-bytes: ${ARCHIVE_MAX_BYTES:268435456}
 eureka:
   client:
     enabled: ${EUREKA_CLIENT_ENABLED:true}

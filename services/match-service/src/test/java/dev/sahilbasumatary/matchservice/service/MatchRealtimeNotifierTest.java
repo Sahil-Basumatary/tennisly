@@ -32,9 +32,10 @@ class MatchRealtimeNotifierTest {
     @SuppressWarnings("unchecked")
     private final ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final MatchTickerCache tickerCache = mock(MatchTickerCache.class);
     private final MatchRealtimeNotifier notifier =
             new MatchRealtimeNotifier(
-                    messagingTemplate, redisTemplate, objectMapper, CHANNEL);
+                    messagingTemplate, redisTemplate, objectMapper, tickerCache, CHANNEL);
 
     @Test
     void publishesThroughRedisWhenLiveNodesAreSubscribed() {
@@ -46,6 +47,7 @@ class MatchRealtimeNotifierTest {
 
         verify(redisTemplate).convertAndSend(CHANNEL, objectMapperValue(event));
         verifyNoInteractions(messagingTemplate);
+        verify(tickerCache).remember(event.snapshot());
     }
 
     @Test

@@ -7,15 +7,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import dev.sahilbasumatary.matchservice.dto.response.MatchResponse;
 import dev.sahilbasumatary.matchservice.entity.Match;
 import dev.sahilbasumatary.matchservice.entity.MatchStatus;
 import dev.sahilbasumatary.matchservice.entity.Surface;
 import dev.sahilbasumatary.matchservice.metrics.MatchTimers;
 import dev.sahilbasumatary.matchservice.repository.MatchEventLogRepository;
+import dev.sahilbasumatary.matchservice.repository.MatchPointCommitStore;
 import dev.sahilbasumatary.matchservice.repository.MatchPointRepository;
 import dev.sahilbasumatary.matchservice.repository.MatchRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,9 @@ class MatchListQueryTest {
     @Mock private MatchEventLogService eventLogService;
     @Mock private MatchRealtimeNotifier realtimeNotifier;
     @Mock private MatchEventDispatch eventDispatch;
+    @Mock private MatchPointCommitStore pointCommitStore;
+    @Mock private MatchTickerCache tickerCache;
+    @Mock private MatchEventReplayCache eventReplayCache;
 
     private MatchService matchService;
 
@@ -48,7 +54,10 @@ class MatchListQueryTest {
                         eventLogService,
                         realtimeNotifier,
                         eventDispatch,
-                        new MatchTimers(new SimpleMeterRegistry()));
+                        new MatchTimers(new SimpleMeterRegistry()),
+                        pointCommitStore,
+                        tickerCache,
+                        eventReplayCache);
     }
 
     @Test
@@ -89,5 +98,20 @@ class MatchListQueryTest {
         verify(matchRepository, never())
                 .findByStatusOrderByScheduledAtAsc(
                         eq(MatchStatus.IN_PROGRESS), any(Pageable.class));
+    }
+
+    @Test
+    void tickerReturnsTheCachedAggregateWithoutCatalogueFanOut() {
+        Match match = new Match();
+        match.setId(UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        match.setSurface(Surface.HARD);
+        match.setStatus(MatchStatus.IN_PROGRESS);
+        when(tickerCache.read()).thenReturn(Optional.of(List.of(MatchResponse.from(match))));
+
+        var rows = matchService.listTicker();
+
+        assertEquals(1, rows.size());
+        verify(matchRepository, never()).findByStatusOrderByScheduledAtDesc(any(), any());
+        verify(tickerCache, never()).write(any());
     }
 }
