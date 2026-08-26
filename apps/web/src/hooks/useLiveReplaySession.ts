@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { recoverEventCursor, unseenPointSequences } from "@/lib/live-replay-sync";
+import {
+  clampJitter,
+  livePollIntervalMs,
+  liveTransport,
+  reconnectDelayMs,
+} from "@/lib/live-poll";
+import type { LiveCursorDocument } from "@/lib/live-score-document";
+import { isSealedPoint } from "@/lib/replay-cache-policy";
+import { missingPointRange, needsEventRecovery, recoverEventCursor } from "@/lib/live-replay-sync";
 import { getPointReplay } from "@/services/replay";
 import { useReplaySession } from "@/stores/replaySession";
 
@@ -26,16 +34,27 @@ function parseSequence(body: string): number | null {
   }
 }
 
-async function fetchLedger(matchId: string): Promise<Array<{ sequence?: unknown; sequenceNumber?: unknown }>> {
-  const response = await fetch(`/api/matches/${matchId}/points`, { cache: "no-store" });
-  if (!response.ok) return [];
-  const body: unknown = await response.json();
-  return Array.isArray(body) ? body : [];
+async function fetchCursor(
+  matchId: string,
+  etag?: string,
+): Promise<{ cursor: LiveCursorDocument | null; etag?: string; notModified: boolean; ok: boolean }> {
+  const headers: HeadersInit = {};
+  if (etag) headers["If-None-Match"] = etag;
+  const response = await fetch(`/api/matches/${matchId}/cursor`, { headers, cache: "no-store" });
+  const nextTag = response.headers.get("ETag") ?? etag;
+  if (response.status === 304) {
+    return { cursor: null, etag: nextTag, notModified: true, ok: true };
+  }
+  if (!response.ok) {
+    return { cursor: null, etag: nextTag, notModified: false, ok: false };
+  }
+  const body = (await response.json()) as LiveCursorDocument;
+  return { cursor: body, etag: nextTag, notModified: false, ok: true };
 }
 
 /**
- * WS is a wake-up; the point ledger is the source of truth. Polling covers
- * brokers that drop silently. Appends are ordered and idempotent.
+ * Public live sessions poll a compact sequence cursor. The event log remains
+ * the gap-recovery plane; WebSocket is an opt-in wake-up, not the default fanout.
  */
 export function useLiveReplaySession({
   matchId,
@@ -44,18 +63,46 @@ export function useLiveReplaySession({
   const [connection, setConnection] = useState<LiveConnection>("idle");
   const syncingRef = useRef(false);
   const cursorRef = useRef(0);
+  const pointsPlayedRef = useRef(0);
+  const etagRef = useRef<string | undefined>(undefined);
+  const failuresRef = useRef(0);
 
-  const syncPoints = useCallback(async () => {
+  const syncFromCursor = useCallback(async () => {
     if (!matchId || syncingRef.current) return;
     syncingRef.current = true;
     try {
-      const ledger = await fetchLedger(matchId);
-      const have = useReplaySession.getState().points.map((point) => point.sequence);
-      const missing = unseenPointSequences(have, ledger);
-      for (const sequence of missing) {
-        const point = await getPointReplay(matchId, sequence);
-        if (point) useReplaySession.getState().appendPointReplay(point);
+      const result = await fetchCursor(matchId, etagRef.current);
+      if (result.etag) etagRef.current = result.etag;
+      if (!result.ok) {
+        failuresRef.current += 1;
+        setConnection("reconnecting");
+        return;
       }
+      failuresRef.current = 0;
+      setConnection("live");
+      if (result.notModified || !result.cursor) return;
+      const liveSequence = Number(result.cursor.liveSequence) || 0;
+      const pointsPlayed = Number(result.cursor.pointsPlayed) || 0;
+      if (needsEventRecovery(cursorRef.current, liveSequence)) {
+        const recovered = await recoverEventCursor(matchId, cursorRef.current);
+        cursorRef.current = Math.max(recovered, liveSequence);
+      } else if (liveSequence > cursorRef.current) {
+        cursorRef.current = liveSequence;
+      }
+      if (pointsPlayed !== pointsPlayedRef.current) {
+        const have = useReplaySession.getState().points.map((point) => point.sequence);
+        const missing = missingPointRange(have, pointsPlayed);
+        for (const sequence of missing) {
+          const point = await getPointReplay(matchId, sequence, {
+            sealed: isSealedPoint(sequence, pointsPlayed),
+          });
+          if (point) useReplaySession.getState().appendPointReplay(point);
+        }
+        pointsPlayedRef.current = pointsPlayed;
+      }
+    } catch {
+      failuresRef.current += 1;
+      setConnection("reconnecting");
     } finally {
       syncingRef.current = false;
     }
@@ -67,19 +114,42 @@ export function useLiveReplaySession({
       return;
     }
     setConnection("live");
-    void syncPoints();
-    const poll = window.setInterval(() => {
-      void syncPoints();
-    }, 4000);
-    return () => window.clearInterval(poll);
-  }, [enabled, matchId, syncPoints]);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = () => {
+      if (cancelled) return;
+      void syncFromCursor().finally(() => {
+        if (cancelled) return;
+        const hidden = document.visibilityState === "hidden";
+        const wait =
+          failuresRef.current > 0
+            ? reconnectDelayMs(failuresRef.current - 1)
+            : livePollIntervalMs(hidden, clampJitter());
+        timer = setTimeout(poll, wait);
+      });
+    };
+    timer = setTimeout(poll, clampJitter());
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        if (timer) clearTimeout(timer);
+        poll();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [enabled, matchId, syncFromCursor]);
 
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_MATCH_WS_URL;
-    if (!enabled || !matchId || !url) return;
+    if (!enabled || !matchId || !url || liveTransport() !== "hybrid") return;
     let stopped = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let socket: WebSocket | null = null;
+    let attempts = 0;
 
     function connect() {
       if (stopped || !url) return;
@@ -87,6 +157,7 @@ export function useLiveReplaySession({
       socket = ws;
       ws.addEventListener("open", () => {
         if (!stopped) setConnection("live");
+        attempts = 0;
         ws.send(
           stompFrame("CONNECT", {
             "accept-version": "1.2,1.1,1.0",
@@ -103,12 +174,7 @@ export function useLiveReplaySession({
               destination: `/topic/matches/${matchId}`,
             }),
           );
-          if (cursorRef.current > 0) {
-            void recoverEventCursor(matchId!, cursorRef.current).then((next) => {
-              cursorRef.current = next;
-              void syncPoints();
-            });
-          }
+          void syncFromCursor();
           return;
         }
         if (!text.includes("MESSAGE")) return;
@@ -117,19 +183,20 @@ export function useLiveReplaySession({
         if (sequence != null && sequence > cursorRef.current) {
           cursorRef.current = sequence;
         }
-        void syncPoints();
+        void syncFromCursor();
       });
       ws.addEventListener("close", () => {
         if (stopped) return;
         setConnection("reconnecting");
         socket = null;
+        attempts += 1;
         reconnectTimer = setTimeout(() => {
           void recoverEventCursor(matchId!, cursorRef.current).then((next) => {
             cursorRef.current = next;
-            void syncPoints();
+            void syncFromCursor();
             connect();
           });
-        }, 400);
+        }, reconnectDelayMs(attempts));
       });
     }
 
@@ -142,7 +209,7 @@ export function useLiveReplaySession({
       }
       socket?.close();
     };
-  }, [enabled, matchId, syncPoints]);
+  }, [enabled, matchId, syncFromCursor]);
 
   return { connection };
 }

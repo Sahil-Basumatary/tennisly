@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchUpstreamMatchEvents, MatchUpstreamError } from "@/lib/match-upstream";
 import { isReplayMatchUuid } from "@/lib/replay-index";
+import { singleFlight } from "@/lib/single-flight";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -16,8 +17,12 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "afterSequence and limit must be numbers" }, { status: 400 });
   }
   try {
-    const events = await fetchUpstreamMatchEvents(id, afterSequence, limit);
-    return NextResponse.json(events, { headers: { "Cache-Control": "no-store" } });
+    const events = await singleFlight(`events:${id}:${afterSequence}:${limit}`, () =>
+      fetchUpstreamMatchEvents(id, afterSequence, limit),
+    );
+    return NextResponse.json(events, {
+      headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate" },
+    });
   } catch (err) {
     const status = err instanceof MatchUpstreamError ? err.status ?? 502 : 502;
     return NextResponse.json({ error: "match-service unavailable" }, { status });

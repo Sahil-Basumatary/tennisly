@@ -4,6 +4,7 @@ import {
   SINGLES_HALF_WIDTH_METRES,
 } from "@/lib/court-geometry";
 import { isReplayMatchUuid } from "@/lib/replay-index";
+import { REPLAY_ENGINE_VERSION } from "@/lib/replay-cache-policy";
 import type {
   MatchReplay,
   PointReplay,
@@ -154,14 +155,17 @@ export async function getMatchReplay(matchId?: string): Promise<MatchReplay | nu
 export async function getPointReplay(
   matchId: string,
   sequence: number,
+  options?: { sealed?: boolean },
 ): Promise<PointReplay | null> {
   if (!isReplayMatchUuid(matchId) || !Number.isSafeInteger(sequence) || sequence < 1) {
     return null;
   }
   try {
-    const response = await fetch(`/api/replays/matches/${matchId}/points/${sequence}`, {
-      cache: "no-store",
-    });
+    const params = new URLSearchParams({ engine: REPLAY_ENGINE_VERSION });
+    const response = await fetch(
+      `/api/replays/matches/${matchId}/points/${sequence}?${params}`,
+      { cache: options?.sealed ? "force-cache" : "no-store" },
+    );
     if (!response.ok) return null;
     return normalizePointReplay(await response.json());
   } catch {

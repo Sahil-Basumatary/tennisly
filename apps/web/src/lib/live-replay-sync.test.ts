@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { advanceCursorFromEvents, unseenPointSequences } from "@/lib/live-replay-sync";
+import {
+  advanceCursorFromEvents,
+  missingPointRange,
+  needsEventRecovery,
+  unseenPointSequences,
+} from "@/lib/live-replay-sync";
 import { normalizePointReplay } from "@/services/replay";
 
 describe("live replay sync", () => {
@@ -17,6 +22,27 @@ describe("live replay sync", () => {
   it("advances the reconnect cursor to the highest proven event sequence", () => {
     expect(advanceCursorFromEvents(4, [{ sequence: 2 }, { sequence: 9 }, { sequence: "x" }])).toBe(9);
     expect(advanceCursorFromEvents(4, [])).toBe(4);
+  });
+
+  it("fills cursor gaps from pointsPlayed without a full ledger", () => {
+    expect(missingPointRange([1, 2], 5)).toEqual([3, 4, 5]);
+    expect(missingPointRange([1, 3], 4)).toEqual([2, 4]);
+    expect(missingPointRange([1, 2, 3], 3)).toEqual([]);
+    expect(missingPointRange([], 20, 4)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("suppresses duplicate sequences already on the tape", () => {
+    expect(unseenPointSequences([1, 2, 3], [{ sequenceNumber: 2 }, { sequenceNumber: 3 }])).toEqual(
+      [],
+    );
+  });
+
+  it("skips event recovery on join and on a single-sequence advance", () => {
+    expect(needsEventRecovery(0, 12)).toBe(false);
+    expect(needsEventRecovery(4, 5)).toBe(false);
+    expect(needsEventRecovery(4, 4)).toBe(false);
+    expect(needsEventRecovery(4, 6)).toBe(true);
+    expect(needsEventRecovery(4, 20)).toBe(true);
   });
 });
 

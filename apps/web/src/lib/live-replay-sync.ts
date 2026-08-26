@@ -1,3 +1,5 @@
+import { MISSING_POINT_FETCH_CAP } from "@/lib/live-poll";
+
 type LedgerRow = {
   sequence?: unknown;
   sequenceNumber?: unknown;
@@ -21,6 +23,27 @@ export function unseenPointSequences(
     seen.add(sequence);
   }
   return missing.sort((a, b) => a - b);
+}
+
+export function missingPointRange(
+  have: Iterable<number>,
+  pointsPlayed: number,
+  cap = MISSING_POINT_FETCH_CAP,
+): number[] {
+  const seen = new Set(have);
+  const missing: number[] = [];
+  const last = Math.max(0, pointsPlayed);
+  for (let sequence = 1; sequence <= last && missing.length < cap; sequence += 1) {
+    if (!seen.has(sequence)) missing.push(sequence);
+  }
+  return missing;
+}
+
+/** Join and one-step advances trust the compact cursor; only a skipped sequence hits /events. */
+export function needsEventRecovery(cursor: number, liveSequence: number): boolean {
+  if (!Number.isSafeInteger(liveSequence) || liveSequence <= 0) return false;
+  if (!Number.isSafeInteger(cursor) || cursor <= 0) return false;
+  return liveSequence > cursor + 1;
 }
 
 /** After a WS drop, the event feed is the cursor — take the max sequence we can prove. */
