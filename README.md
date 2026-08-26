@@ -16,7 +16,7 @@
 - Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, and Babylon.js
 - Java 21 and Spring Boot services for tennis data, matches, replays, analytics, users, and notifications
 - PostgreSQL for match, account, and delivery state
-- Redis for caching and live match updates
+- Redis for match snapshots, the live ticker aggregate, a 1s event-recovery page, and pub/sub
 - Kafka for events between services
 - Elasticsearch for match and player analytics
 - MinIO locally and S3-compatible storage for replay files
@@ -36,7 +36,8 @@ Next.js web app
 
 BallDontLie + Live Tennis API -> tennis data -> matches
 matches -> Kafka -> replays, analytics, and notifications
-live match updates -> Redis and WebSocket -> web app
+public live scores -> Vercel CDN HTTP (sequence ETag) -> browsers
+optional WebSocket wake-up -> Redis pub/sub -> capped cohort
 ```
 
 ## Run locally
@@ -85,6 +86,17 @@ pnpm lint
 pnpm --filter @tennisly/web type-check
 pnpm --filter @tennisly/web test
 make e2e
+```
+
+Local performance numbers live in [`docs/performance.md`](docs/performance.md) and [`tests/load/baselines/`](tests/load/baselines/). Keep five labels separate: in-process latency, replay frames/s, atomic commit TPS, transactional batch points/s, and staging/promote rows/s. Near-live HTTP cache-collapse is a sixth, separate label (CDN viewer RPS vs origin RPS). The 2026-08-25 rows are historical single-run evidence. The 2026-08-26 row is the 3-fork / cold-warm v2 session. Sub-1 ms is an in-process CPU p99, not HTTP or Postgres.
+
+```bash
+make jmh
+make jmh-replay
+make jmh-archive
+make load-durable
+make load-bulk
+make perf-evidence
 ```
 
 Deployment, analytics, and contribution notes live in [`docs/`](docs/) and [`CONTRIBUTING.md`](CONTRIBUTING.md).

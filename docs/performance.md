@@ -1,6 +1,6 @@
 # Performance
 
-Measured wins on the hottest paths. Sub-1 ms is an **in-process JMH p99** target, not a public HTTP claim. SLOs: [docs/slo.md](slo.md).
+Measured wins on the hottest paths. Sub-1 ms is an **in-process JMH p99** on a CPU pipeline (decode, validation, state transition, event serialization). It is not public HTTP, not Postgres commit time, and not replay generation. SLOs: [docs/slo.md](slo.md).
 
 ## What already shipped (Week 31)
 
@@ -21,10 +21,12 @@ Public path is gateway + tennis-data + match on Render **Starter**. Auth/user st
 |---|---|
 | Catalogue k6 | `./scripts/k6-load.sh` — public GETs, 200-only, warm-up stage |
 | `/api/v1` k6 | `tests/load/public-api-v1.js` — needs API key + warm user-service |
-| JMH | `make jmh` — shaded uber-jar, 2 JVM forks, p99 < 1 ms |
+| JMH | `make jmh` — shaded uber-jar, 2 JVM forks, in-process CPU p99 < 1 ms |
 | Correlation | `traceparent` / `X-Request-Id` from BFF through gateway |
-| Live ticker | Client fetch of `/api/matches/ticker` (SWR 5s / 15s), not a full match list on every page |
-| WebSocket | `NEXT_PUBLIC_MATCH_WS_URL` STOMP `/topic/matches/{id}` for deltas |
+| Live ticker | Anonymous CDN cache of `/api/matches/ticker` (`s-maxage=3`, ETag/304) |
+| Live scores | Compact `/api/matches/{id}/live` and `/cursor` (`s-maxage=2`); completed matches immutable |
+| Recovery | `GET /api/matches/{id}/events?afterSequence=` stays private `no-store` |
+| WebSocket | Opt-in (`NEXT_PUBLIC_LIVE_TRANSPORT=hybrid`); HTTP is the public default |
 | Reports | `.run/performance/` (gitignored) |
 
 ```bash
@@ -38,6 +40,28 @@ Scenarios: `smoke` (30s, 1 VU), `load` (ramp to 8), `burst` (20 VUs), `soak` (30
 
 JFR is local-only: `JFR_PID=... make jfr`. Never expose JFR or Prometheus on public Render.
 
+## Same-budget near-live HTTP
+
+The public default is **near-live scores**, not 100k WebSockets. Animated court replay stays opt-in and cacheable. Writes are unchanged: HTTP 201 only after the atomic Postgres point + counter + event log + outbox commit.
+
+| Audience request | Edge TTL | Origin work |
+|---|---|---|
+| Ticker strip | `s-maxage=3`, `stale-while-revalidate=10`, 10s client / 30s hidden tab | Redis `live-ticker:v1`, else two bounded status pages (size 12) |
+| Match-centre score | `s-maxage=2` while live; 24h immutable when completed | Compact live document keyed by `liveSequence` |
+| Court point tape | sealed sequences `immutable`; newest point `s-maxage=2` | Replay-service miss only; engine version is part of the cache key |
+| Event recovery | never CDN-cached; BFF single-flight + Redis 1s private page | genuine gaps only (`liveSequence > cursor + 1`); join and one-step skip `/events` |
+
+Vercel Hobby included usage (do not burn this in a 100k demo): **100 GB Fast Data Transfer**, **10 GB Fast Origin Transfer**, **1M function invocations**, **4 CPU-hrs**. Cache hits are CDN bandwidth, not Render origin RPS. A 100k-viewer *architecture* is compact HTTP + collapse at the edge. It is not a measured 100k concurrent viewer run.
+
+Target freshness: **2–3 seconds** for match-centre scores, **~10 seconds** for the ticker. ETags exist so unchanged sequences cost a 304, not another JSON body.
+
+Do not set `ALLOW_VERCEL_LIVE_HTTP=1` against tennisly.tv unless you have checked the Hobby dashboard. Local proof is `make load-http-live` (100, then 1000) and `make load-http-live-stack` against match-service + Postgres + Redis. The Python origin is a CDN stand-in. It is not Vercel.
+
+WebSocket wake-up remains for staging: `NEXT_PUBLIC_LIVE_TRANSPORT=hybrid` and `NEXT_PUBLIC_MATCH_WS_URL`. Public production stays HTTP.
+
+Stampede dataset (2s mock cadence, recover-on-join): [tests/load/baselines/2026-08-26-http-live-cache.md](../tests/load/baselines/2026-08-26-http-live-cache.md).
+Recovery-fixed evidence (20s cadence, skip join/one-step): [tests/load/baselines/2026-08-26-http-live-recovery.md](../tests/load/baselines/2026-08-26-http-live-recovery.md).
+
 ## Regions (record, do not hide)
 
 | Piece | Typical region | Note |
@@ -45,6 +69,54 @@ JFR is local-only: `JFR_PID=... make jfr`. Never expose JFR or Prometheus on pub
 | Vercel | `lhr1` (London) | `apps/web/vercel.json` |
 | Render | Dashboard (often US) | Blueprint does not pin region |
 | Neon | Check console (`eu-west-2` in examples) | Cross-region RTT is reported, not migrated here |
+
+## Measured (2026-08-25)
+
+Replay physics: [tests/load/baselines/2026-08-25-replay-physics.md](../tests/load/baselines/2026-08-25-replay-physics.md).
+Archive tape: [tests/load/baselines/2026-08-25-archive-tape.md](../tests/load/baselines/2026-08-25-archive-tape.md).
+Atomic match writes: [tests/load/baselines/2026-08-25-durable-match-write.md](../tests/load/baselines/2026-08-25-durable-match-write.md).
+Bulk ingest: [tests/load/baselines/2026-08-25-bulk-ingest.md](../tests/load/baselines/2026-08-25-bulk-ingest.md).
+
+| Layer | What we ran | Result |
+|---|---|---|
+| Replay full pipeline (local JMH, 1 fork, Apple M1 Pro, Temurin 21.0.10) | solver + frames for one production-shaped point | **14,596 frames/s**; assembler-only 30.8M frames/s is a different claim |
+| Archive tape (local JMH, 1 fork, 1024m heap) | 1,000,000 unique generated events, 8 workers | **36.2 million-event tapes/s**; not HTTP or Postgres |
+| Durable match write (local, 8 VUs) | HTTP → point + counter + audit + outbox in Postgres | **638.67 commits/s**; p95 24.87 ms; p99 41.56 ms; 0 errors |
+| Bulk ingest (local, labelled separately) | transactional batches then COPY/staging | **5,458 points/s** batch; **20,991 rows/s** COPY of 1,000,000 source rows |
+
+`make jmh` still gates only in-process CPU p99 and point-decision throughput. Scale benches are `make jmh-replay` and `make jmh-archive`. Multi-fork evidence with JFR, cold/warm HTTP, and an ephemeral Postgres is `make perf-evidence`. Frame counts for derived replay frames/s come from [tests/load/baselines/replay-golden-sha256.txt](../tests/load/baselines/replay-golden-sha256.txt), not shell literals.
+
+The 2026-08-25 table above is **historical single-run / single-fork** evidence. Do not treat those rows as a 3-fork distribution. Replay engine 2.0.0 replaces 1.0.0 generation; stored 1.0.0 artifacts remain readable.
+
+## Measured (2026-08-26, engine 2.0 / streaming ingest)
+
+Generated from session JSON: [tests/load/baselines/2026-08-26-v2-evidence.md](../tests/load/baselines/2026-08-26-v2-evidence.md). Local floors (20% slack): [tests/load/baselines/v2-floors.json](../tests/load/baselines/v2-floors.json). Absolute floors apply to this suite, not PR CI.
+
+| Layer | What we ran | Result |
+|---|---|---|
+| In-process CPU pipeline (3 forks) | decode + validate + state machine + event serialize | p99 **13.2 µs** (not HTTP) |
+| Replay full pipeline (3 forks, engine 2.0.0) | solver + frames for one production-shaped point | **27,962 frames/s**; 50k/100k/250k ladders **missed**; assembler-only 23.3M frames/s is a different claim |
+| Archive tape (3 forks, in-memory) | 1,000,000 events | **8.9M / 27.0M events/s** at 1 / 8 workers; not Postgres |
+| Atomic match write (ephemeral PG 16, fsync=on, 1 cold + 5 warm) | HTTP → point + counter + audit + outbox | median **251.9 commits/s**; cold p99 69.7 ms; some warm runs missed 250 ms p99 (recorded, not hidden) |
+| Streaming bulk ingest (same Postgres) | transactional batches, then COPY staging + promote | median **2,744 batch points/s**; **25,608 staging rows/s**; **26,297 promote rows/s** |
+
+HTTP stages were 10 s measured windows and 12,000 COPY rows so cold vs warm p99 is comparable. That is not a 30 s soak. Durability checks (counts, distinct sequences, staging cleaned) passed on every completed run.
+
+## Measured (2026-08-26, near-live HTTP)
+
+Stampede dataset (do not overwrite): [tests/load/baselines/2026-08-26-http-live-cache.md](../tests/load/baselines/2026-08-26-http-live-cache.md). Recovery-fixed + real stack: [tests/load/baselines/2026-08-26-http-live-recovery.md](../tests/load/baselines/2026-08-26-http-live-recovery.md). Replay with `make load-http-live` and `make load-http-live-stack`.
+
+| Layer | What we ran | Result |
+|---|---|---|
+| HTTP live cache-collapse (Python origin + edge, 100 VUs, 2s cadence) | recover-on-join stampede | **65.6×** score collapse (787 / 12); **350 uncached `/events`**; 0 errors; p50 0.68 ms; p95 14.8 ms |
+| HTTP live cache-collapse (1,000 VUs, 2s cadence) | same stampede harness | **565×** score collapse (7,919 / 14); **3,568 `/events` of 3,582 origin fetches**; p99 293 ms |
+| HTTP live recovery-fixed (Python origin + edge, 100 VUs, 20s cadence) | skip join/one-step; 3s + 25s | **120×** (2,644 / 22 origin); **0 recovery**; 99.16% score hits; p50 0.88 ms; p95 5.82 ms; p99 11.5 ms |
+| HTTP live recovery-fixed (1,000 VUs, 20s cadence) | same, 5s + 25s | **604×** (14,496 / 24 origin); **0 recovery**; 99.83% score hits; p50 0.50 ms; p95 38.6 ms; p99 55.9 ms |
+| HTTP live real stack (match-service + Postgres + Redis + edge, 100 VUs) | 15s point writes | **142×** (3,554 / 25); **0 recovery**; 99.29% hits; viewer p99 14.6 ms |
+| HTTP live real stack (1,000 VUs) | same | **597×** (16,722 / 28); **0 recovery**; 99.83% hits; viewer p99 64.4 ms |
+| Vercel Hobby / 100k viewers | not run | Hobby quotas not burned; 100k is an architecture, not a measured ceiling |
+
+The 1,000-VU p99 is still the local edge stand-in, not Vercel. 99.83% score-cache hits is the s-maxage=2 / 3s-poll ceiling at 1,000 VUs (about 0.5 origin revalidates per second vs ~440 viewer RPS). 99.9% is the 10k-viewer arithmetic at the same TTLs, not a 1k-laptop gate. Court replay was not in this load.
 
 ## Measured (2026-08-22)
 
@@ -70,7 +142,7 @@ Live lists are still unbounded (1450 players / 422 rankings / 230 in-progress ma
 
 ## 100k live-delivery program
 
-The target is 100,000 concurrent WebSocket clients across multiple service and load-generator instances. It is not a current capacity claim.
+The target is 100,000 concurrent **viewers**. The public transport for that shape is compact, edge-cached HTTP, not 100k origin WebSockets. The STOMP path remains for a capped hybrid cohort. It is not a current capacity claim.
 
 The ordered protocol foundation is now:
 
@@ -118,6 +190,5 @@ Revoke can lag up to **TTL seconds** (default 30). Keep TTL short.
 
 ## Explicitly deferred
 
-- Cloudflare / edge CDN
 - Paid Redis/Neon, region migration, service consolidation
 - Analytics/replay production SLOs (no live ES/R2 yet)
