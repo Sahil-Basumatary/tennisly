@@ -17,7 +17,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "match not found" }, { status: 404 });
     }
     return NextResponse.json(match, {
-      headers: { "Cache-Control": "no-store" },
+      headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate" },
     });
   } catch (err) {
     const status = err instanceof MatchUpstreamError ? err.status ?? 502 : 502;

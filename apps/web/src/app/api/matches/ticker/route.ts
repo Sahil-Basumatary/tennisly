@@ -1,26 +1,19 @@
-import { NextResponse } from "next/server";
+import { jsonPublic, TICKER_CACHE_CONTROL, TICKER_MAX_BYTES } from "@/lib/public-http-cache";
+import { tickerUpdatedAt, toScoresFeed } from "@/lib/match-mapper";
+import { fetchTickerOriginMatches } from "@/lib/ordered-matches";
 import { MatchUpstreamError } from "@/lib/match-upstream";
-import { toScoresFeed } from "@/lib/match-mapper";
-import { fetchOrderedMatches } from "@/lib/ordered-matches";
-import { withScoresFeedHeadshots } from "@/lib/player-photos";
+import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const live = await fetchOrderedMatches("live", 12);
-    const feed =
-      live.length > 0
-        ? await withScoresFeedHeadshots(toScoresFeed(live))
-        : await withScoresFeedHeadshots(toScoresFeed(await fetchOrderedMatches(undefined, 12)));
-    return NextResponse.json(feed, {
-      headers: {
-        "Cache-Control": "private, max-age=5, stale-while-revalidate=15",
-      },
-    });
+    const matches = await fetchTickerOriginMatches();
+    const feed = toScoresFeed(matches, tickerUpdatedAt(matches) || undefined);
+    return jsonPublic(request, feed, TICKER_CACHE_CONTROL, { maxBytes: TICKER_MAX_BYTES });
   } catch (err) {
     const status = err instanceof MatchUpstreamError ? err.status ?? 502 : 502;
     return NextResponse.json(
-      { updatedAt: new Date().toISOString(), items: [] },
-      { status: status === 502 ? 200 : status },
+      { error: "match-service unavailable" },
+      { status, headers: { "Cache-Control": "private, no-store" } },
     );
   }
 }

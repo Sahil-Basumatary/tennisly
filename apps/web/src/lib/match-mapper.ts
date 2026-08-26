@@ -148,10 +148,19 @@ export function toScoreCard(match: UpstreamMatch): ScoreCard {
   };
 }
 
-export function toScoresFeed(matches: UpstreamMatch[]): ScoresFeed {
+export function tickerUpdatedAt(matches: UpstreamMatch[]): string {
+  let latest = "";
+  for (const match of matches) {
+    const stamp = match.updatedAt ?? match.scheduledAt ?? "";
+    if (stamp > latest) latest = stamp;
+  }
+  return latest;
+}
+
+export function toScoresFeed(matches: UpstreamMatch[], updatedAt?: string): ScoresFeed {
   const sorted = [...matches].sort(compareMatchesByPriority);
   return {
-    updatedAt: new Date().toISOString(),
+    updatedAt: updatedAt ?? new Date().toISOString(),
     items: sorted.map(toScoreCard),
   };
 }

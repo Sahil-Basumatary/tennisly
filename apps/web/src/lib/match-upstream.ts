@@ -1,5 +1,7 @@
 import { isReplayMatchUuid } from "@/lib/replay-index";
 import { upstreamHeaders } from "@/lib/request-id";
+import type { LiveCursorDocument, LiveScoreDocument } from "@/lib/live-score-document";
+import { toLiveCursorDocument, toLiveScoreDocument } from "@/lib/live-score-document";
 import type { UpstreamMatchPoint } from "@/lib/match-stats";
 import type { UpstreamMatch, UpstreamMatchStatus } from "@/types/match-catalogue";
 
@@ -89,6 +91,57 @@ export type UpstreamMatchEvent = {
   payload?: Record<string, unknown>;
   createdAt?: string;
 };
+
+export async function fetchUpstreamTicker(): Promise<UpstreamMatch[] | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${matchServiceBase()}/api/matches/ticker`, {
+      headers: upstreamHeaders(),
+      cache: "no-store",
+    });
+  } catch {
+    throw new MatchUpstreamError("match-service unreachable", 502);
+  }
+  if (response.status === 404) return null;
+  return readJson<UpstreamMatch[]>(response);
+}
+
+async function fetchCompactJson<T>(path: string): Promise<T | null | undefined> {
+  let response: Response;
+  try {
+    response = await fetch(`${matchServiceBase()}${path}`, {
+      headers: upstreamHeaders(),
+      cache: "no-store",
+    });
+  } catch {
+    return undefined;
+  }
+  if (response.status === 404) return null;
+  if (!response.ok) return undefined;
+  return (await response.json()) as T;
+}
+
+export async function fetchUpstreamLiveScore(idOrExternal: string): Promise<LiveScoreDocument | null> {
+  if (isReplayMatchUuid(idOrExternal)) {
+    const compact = await fetchCompactJson<LiveScoreDocument>(
+      `/api/matches/${idOrExternal}/live`,
+    );
+    if (compact) return compact;
+  }
+  const match = await fetchUpstreamMatch(idOrExternal);
+  return match ? toLiveScoreDocument(match) : null;
+}
+
+export async function fetchUpstreamLiveCursor(idOrExternal: string): Promise<LiveCursorDocument | null> {
+  if (isReplayMatchUuid(idOrExternal)) {
+    const compact = await fetchCompactJson<LiveCursorDocument>(
+      `/api/matches/${idOrExternal}/cursor`,
+    );
+    if (compact) return compact;
+  }
+  const live = await fetchUpstreamLiveScore(idOrExternal);
+  return live ? toLiveCursorDocument(live) : null;
+}
 
 export async function fetchUpstreamMatchEvents(
   matchId: string,

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/brandIcons";
 import type { ScoreCard, ScoresFeed } from "@/types/scores";
 import { PlayerName } from "@/components/player/PlayerName";
+import { shouldReplaceTickerBody, tickerIntervalMs } from "@/lib/ticker-poll";
 import { cn } from "@/lib/utils";
 
 type ScoresStripProps = {
@@ -69,21 +70,38 @@ export function ScoresStrip({ items }: ScoresStripProps) {
       return;
     }
     let cancelled = false;
+    const etagRef = { current: "" };
     const load = async () => {
       try {
-        const res = await fetch("/api/matches/ticker");
-        if (!res.ok) return;
+        const headers: HeadersInit = {};
+        if (etagRef.current) headers["If-None-Match"] = etagRef.current;
+        const res = await fetch("/api/matches/ticker", { headers });
+        const nextTag = res.headers.get("ETag");
+        if (nextTag) etagRef.current = nextTag;
+        if (!shouldReplaceTickerBody(res.status) || !res.ok) return;
         const feed = (await res.json()) as ScoresFeed;
         if (!cancelled) setCards(feed.items ?? []);
       } catch {
         if (!cancelled) setCards([]);
       }
     };
-    void load();
-    const timer = window.setInterval(() => void load(), 10_000);
+    const arm = () => {
+      void load();
+      return window.setInterval(
+        () => void load(),
+        tickerIntervalMs(document.visibilityState === "hidden"),
+      );
+    };
+    let timer = arm();
+    const onVisibility = () => {
+      window.clearInterval(timer);
+      timer = arm();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [items]);
 
