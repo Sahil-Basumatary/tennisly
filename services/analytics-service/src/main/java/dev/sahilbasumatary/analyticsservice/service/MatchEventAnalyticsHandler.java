@@ -24,7 +24,8 @@ public class MatchEventAnalyticsHandler {
             if (!"COMPLETED".equals(event.getStatus())) {
                 return;
             }
-        } else if (!MatchEvent.MATCH_POINT_RECORDED.equals(event.getEventType())) {
+        } else if (!MatchEvent.MATCH_ARCHIVE_COMPLETED.equals(event.getEventType())
+                && !MatchEvent.MATCH_POINT_RECORDED.equals(event.getEventType())) {
             return;
         }
         try {

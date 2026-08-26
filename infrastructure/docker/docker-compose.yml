@@ -12,6 +12,14 @@ services:
     volumes:
       - tennisly_postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "wal_compression=on"
+      - "-c"
+      - "synchronous_commit=on"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tennisly"]
       interval: 10s

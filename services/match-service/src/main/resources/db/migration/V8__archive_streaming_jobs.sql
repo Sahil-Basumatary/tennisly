@@ -1,0 +1,8 @@
+ALTER TABLE match_archive_jobs
+    ADD COLUMN IF NOT EXISTS bytes_received BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS expected_bytes BIGINT,
+    ADD COLUMN IF NOT EXISTS content_sha256 VARCHAR(64),
+    ADD COLUMN IF NOT EXISTS expected_sha256 VARCHAR(64);
+
+ALTER TABLE match_archive_jobs
+    ALTER COLUMN status TYPE VARCHAR(24);
