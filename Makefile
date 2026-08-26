@@ -189,6 +189,26 @@ jmh-archive: ## In-memory million-event archive processor (not HTTP/Postgres)
 load-durable: ## Local HTTP -> Postgres atomic four-row point commits
 	@$(LOAD_ENV) ./scripts/match-durable-load.sh
 
+.PHONY: load-bulk
+load-bulk: ## Local transactional batch points/s and staging/promote rows/s (not atomic TPS)
+	@$(LOAD_ENV) ./scripts/match-bulk-ingest.sh
+
+.PHONY: perf-postgres
+perf-postgres: ## Ephemeral Postgres 16 for evidence (does not wipe tennisly-postgres)
+	@$(LOAD_ENV) ./scripts/perf-postgres.sh
+
+.PHONY: perf-evidence
+perf-evidence: ## Local 3-fork JMH + 1 cold/5 warm HTTP evidence session
+	@$(LOAD_ENV) ./scripts/perf-suite.sh
+
+.PHONY: load-http-live
+load-http-live: ## Local CDN cache-collapse (HTTP_LIVE_CLIENTS=100|1000). Not a Vercel 100k run
+	@$(LOAD_ENV) ./scripts/live-http-cache-load.sh
+
+.PHONY: load-http-live-stack
+load-http-live-stack: ## Real match-service + Postgres + Redis behind the local HTTP edge
+	@$(LOAD_ENV) ./scripts/live-http-real-stack.sh
+
 .PHONY: load-websocket
 load-websocket: ## Local STOMP/Redis fanout benchmark (MATCH_INSTANCE_COUNT=1+)
 	@$(LOAD_ENV) ./scripts/match-websocket-load.sh
