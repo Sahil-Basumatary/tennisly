@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type RemotePhotoProps = {
@@ -11,18 +11,15 @@ type RemotePhotoProps = {
 };
 
 export function RemotePhoto({ src, alt, className, fallback }: RemotePhotoProps) {
-  const [broken, setBroken] = useState(false);
-  useEffect(() => {
-    setBroken(false);
-  }, [src]);
-  if (!src || broken) return fallback;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!src || failedSrc === src) return fallback;
   return (
     <img
       src={src}
       alt={alt}
       className={cn("absolute inset-0 h-full w-full", className)}
       referrerPolicy="no-referrer"
-      onError={() => setBroken(true)}
+      onError={() => setFailedSrc(src)}
     />
   );
 }

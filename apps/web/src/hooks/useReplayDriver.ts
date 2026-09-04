@@ -37,7 +37,16 @@ export function useReplayDriver({
   loop,
   rootRef,
 }: UseReplayDriverOptions): { status: ReplayDriverStatus; connection: LiveConnection } {
-  const [status, setStatus] = useState<ReplayDriverStatus>("idle");
+  const replayKey = enabled && matchId ? `${matchId}:${live ? "live" : "replay"}` : null;
+  const [loadState, setLoadState] = useState<{
+    key: string;
+    status: "ready" | "unavailable";
+  } | null>(null);
+  const status: ReplayDriverStatus = !replayKey
+    ? "idle"
+    : loadState?.key === replayKey
+      ? loadState.status
+      : "loading";
   const [inView, setInView] = useState(true);
   const playing = usePlayback((s) => s.playing);
   const { connection } = useLiveReplaySession({
@@ -47,10 +56,7 @@ export function useReplayDriver({
 
   useEffect(() => {
     const node = rootRef?.current;
-    if (!node || typeof IntersectionObserver === "undefined") {
-      setInView(true);
-      return;
-    }
+    if (!node || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
       ([entry]) => setInView(Boolean(entry?.isIntersecting)),
       { threshold: 0.12 },
@@ -60,18 +66,14 @@ export function useReplayDriver({
   }, [rootRef]);
 
   useEffect(() => {
-    if (!enabled || !matchId) {
-      setStatus("idle");
-      return;
-    }
+    if (!replayKey || !matchId) return;
     let cancelled = false;
-    setStatus("loading");
     void getMatchReplay(matchId).then((replay) => {
       if (cancelled) return;
       if (!replay) {
         usePlayback.getState().setDuration(0);
         useReplaySession.getState().reset();
-        setStatus("unavailable");
+        setLoadState({ key: replayKey, status: "unavailable" });
         return;
       }
       useReplaySession.getState().hydrateReplay(replay, live ? LIVE_POINT_BUFFER : undefined);
@@ -86,14 +88,14 @@ export function useReplayDriver({
         }),
       );
       syncActiveShotFromClock();
-      setStatus("ready");
+      setLoadState({ key: replayKey, status: "ready" });
     });
     return () => {
       cancelled = true;
       usePlayback.getState().pause();
       useReplaySession.getState().reset();
     };
-  }, [matchId, enabled, live, loop]);
+  }, [matchId, replayKey, live, loop]);
 
   useEffect(() => {
     return usePlayback.subscribe((state, prev) => {

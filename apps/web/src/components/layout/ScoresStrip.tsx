@@ -62,13 +62,11 @@ export function ScoresStrip({ items }: ScoresStripProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-  const [cards, setCards] = useState<ScoreCard[]>(items ?? []);
+  const [polledCards, setPolledCards] = useState<ScoreCard[]>([]);
+  const cards = items ?? polledCards;
 
   useEffect(() => {
-    if (items) {
-      setCards(items);
-      return;
-    }
+    if (items) return;
     let cancelled = false;
     const etagRef = { current: "" };
     const load = async () => {
@@ -80,9 +78,9 @@ export function ScoresStrip({ items }: ScoresStripProps) {
         if (nextTag) etagRef.current = nextTag;
         if (!shouldReplaceTickerBody(res.status) || !res.ok) return;
         const feed = (await res.json()) as ScoresFeed;
-        if (!cancelled) setCards(feed.items ?? []);
+        if (!cancelled) setPolledCards(feed.items ?? []);
       } catch {
-        if (!cancelled) setCards([]);
+        if (!cancelled) setPolledCards([]);
       }
     };
     const arm = () => {

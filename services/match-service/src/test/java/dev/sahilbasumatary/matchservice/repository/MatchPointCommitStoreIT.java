@@ -118,7 +118,12 @@ class MatchPointCommitStoreIT {
         assertEquals(
                 1L,
                 jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM match_outbox WHERE event_json->>'matchId' = ? AND event_json->>'pointSequence' = '2'",
+                        """
+                        SELECT COUNT(*)
+                        FROM match_outbox
+                        WHERE event_json->>'matchId' = ?
+                          AND event_json->>'pointSequence' = '2'
+                        """,
                         Long.class,
                         seeded.matchId.toString()));
     }
@@ -176,7 +181,10 @@ class MatchPointCommitStoreIT {
         UUID away = UUID.randomUUID();
         jdbc.update(
                 """
-                INSERT INTO matches (id, external_id, surface, status, best_of_sets, current_score, metadata, point_count, live_sequence)
+                INSERT INTO matches (
+                    id, external_id, surface, status, best_of_sets,
+                    current_score, metadata, point_count, live_sequence
+                )
                 VALUES (?, ?, 'HARD', 'IN_PROGRESS', 3, '{}'::jsonb, '{}'::jsonb, 0, 0)
                 """,
                 matchId,

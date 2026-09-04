@@ -113,15 +113,19 @@ class LaunchSolverTest {
             return true;
         }
         for (int index = 1; index < path.size(); index++) {
-            double y0 = path.y(index - 1);
-            double y1 = path.y(index);
+            double y0 = path.positionY(index - 1);
+            double y1 = path.positionY(index);
             if (y0 * y1 > 0.0) {
                 continue;
             }
             double span = y1 - y0;
             double fraction = Math.abs(span) < 1.0e-9 ? 0.0 : (0.0 - y0) / span;
-            double x = path.x(index - 1) + (path.x(index) - path.x(index - 1)) * fraction;
-            double z = path.z(index - 1) + (path.z(index) - path.z(index - 1)) * fraction;
+            double x =
+                    path.positionX(index - 1)
+                            + (path.positionX(index) - path.positionX(index - 1)) * fraction;
+            double z =
+                    path.positionZ(index - 1)
+                            + (path.positionZ(index) - path.positionZ(index - 1)) * fraction;
             if (z + 0.02 < CourtGeometry.netHeightAt(x)) {
                 return false;
             }

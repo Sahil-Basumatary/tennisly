@@ -30,8 +30,8 @@ class MatchEventReplayTest {
     @Test
     void replaysOnlyEventsAfterTheClientCursorInSequenceOrder() {
         MatchRepository matchRepository = mock(MatchRepository.class);
-        MatchPointRepository pointRepository = mock(MatchPointRepository.class);
-        MatchEventLogRepository eventLogRepository = mock(MatchEventLogRepository.class);
+        final MatchPointRepository pointRepository = mock(MatchPointRepository.class);
+        final MatchEventLogRepository eventLogRepository = mock(MatchEventLogRepository.class);
         MatchEventReplayCache eventReplayCache = mock(MatchEventReplayCache.class);
         UUID matchId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         Match match = new Match();
@@ -58,7 +58,7 @@ class MatchEventReplayTest {
     @Test
     void servesACoalescedRecoveryPageFromTheShortTtlCache() {
         MatchRepository matchRepository = mock(MatchRepository.class);
-        MatchEventLogRepository eventLogRepository = mock(MatchEventLogRepository.class);
+        final MatchEventLogRepository eventLogRepository = mock(MatchEventLogRepository.class);
         MatchEventReplayCache eventReplayCache = mock(MatchEventReplayCache.class);
         UUID matchId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         Match match = new Match();

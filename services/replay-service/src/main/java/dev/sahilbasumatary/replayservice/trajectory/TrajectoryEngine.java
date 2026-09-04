@@ -119,14 +119,19 @@ public class TrajectoryEngine {
             int bounceIndex = firstBounceIndex(scratch);
             Vector3 landing =
                     new Vector3(
-                            scratch.x(bounceIndex), scratch.y(bounceIndex), scratch.z(bounceIndex));
+                            scratch.positionX(bounceIndex),
+                            scratch.positionY(bounceIndex),
+                            scratch.positionZ(bounceIndex));
             int contactIndex =
                     nextContactIndex(scratch, bounceIndex, RECEIVER_CONTACT_HEIGHT_METRES);
             BallPathBuffer samples = new BallPathBuffer();
             samples.copyPrefix(scratch, contactIndex + 1);
 
             int last = samples.size() - 1;
-            Vector3 nextContact = clampToCourt(new Vector3(samples.x(last), samples.y(last), 0));
+            Vector3 nextContact =
+                    clampToCourt(
+                            new Vector3(
+                                    samples.positionX(last), samples.positionY(last), 0));
 
             PlayerSide receiverSide =
                     hitterSide == PlayerSide.HOME ? PlayerSide.AWAY : PlayerSide.HOME;
@@ -168,7 +173,7 @@ public class TrajectoryEngine {
 
     private int firstBounceIndex(BallPathBuffer path) {
         for (int index = 1; index < path.size(); index++) {
-            if (path.z(index) <= 1.0e-6 && path.z(index - 1) > 1.0e-6) {
+            if (path.positionZ(index) <= 1.0e-6 && path.positionZ(index - 1) > 1.0e-6) {
                 return index;
             }
         }
@@ -181,8 +186,9 @@ public class TrajectoryEngine {
         }
         double depthCap = CourtGeometry.HALF_LENGTH_METRES + 0.80;
         for (int index = bounceIndex + 1; index < path.size(); index++) {
-            boolean reachedBaseline = Math.abs(path.y(index)) >= depthCap;
-            boolean reachableOnDescent = path.vz(index) < 0.0 && path.z(index) <= contactHeight;
+            boolean reachedBaseline = Math.abs(path.positionY(index)) >= depthCap;
+            boolean reachableOnDescent =
+                    path.vz(index) < 0.0 && path.positionZ(index) <= contactHeight;
             if (reachedBaseline || reachableOnDescent) {
                 return index;
             }
@@ -193,7 +199,7 @@ public class TrajectoryEngine {
     private double apexHeight(BallPathBuffer samples) {
         double apex = 0.0;
         for (int index = 0; index < samples.size(); index++) {
-            apex = Math.max(apex, samples.z(index));
+            apex = Math.max(apex, samples.positionZ(index));
         }
         return apex;
     }

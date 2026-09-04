@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { HEADSHOT_FOCUS } from "@/lib/headshot";
 import { playerInitials, publicPlayerName } from "@/lib/player-directory";
 import { cn } from "@/lib/utils";
@@ -37,11 +37,8 @@ export function PlayerName({
   const px = SIZES[size];
   const dark = tone === "dark";
   const label = publicPlayerName(name);
-  const [broken, setBroken] = useState(false);
-  useEffect(() => {
-    setBroken(false);
-  }, [photoUrl]);
-  const showPhoto = Boolean(photoUrl) && !broken;
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const showPhoto = Boolean(photoUrl) && failedPhotoUrl !== photoUrl;
   return (
     <span className={cn("inline-flex min-w-0 max-w-full items-center gap-2", className)}>
       <span
@@ -59,7 +56,7 @@ export function PlayerName({
             height={px}
             className={cn("h-full w-full", HEADSHOT_FOCUS)}
             referrerPolicy="no-referrer"
-            onError={() => setBroken(true)}
+            onError={() => setFailedPhotoUrl(photoUrl ?? null)}
           />
         ) : (
           <span

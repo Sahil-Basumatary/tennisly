@@ -87,7 +87,10 @@ public class FrameAssembler {
     private Vector3 interpolateBall(BallPathBuffer samples, int sampleIndex, double localTime) {
         if (sampleIndex >= samples.size() - 1) {
             int last = samples.size() - 1;
-            return new Vector3(samples.x(last), samples.y(last), samples.z(last));
+            return new Vector3(
+                    samples.positionX(last),
+                    samples.positionY(last),
+                    samples.positionZ(last));
         }
         double beforeTime = samples.time(sampleIndex);
         double afterTime = samples.time(sampleIndex + 1);
@@ -95,12 +98,18 @@ public class FrameAssembler {
         double fraction = span <= 0.0 ? 0.0 : (localTime - beforeTime) / span;
         double clamped = Math.max(0.0, Math.min(1.0, fraction));
         return new Vector3(
-                samples.x(sampleIndex)
-                        + (samples.x(sampleIndex + 1) - samples.x(sampleIndex)) * clamped,
-                samples.y(sampleIndex)
-                        + (samples.y(sampleIndex + 1) - samples.y(sampleIndex)) * clamped,
-                samples.z(sampleIndex)
-                        + (samples.z(sampleIndex + 1) - samples.z(sampleIndex)) * clamped);
+                samples.positionX(sampleIndex)
+                        + (samples.positionX(sampleIndex + 1)
+                                        - samples.positionX(sampleIndex))
+                                * clamped,
+                samples.positionY(sampleIndex)
+                        + (samples.positionY(sampleIndex + 1)
+                                        - samples.positionY(sampleIndex))
+                                * clamped,
+                samples.positionZ(sampleIndex)
+                        + (samples.positionZ(sampleIndex + 1)
+                                        - samples.positionZ(sampleIndex))
+                                * clamped);
     }
 
     private Vector3 lerp(Vector3 from, Vector3 to, double fraction) {

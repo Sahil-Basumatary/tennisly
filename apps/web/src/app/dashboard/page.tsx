@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHero } from "@/components/layout/PageHero";
 
 export default function DashboardPage() {
@@ -10,19 +11,19 @@ export default function DashboardPage() {
       />
       <main id="main-content" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <a href="/scores" className="min-h-[140px] border border-hairline bg-white p-5 hover:border-chrome">
+          <Link href="/scores" className="min-h-[140px] border border-hairline bg-white p-5 hover:border-chrome">
             <h2 className="mb-2 font-sans text-[14px] font-bold uppercase tracking-wide">Scores</h2>
             <p className="font-sans text-[13px] text-muted-foreground">
               ESPN-style board for every tour on the ticker.
             </p>
-          </a>
-          <a href="/matches" className="min-h-[140px] border border-hairline bg-white p-5 hover:border-chrome">
+          </Link>
+          <Link href="/matches" className="min-h-[140px] border border-hairline bg-white p-5 hover:border-chrome">
             <h2 className="mb-2 font-sans text-[14px] font-bold uppercase tracking-wide">Live Centre</h2>
             <p className="font-sans text-[13px] text-muted-foreground">
               Open the court, scorebug, and point tape.
             </p>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/settings/notifications"
             className="min-h-[140px] border border-hairline bg-white p-5 hover:border-chrome"
           >
@@ -30,7 +31,7 @@ export default function DashboardPage() {
             <p className="font-sans text-[13px] text-muted-foreground">
               Email categories and master switches.
             </p>
-          </a>
+          </Link>
         </div>
       </main>
     </>

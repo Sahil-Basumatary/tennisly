@@ -32,7 +32,9 @@ export function CourtViz({
   const sceneRef = useRef<CourtScene | null>(null);
   const skipPresetAnim = useRef(true);
   const onErrorRef = useRef(onError);
+  const cameraPresetRef = useRef(cameraPreset);
   onErrorRef.current = onError;
+  cameraPresetRef.current = cameraPreset;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -50,7 +52,7 @@ export function CourtViz({
         const instance = new CourtScene({
           canvas,
           surface,
-          cameraPreset,
+          cameraPreset: cameraPresetRef.current,
           homeGender,
           awayGender,
         });

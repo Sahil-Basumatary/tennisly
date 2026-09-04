@@ -3,8 +3,12 @@ import { fetchUpstreamMatchEvents } from "@/lib/match-upstream";
 import { resetSingleFlight } from "@/lib/single-flight";
 import { GET } from "./route";
 
+const EVENT = { id: "event-2", sequence: 2, eventType: "POINT_RECORDED" };
+
 vi.mock("@/lib/match-upstream", () => ({
-  fetchUpstreamMatchEvents: vi.fn().mockResolvedValue([{ sequence: 2 }]),
+  fetchUpstreamMatchEvents: vi
+    .fn()
+    .mockResolvedValue([{ id: "event-2", sequence: 2, eventType: "POINT_RECORDED" }]),
   MatchUpstreamError: class MatchUpstreamError extends Error {},
 }));
 
@@ -21,7 +25,7 @@ describe("GET /api/matches/[id]/events", () => {
   beforeEach(() => {
     resetSingleFlight();
     vi.mocked(fetchUpstreamMatchEvents).mockReset();
-    vi.mocked(fetchUpstreamMatchEvents).mockResolvedValue([{ sequence: 2 }]);
+    vi.mocked(fetchUpstreamMatchEvents).mockResolvedValue([EVENT]);
   });
 
   it("never shares recovery pages at the CDN", async () => {
@@ -41,7 +45,7 @@ describe("GET /api/matches/[id]/events", () => {
     vi.mocked(fetchUpstreamMatchEvents).mockImplementation(async () => {
       started += 1;
       await blocked;
-      return [{ sequence: 2 }];
+      return [EVENT];
     });
     const pending = Promise.all([eventsRequest(), eventsRequest(), eventsRequest()]);
     await vi.waitFor(() => expect(started).toBe(1));

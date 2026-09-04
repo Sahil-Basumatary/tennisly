@@ -14,7 +14,8 @@ class ArchiveTapeProcessorTest {
         ArchiveEventGenerator.Dataset dataset =
                 ArchiveEventGenerator.generate(ArchiveEventGenerator.Spec.compact());
         ArchiveProcessResult one = processor.process(dataset.events(), dataset.rosters(), 1);
-        ArchiveProcessResult four = processor.process(dataset.events(), dataset.rosters(), 4);
+        final ArchiveProcessResult four =
+                processor.process(dataset.events(), dataset.rosters(), 4);
         assertEquals(dataset.events().size(), one.sourceRows());
         assertEquals(dataset.expectedAccepted(), one.accepted());
         assertEquals(dataset.expectedDuplicates(), one.duplicates());
@@ -32,9 +33,11 @@ class ArchiveTapeProcessorTest {
         ArchiveEventGenerator.Dataset dataset =
                 ArchiveEventGenerator.generate(ArchiveEventGenerator.Spec.million());
         ArchiveProcessResult one = processor.process(dataset.events(), dataset.rosters(), 1);
-        ArchiveProcessResult ten = processor.process(dataset.events(), dataset.rosters(), 10);
+        final ArchiveProcessResult ten =
+                processor.process(dataset.events(), dataset.rosters(), 10);
         long started = System.nanoTime();
-        ArchiveProcessResult timed = processor.process(dataset.events(), dataset.rosters(), 8);
+        final ArchiveProcessResult timed =
+                processor.process(dataset.events(), dataset.rosters(), 8);
         double seconds = (System.nanoTime() - started) / 1_000_000_000.0;
         double eventsPerSecond = dataset.events().size() / seconds;
         assertTrue(

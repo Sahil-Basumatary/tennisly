@@ -24,7 +24,7 @@ class MatchIngestionServiceTest {
     @Test
     void liveBoardChecksMainToursBeforeTheGeneralFeed() {
         TennisDataMatchClient matchClient = mock(TennisDataMatchClient.class);
-        MatchIngestionService service =
+        final MatchIngestionService service =
                 new MatchIngestionService(
                         matchClient,
                         mock(MatchRepository.class),
@@ -46,7 +46,7 @@ class MatchIngestionServiceTest {
         TennisDataMatchClient matchClient = mock(TennisDataMatchClient.class);
         MatchRepository matchRepository = mock(MatchRepository.class);
         MatchEventLogService eventLogService = mock(MatchEventLogService.class);
-        MatchIngestionService service =
+        final MatchIngestionService service =
                 new MatchIngestionService(
                         matchClient,
                         matchRepository,

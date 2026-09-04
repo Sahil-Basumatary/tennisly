@@ -51,14 +51,15 @@ public class BallPhysicsSimulator {
      */
     public Vector3 acceleration(Vector3 velocity, Vector3 spin) {
         Accel accel = new Accel();
-        acceleration(velocity.x(), velocity.y(), velocity.z(), spin.x(), spin.y(), spin.z(), accel);
-        return new Vector3(accel.x, accel.y, accel.z);
+        accelerationInto(
+                velocity.x(), velocity.y(), velocity.z(), spin.x(), spin.y(), spin.z(), accel);
+        return new Vector3(accel.ax, accel.ay, accel.az);
     }
 
     /** Advances the ball by one timestep using fourth-order Runge-Kutta, ignoring the ground. */
     public BallState integrate(BallState state, double stepSeconds) {
         Step step = new Step();
-        integrate(
+        integrateInto(
                 state.timeSeconds(),
                 state.position().x(),
                 state.position().y(),
@@ -108,7 +109,7 @@ public class BallPhysicsSimulator {
         Step current = Step.from(initial);
         Step next = new Step();
         while (current.time < maxTimeSeconds) {
-            integrate(
+            integrateInto(
                     current.time,
                     current.px,
                     current.py,
@@ -158,7 +159,7 @@ public class BallPhysicsSimulator {
         double netX = initial.position().x();
         double netZ = initial.position().z();
         while (current.time < maxTimeSeconds) {
-            integrate(
+            integrateInto(
                     current.time,
                     current.px,
                     current.py,
@@ -198,7 +199,7 @@ public class BallPhysicsSimulator {
         }
     }
 
-    private void integrate(
+    private void integrateInto(
             double time,
             double px,
             double py,
@@ -214,27 +215,33 @@ public class BallPhysicsSimulator {
         Accel a1 = out.a1;
         Accel a2 = out.a2;
         Accel a3 = out.a3;
-        Accel a4 = out.a4;
-        acceleration(vx, vy, vz, sx, sy, sz, a1);
-        double v2x = vx + a1.x * (stepSeconds / 2.0);
-        double v2y = vy + a1.y * (stepSeconds / 2.0);
-        double v2z = vz + a1.z * (stepSeconds / 2.0);
-        acceleration(v2x, v2y, v2z, sx, sy, sz, a2);
-        double v3x = vx + a2.x * (stepSeconds / 2.0);
-        double v3y = vy + a2.y * (stepSeconds / 2.0);
-        double v3z = vz + a2.z * (stepSeconds / 2.0);
-        acceleration(v3x, v3y, v3z, sx, sy, sz, a3);
-        double v4x = vx + a3.x * stepSeconds;
-        double v4y = vy + a3.y * stepSeconds;
-        double v4z = vz + a3.z * stepSeconds;
-        acceleration(v4x, v4y, v4z, sx, sy, sz, a4);
-        double velocityIncrementX = (a1.x + a2.x * 2.0 + a3.x * 2.0 + a4.x) * (stepSeconds / 6.0);
-        double velocityIncrementY = (a1.y + a2.y * 2.0 + a3.y * 2.0 + a4.y) * (stepSeconds / 6.0);
-        double velocityIncrementZ = (a1.z + a2.z * 2.0 + a3.z * 2.0 + a4.z) * (stepSeconds / 6.0);
+        final Accel a4 = out.a4;
+        accelerationInto(vx, vy, vz, sx, sy, sz, a1);
+        double v2x = vx + a1.ax * (stepSeconds / 2.0);
+        double v2y = vy + a1.ay * (stepSeconds / 2.0);
+        double v2z = vz + a1.az * (stepSeconds / 2.0);
+        accelerationInto(v2x, v2y, v2z, sx, sy, sz, a2);
+        double v3x = vx + a2.ax * (stepSeconds / 2.0);
+        double v3y = vy + a2.ay * (stepSeconds / 2.0);
+        double v3z = vz + a2.az * (stepSeconds / 2.0);
+        accelerationInto(v3x, v3y, v3z, sx, sy, sz, a3);
+        double v4x = vx + a3.ax * stepSeconds;
+        double v4y = vy + a3.ay * stepSeconds;
+        double v4z = vz + a3.az * stepSeconds;
+        accelerationInto(v4x, v4y, v4z, sx, sy, sz, a4);
+        final double velocityIncrementX =
+                (a1.ax + a2.ax * 2.0 + a3.ax * 2.0 + a4.ax) * (stepSeconds / 6.0);
+        final double velocityIncrementY =
+                (a1.ay + a2.ay * 2.0 + a3.ay * 2.0 + a4.ay) * (stepSeconds / 6.0);
+        final double velocityIncrementZ =
+                (a1.az + a2.az * 2.0 + a3.az * 2.0 + a4.az) * (stepSeconds / 6.0);
         // v1 is v0; chained Vector3 add/scale must stay left-associative.
-        double positionIncrementX = (((vx + v2x * 2.0) + v3x * 2.0) + v4x) * (stepSeconds / 6.0);
-        double positionIncrementY = (((vy + v2y * 2.0) + v3y * 2.0) + v4y) * (stepSeconds / 6.0);
-        double positionIncrementZ = (((vz + v2z * 2.0) + v3z * 2.0) + v4z) * (stepSeconds / 6.0);
+        final double positionIncrementX =
+                (((vx + v2x * 2.0) + v3x * 2.0) + v4x) * (stepSeconds / 6.0);
+        final double positionIncrementY =
+                (((vy + v2y * 2.0) + v3y * 2.0) + v4y) * (stepSeconds / 6.0);
+        final double positionIncrementZ =
+                (((vz + v2z * 2.0) + v3z * 2.0) + v4z) * (stepSeconds / 6.0);
         out.time = time + stepSeconds;
         out.px = px + positionIncrementX;
         out.py = py + positionIncrementY;
@@ -247,24 +254,24 @@ public class BallPhysicsSimulator {
         out.sz = sz;
     }
 
-    private void acceleration(
+    private void accelerationInto(
             double vx, double vy, double vz, double sx, double sy, double sz, Accel out) {
         double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
         if (speed == 0.0) {
-            out.x = 0.0;
-            out.y = 0.0;
-            out.z = -gravity;
+            out.ax = 0.0;
+            out.ay = 0.0;
+            out.az = -gravity;
             return;
         }
         double dragScale = -dragFactor * speed;
         double dragX = vx * dragScale;
         double dragY = vy * dragScale;
-        double dragZ = vz * dragScale;
+        final double dragZ = vz * dragScale;
         magnusForce(vx, vy, vz, sx, sy, sz, speed, out);
         double invMass = 1.0 / mass;
-        out.x = 0.0 + (dragX + out.x) * invMass;
-        out.y = 0.0 + (dragY + out.y) * invMass;
-        out.z = -gravity + (dragZ + out.z) * invMass;
+        out.ax = 0.0 + (dragX + out.ax) * invMass;
+        out.ay = 0.0 + (dragY + out.ay) * invMass;
+        out.az = -gravity + (dragZ + out.az) * invMass;
     }
 
     private void magnusForce(
@@ -278,9 +285,9 @@ public class BallPhysicsSimulator {
             Accel out) {
         double spinRate = Math.sqrt(sx * sx + sy * sy + sz * sz);
         if (spinRate == 0.0) {
-            out.x = 0.0;
-            out.y = 0.0;
-            out.z = 0.0;
+            out.ax = 0.0;
+            out.ay = 0.0;
+            out.az = 0.0;
             return;
         }
         double cx = sy * vz - sz * vy;
@@ -288,18 +295,18 @@ public class BallPhysicsSimulator {
         double cz = sx * vy - sy * vx;
         double crossMagnitude = Math.sqrt(cx * cx + cy * cy + cz * cz);
         if (crossMagnitude == 0.0) {
-            out.x = 0.0;
-            out.y = 0.0;
-            out.z = 0.0;
+            out.ax = 0.0;
+            out.ay = 0.0;
+            out.az = 0.0;
             return;
         }
         double spinRatio = (ballRadius * spinRate) / speed;
         double liftCoefficient = 1.0 / (2.0 + (1.0 / spinRatio));
         double magnitude = liftFactor * liftCoefficient * speed * speed;
         double inv = 1.0 / crossMagnitude;
-        out.x = cx * inv * magnitude;
-        out.y = cy * inv * magnitude;
-        out.z = cz * inv * magnitude;
+        out.ax = cx * inv * magnitude;
+        out.ay = cy * inv * magnitude;
+        out.az = cz * inv * magnitude;
     }
 
     private void interpolateGroundContact(Step above, Step below, Step out) {
@@ -319,8 +326,8 @@ public class BallPhysicsSimulator {
     }
 
     private void applyBounce(Step impact, BounceProfile profile, Step out) {
-        double bouncedVerticalSpeed = -impact.vz * profile.verticalRestitution();
-        double horizontalRetention = 1.0 - 0.35 * profile.horizontalFriction();
+        final double bouncedVerticalSpeed = -impact.vz * profile.verticalRestitution();
+        final double horizontalRetention = 1.0 - 0.35 * profile.horizontalFriction();
         double spinRate =
                 Math.sqrt(impact.sx * impact.sx + impact.sy * impact.sy + impact.sz * impact.sz);
         double spinSurfaceSpeed = spinRate * ballRadius;
@@ -334,7 +341,7 @@ public class BallPhysicsSimulator {
             nx = impact.vx / horizontalMagnitude;
             ny = impact.vy / horizontalMagnitude;
         }
-        double forwardBoost = profile.spinForwardFactor() * spinSurfaceSpeed;
+        final double forwardBoost = profile.spinForwardFactor() * spinSurfaceSpeed;
         out.time = impact.time;
         out.px = impact.px;
         out.py = impact.py;
@@ -348,9 +355,9 @@ public class BallPhysicsSimulator {
     }
 
     private static final class Accel {
-        private double x;
-        private double y;
-        private double z;
+        private double ax;
+        private double ay;
+        private double az;
     }
 
     private static final class Step {

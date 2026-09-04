@@ -74,7 +74,7 @@ public class LaunchSolver {
                 new Vector3(target.x() - launchPoint.x(), target.y() - launchPoint.y(), 0.0)
                         .magnitude();
         Vector3 spin = spinVector(spinRate, horizontalDirection, spinType);
-        int probeBudget = Math.max(6, Math.min(maxIterations, 16));
+        final int probeBudget = Math.max(6, Math.min(maxIterations, 16));
 
         double lowBound = highArc ? HIGH_ARC_MIN : MIN_ELEVATION;
         double highBound = highArc ? MAX_ELEVATION : LOW_ARC_MAX;

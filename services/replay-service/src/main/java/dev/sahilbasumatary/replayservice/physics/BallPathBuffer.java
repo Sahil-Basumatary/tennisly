@@ -13,9 +13,9 @@ public final class BallPathBuffer {
     private static final int INITIAL_CAPACITY = 256;
 
     private double[] time = new double[INITIAL_CAPACITY];
-    private double[] x = new double[INITIAL_CAPACITY];
-    private double[] y = new double[INITIAL_CAPACITY];
-    private double[] z = new double[INITIAL_CAPACITY];
+    private double[] posX = new double[INITIAL_CAPACITY];
+    private double[] posY = new double[INITIAL_CAPACITY];
+    private double[] posZ = new double[INITIAL_CAPACITY];
     private double[] vx = new double[INITIAL_CAPACITY];
     private double[] vy = new double[INITIAL_CAPACITY];
     private double[] vz = new double[INITIAL_CAPACITY];
@@ -45,9 +45,9 @@ public final class BallPathBuffer {
             cap *= 2;
         }
         time = Arrays.copyOf(time, cap);
-        x = Arrays.copyOf(x, cap);
-        y = Arrays.copyOf(y, cap);
-        z = Arrays.copyOf(z, cap);
+        posX = Arrays.copyOf(posX, cap);
+        posY = Arrays.copyOf(posY, cap);
+        posZ = Arrays.copyOf(posZ, cap);
         vx = Arrays.copyOf(vx, cap);
         vy = Arrays.copyOf(vy, cap);
         vz = Arrays.copyOf(vz, cap);
@@ -87,9 +87,9 @@ public final class BallPathBuffer {
         ensureCapacity(size + 1);
         int index = size++;
         time[index] = timeSeconds;
-        x[index] = px;
-        y[index] = py;
-        z[index] = pz;
+        posX[index] = px;
+        posY[index] = py;
+        posZ[index] = pz;
         vx[index] = velX;
         vy[index] = velY;
         vz[index] = velZ;
@@ -104,9 +104,9 @@ public final class BallPathBuffer {
         }
         ensureCapacity(count);
         System.arraycopy(source.time, 0, time, 0, count);
-        System.arraycopy(source.x, 0, x, 0, count);
-        System.arraycopy(source.y, 0, y, 0, count);
-        System.arraycopy(source.z, 0, z, 0, count);
+        System.arraycopy(source.posX, 0, posX, 0, count);
+        System.arraycopy(source.posY, 0, posY, 0, count);
+        System.arraycopy(source.posZ, 0, posZ, 0, count);
         System.arraycopy(source.vx, 0, vx, 0, count);
         System.arraycopy(source.vy, 0, vy, 0, count);
         System.arraycopy(source.vz, 0, vz, 0, count);
@@ -120,16 +120,16 @@ public final class BallPathBuffer {
         return time[index];
     }
 
-    public double x(int index) {
-        return x[index];
+    public double positionX(int index) {
+        return posX[index];
     }
 
-    public double y(int index) {
-        return y[index];
+    public double positionY(int index) {
+        return posY[index];
     }
 
-    public double z(int index) {
-        return z[index];
+    public double positionZ(int index) {
+        return posZ[index];
     }
 
     public double vx(int index) {
@@ -147,7 +147,7 @@ public final class BallPathBuffer {
     public BallState state(int index) {
         return new BallState(
                 time[index],
-                new Vector3(x[index], y[index], z[index]),
+                new Vector3(posX[index], posY[index], posZ[index]),
                 new Vector3(vx[index], vy[index], vz[index]),
                 new Vector3(sx[index], sy[index], sz[index]));
     }
