@@ -16,6 +16,7 @@ out/
 .turbo.nosync/
 *.tsbuildinfo
 target/
+dependency-reduced-pom.xml
 *.class
 *.jar
 *.war

@@ -36,16 +36,21 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'turbo.json'
+              - '.github/workflows/ci.yml'
             backend:
               - 'services/**'
               - 'pom.xml'
               - 'infrastructure/**'
+              - '.github/workflows/ci.yml'
 
   frontend:
     name: Frontend
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    env:
+      # Static CI builds must not depend on a real Clerk tenant or unavailable fork secrets.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
