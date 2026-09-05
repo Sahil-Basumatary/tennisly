@@ -24,7 +24,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Detect file changes
         uses: dorny/paths-filter@v3
         id: filter
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Configure static build authentication
         run: |
           encoded="$(printf '%s' 'example.clerk.accounts.dev$' | base64 | tr -d '\n')"
@@ -91,7 +91,7 @@ jobs:
       E2E_CLERK_USER_EMAIL: ${{ secrets.E2E_CLERK_USER_EMAIL }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Require Clerk secrets
         run: |
           test -n "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" || { echo "missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"; exit 1; }
@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Run gitleaks
@@ -144,7 +144,7 @@ jobs:
       TARGET_URL: ${{ secrets.ZAP_TARGET_URL }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Require scan secrets
         run: |
           test -n "$API_KEY" || { echo "missing secret ZAP_API_KEY"; exit 1; }
@@ -167,7 +167,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -201,7 +201,7 @@ jobs:
       JMH_QUICK: 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -230,7 +230,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Review dependency changes
         uses: actions/dependency-review-action@v4
         with:
