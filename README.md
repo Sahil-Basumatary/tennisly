@@ -40,7 +40,7 @@ public live scores -> Vercel CDN HTTP (sequence ETag) -> browsers
 optional WebSocket wake-up -> Redis pub/sub -> capped cohort
 ```
 
-## Run locally
+## local setup
 
 Requirements:
 
@@ -70,8 +70,6 @@ make up
 make ports-print
 ```
 
-The web app uses [http://localhost:13000](http://localhost:13000) by default. Run `make ports-print` if that port was already in use.
-
 Stop everything with:
 
 ```bash
@@ -87,19 +85,6 @@ pnpm --filter @tennisly/web type-check
 pnpm --filter @tennisly/web test
 make e2e
 ```
-
-Local performance numbers live in [`docs/performance.md`](docs/performance.md) and [`tests/load/baselines/`](tests/load/baselines/). Keep five labels separate: in-process latency, replay frames/s, atomic commit TPS, transactional batch points/s, and staging/promote rows/s. Near-live HTTP cache-collapse is a sixth, separate label (CDN viewer RPS vs origin RPS). The 2026-08-25 rows are historical single-run evidence. The 2026-08-26 row is the 3-fork / cold-warm v2 session. Sub-1 ms is an in-process CPU p99, not HTTP or Postgres.
-
-```bash
-make jmh
-make jmh-replay
-make jmh-archive
-make load-durable
-make load-bulk
-make perf-evidence
-```
-
-Deployment, analytics, and contribution notes live in [`docs/`](docs/) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contact
 
